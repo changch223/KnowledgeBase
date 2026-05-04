@@ -32,7 +32,7 @@ spec 001 の Xcode project を **拡張する** 単一プロジェクト構成 (
 
 **Purpose**: enrichment に必要な日本語キーと test fixture を準備。
 
-- [ ] T001 [P] `KnowledgeTree/Localization/Localizable.xcstrings` に新規キーを追加: `enrichment.statusFetching` (取得中)、`enrichment.statusUnfetched` (未取得)、`enrichment.statusFailed` (取得失敗)、`enrichment.thumbnailPlaceholderLabel` (サムネイルなし — VoiceOver 用)。値はすべて日本語。
+- [X] T001 [P] `KnowledgeTree/Localization/Localizable.xcstrings` に新規キーを追加: `enrichment.statusFetching` (取得中)、`enrichment.statusUnfetched` (未取得)、`enrichment.statusFailed` (取得失敗)、`enrichment.thumbnailPlaceholderLabel` (サムネイルなし — VoiceOver 用)。値はすべて日本語。
 - [ ] T002 [P] HTML test fixtures を作成: `KnowledgeTreeTests/Fixtures/sample-full.html` (title + description + og:image 全有)、`sample-title-only.html`、`sample-empty.html`、`sample-relative-og.html` (相対 OG image)、`sample-broken.html` (壊れた HTML)。固定 string でも可だが file の方が test 可読性が高い
 
 ---
@@ -43,10 +43,10 @@ spec 001 の Xcode project を **拡張する** 単一プロジェクト構成 (
 
 **⚠️ CRITICAL**: このフェーズ完了前は user story 着手不可。
 
-- [ ] T003 `KnowledgeTree/Models/ArticleEnrichment.swift` を作成する。SwiftData `@Model` クラス、attributes は data-model.md の SwiftData 構成セクションに従う (`id` UUID 主キー、`article: Article` non-optional 参照、`statusRaw: String`、`canonicalTitle/summary/ogImageURL/rawHTML/lastFetchedAt: Optional`、`retryCount: Int`)。`EnrichmentStatus` enum + getter/setter extension も同 file に定義
-- [ ] T004 `KnowledgeTree/Models/Article.swift` を更新する: `@Relationship(deleteRule: .cascade, inverse: \ArticleEnrichment.article) var enrichment: ArticleEnrichment?` を追加。既存 init は変更不要 (新 field は default nil)
-- [ ] T005 `KnowledgeTree/KnowledgeTreeApp.swift` を更新する: `Schema([Article.self])` を `Schema([Article.self, ArticleEnrichment.self])` に拡張。SwiftData は backward-compat な lightweight migration で吸収 (research.md / R6)
-- [ ] T006 [P] `KnowledgeTree/Services/URLSessionProtocol.swift` を作成する。1 メソッド protocol (`func data(for request: URLRequest) async throws -> (Data, URLResponse)`) を定義し、`extension URLSession: URLSessionProtocol {}` を追加 (research.md / R7)
+- [X] T003 `KnowledgeTree/Models/ArticleEnrichment.swift` を作成する。SwiftData `@Model` クラス、attributes は data-model.md の SwiftData 構成セクションに従う (`id` UUID 主キー、`article: Article` non-optional 参照、`statusRaw: String`、`canonicalTitle/summary/ogImageURL/rawHTML/lastFetchedAt: Optional`、`retryCount: Int`)。`EnrichmentStatus` enum + getter/setter extension も同 file に定義
+- [X] T004 `KnowledgeTree/Models/Article.swift` を更新する: `@Relationship(deleteRule: .cascade, inverse: \ArticleEnrichment.article) var enrichment: ArticleEnrichment?` を追加。既存 init は変更不要 (新 field は default nil)
+- [X] T005 `KnowledgeTree/KnowledgeTreeApp.swift` を更新する: `Schema([Article.self])` を `Schema([Article.self, ArticleEnrichment.self])` に拡張。SwiftData は backward-compat な lightweight migration で吸収 (research.md / R6)
+- [X] T006 [P] `KnowledgeTree/Services/URLSessionProtocol.swift` を作成する。1 メソッド protocol (`func data(for request: URLRequest) async throws -> (Data, URLResponse)`) を定義し、`extension URLSession: URLSessionProtocol {}` を追加 (research.md / R7)
 - [ ] T007 [P] `KnowledgeTree/Models/ArticleEnrichment.swift` の Target Membership を **`KnowledgeTree` のみ** で ON にする (Share Extension では未使用、Constitution Principle V — 共有を止めない設計のため)
 
 **Checkpoint**: 基盤完成。User story 着手可能。
@@ -63,19 +63,19 @@ spec 001 の Xcode project を **拡張する** 単一プロジェクト構成 (
 
 > **NOTE: テスト先行 (TDD 推奨)。fetch / parser ロジックは副作用が多いため fixture-based test で固める。**
 
-- [ ] T008 [P] [US1] `KnowledgeTreeTests/MetadataParserTests.swift` を作成する。Phase 1 で作った fixture HTML を読み込み、contracts/metadata-parser.md の Tests 表にある 13 ケース (完全 / title only / 空 / HTML エンティティ / 切り詰め / 相対 og:image / og:secure_url / http-only og:image / 壊れ HTML / og:description fallback / 大文字 META / シングルクォート / 多重 meta) をすべて網羅
-- [ ] T009 [P] [US1] `KnowledgeTreeTests/SwiftDataArticleEnrichmentStoreTests.swift` を作成する。`isStoredInMemoryOnly: true` の `ModelContainer` で contracts/article-enrichment-store.md の Tests 表にある 6 ケース (upsert 新規 / upsert 更新 / fetchPendingArticles 空 / 混在 / cascade delete / deleteAll) を網羅
-- [ ] T010 [P] [US1] `KnowledgeTreeTests/ArticleEnrichmentServiceTests.swift` を作成する。`MockURLSession` + `MockArticleEnrichmentStore` で **成功パスのみ** をテスト (US1 範囲): 通常成功 / no-op (succeeded) / no-op (permanentlyFailed) / scheme チェック (http→permanentlyFailed)。retry 系テストは Phase 4 / US2 で追加
+- [X] T008 [P] [US1] `KnowledgeTreeTests/MetadataParserTests.swift` を作成する。Phase 1 で作った fixture HTML を読み込み、contracts/metadata-parser.md の Tests 表にある 13 ケース (完全 / title only / 空 / HTML エンティティ / 切り詰め / 相対 og:image / og:secure_url / http-only og:image / 壊れ HTML / og:description fallback / 大文字 META / シングルクォート / 多重 meta) をすべて網羅
+- [X] T009 [P] [US1] `KnowledgeTreeTests/SwiftDataArticleEnrichmentStoreTests.swift` を作成する。`isStoredInMemoryOnly: true` の `ModelContainer` で contracts/article-enrichment-store.md の Tests 表にある 6 ケース (upsert 新規 / upsert 更新 / fetchPendingArticles 空 / 混在 / cascade delete / deleteAll) を網羅
+- [X] T010 [P] [US1] `KnowledgeTreeTests/ArticleEnrichmentServiceTests.swift` を作成する。`MockURLSession` + `MockArticleEnrichmentStore` で **成功パスのみ** をテスト (US1 範囲): 通常成功 / no-op (succeeded) / no-op (permanentlyFailed) / scheme チェック (http→permanentlyFailed)。retry 系テストは Phase 4 / US2 で追加
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] `KnowledgeTree/Services/MetadataParser.swift` を実装する。`struct MetadataParser` + `static func parse(html:baseURL:) -> ParsedMetadata`。`<title>` / `<meta name="description">` / `<meta property="og:image">` を case-insensitive 正規表現 + HTML エンティティ decode + 切り詰め (title 200 / summary 300) で抽出。og:image は base URL で絶対化、http→https 置換 (research.md / R5、contracts/metadata-parser.md)
-- [ ] T012 [US1] `KnowledgeTree/Services/ArticleEnrichmentStore.swift` を実装する。`ArticleEnrichmentStoreProtocol` + `SwiftDataArticleEnrichmentStore` (内部に `ModelContext`、`@MainActor`)。`upsert(article:status:...)` / `fetchPendingArticles()` / `deleteAll()` を実装 (contracts/article-enrichment-store.md)
-- [ ] T013 [US1] `KnowledgeTree/Services/ArticleEnrichmentService.swift` を実装する (成功パスのみ、retry は Phase 4)。`ArticleEnrichmentServiceProtocol` + `DefaultArticleEnrichmentService`。init で `URLSessionProtocol` (background config) と `ArticleEnrichmentStoreProtocol` を受け取る。`enrich(article:)` は: status .succeeded/.permanentlyFailed なら no-op → status .fetching に更新 → URLRequest 構築 (固定 User-Agent `KnowledgeTree/1.0 (iOS)` + 標準 Accept、Cookie/Authorization は付けない / `httpAdditionalHeaders = nil`) → fetch → MetadataParser.parse → 2MB チェック後 store.upsert(.succeeded)。失敗時は status .failed のままにして本 phase では retry しない
-- [ ] T014 [P] [US1] `KnowledgeTree/Views/ThumbnailView.swift` を実装する。`AsyncImage(url:)` ラッパ。loading / failure / nil URL すべての場合にプレースホルダ (グレー角丸正方形 72×72pt) を表示し layout shift を起こさない。`accessibilityIdentifier("articleListThumbnail")`、ogImageURL nil 時は body 自体を返さず行高をコンパクトに保つ
-- [ ] T015 [P] [US1] `KnowledgeTree/Views/ArticleRow.swift` を新規作成 (既存 `ArticleListView.swift` から行レンダリング部分を抽出 — Principle VI / 単一巨大 View 回避)。enrichment.canonicalTitle があれば優先表示、なければ Article.title。enrichment.summary があれば 2 行で表示。enrichment.ogImageURL があれば左端に ThumbnailView を表示
-- [ ] T016 [US1] `KnowledgeTree/Views/ArticleListView.swift` を更新する: 既存 ForEach 内の `ArticleRow(article:)` への置換、行ごとの `accessibilityIdentifier("articleListRow")` は維持、`accessibilityLabel` は enriched 値があれば canonical title + summary に切り替え (なければ既存通り)
-- [ ] T017 [US1] `KnowledgeTree/KnowledgeTreeApp.swift` を更新する: `WindowGroup { ArticleListView() ... }` の `.task { ... }` モディファイアで `DefaultArticleEnrichmentService(...).backfillAll()` をキックオフ。`ModelContext` を Service init に渡せるよう、Service の inject を `@Environment(\.modelContext)` 経由で取得する小さな wrapper (`@MainActor func bootstrap(in context: ModelContext)`) を `KnowledgeTreeApp.swift` に置く
+- [X] T011 [US1] `KnowledgeTree/Services/MetadataParser.swift` を実装する。`struct MetadataParser` + `static func parse(html:baseURL:) -> ParsedMetadata`。`<title>` / `<meta name="description">` / `<meta property="og:image">` を case-insensitive 正規表現 + HTML エンティティ decode + 切り詰め (title 200 / summary 300) で抽出。og:image は base URL で絶対化、http→https 置換 (research.md / R5、contracts/metadata-parser.md)
+- [X] T012 [US1] `KnowledgeTree/Services/ArticleEnrichmentStore.swift` を実装する。`ArticleEnrichmentStoreProtocol` + `SwiftDataArticleEnrichmentStore` (内部に `ModelContext`、`@MainActor`)。`upsert(article:status:...)` / `fetchPendingArticles()` / `deleteAll()` を実装 (contracts/article-enrichment-store.md)
+- [X] T013 [US1] `KnowledgeTree/Services/ArticleEnrichmentService.swift` を実装する (成功パスのみ、retry は Phase 4)。`ArticleEnrichmentServiceProtocol` + `DefaultArticleEnrichmentService`。init で `URLSessionProtocol` (background config) と `ArticleEnrichmentStoreProtocol` を受け取る。`enrich(article:)` は: status .succeeded/.permanentlyFailed なら no-op → status .fetching に更新 → URLRequest 構築 (固定 User-Agent `KnowledgeTree/1.0 (iOS)` + 標準 Accept、Cookie/Authorization は付けない / `httpAdditionalHeaders = nil`) → fetch → MetadataParser.parse → 2MB チェック後 store.upsert(.succeeded)。失敗時は status .failed のままにして本 phase では retry しない
+- [X] T014 [P] [US1] `KnowledgeTree/Views/ThumbnailView.swift` を実装する。`AsyncImage(url:)` ラッパ。loading / failure / nil URL すべての場合にプレースホルダ (グレー角丸正方形 72×72pt) を表示し layout shift を起こさない。`accessibilityIdentifier("articleListThumbnail")`、ogImageURL nil 時は body 自体を返さず行高をコンパクトに保つ
+- [X] T015 [P] [US1] `KnowledgeTree/Views/ArticleRow.swift` を新規作成 (既存 `ArticleListView.swift` から行レンダリング部分を抽出 — Principle VI / 単一巨大 View 回避)。enrichment.canonicalTitle があれば優先表示、なければ Article.title。enrichment.summary があれば 2 行で表示。enrichment.ogImageURL があれば左端に ThumbnailView を表示
+- [X] T016 [US1] `KnowledgeTree/Views/ArticleListView.swift` を更新する: 既存 ForEach 内の `ArticleRow(article:)` への置換、行ごとの `accessibilityIdentifier("articleListRow")` は維持、`accessibilityLabel` は enriched 値があれば canonical title + summary に切り替え (なければ既存通り)
+- [X] T017 [US1] `KnowledgeTree/KnowledgeTreeApp.swift` を更新する: `WindowGroup { ArticleListView() ... }` の `.task { ... }` モディファイアで `DefaultArticleEnrichmentService(...).backfillAll()` をキックオフ。`ModelContext` を Service init に渡せるよう、Service の inject を `@Environment(\.modelContext)` 経由で取得する小さな wrapper (`@MainActor func bootstrap(in context: ModelContext)`) を `KnowledgeTreeApp.swift` に置く
 - [ ] T018 [P] [US1] `KnowledgeTreeUITests/SaveArticleUITests.swift` に enriched 行表示テストを追加する。launch argument (例 `--ui-test-seed-enriched`) で in-memory モード起動 + ArticleEnrichment 1 件 seed → 起動後に `articleListThumbnail` と canonical title 文字列が表示されることを assert (URLProtocol stub の有無に依らず seed で検証)
 
 **Checkpoint**: User Story 1 完成。Wi-Fi 環境で保存 → 数秒で enriched カード表示の最小フローが動く MVP 状態。
@@ -94,10 +94,10 @@ spec 001 の Xcode project を **拡張する** 単一プロジェクト構成 (
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] `KnowledgeTree/Services/ArticleEnrichmentService.swift` を更新する: retry + exponential backoff スケジュール (30s → 2min → 10min) を実装。`Task.sleep(for: .seconds(...))` で待機、cancel respect。retryCount を ArticleEnrichmentStore.upsert で永続化 (将来の再起動後も状態継続)。失敗時 status を `.failed` (retry 余地あり) または `.permanentlyFailed` (上限超) に更新
-- [ ] T021 [US2] `KnowledgeTree/Services/ArticleEnrichmentService.swift` を更新する: `Network.NWPathMonitor` を統合。オフライン状態では retry の `Task.sleep` を skip して待機状態に。オンライン復帰時に `failed` ステータスの Article を再度キューイング
-- [ ] T022 [P] [US2] `KnowledgeTree/Views/EnrichmentStatusBadge.swift` を新規作成。3 状態のアイコン (例: `arrow.triangle.2.circlepath` 取得中、`cloud.slash` 未取得、`exclamationmark.triangle` 取得失敗)。SF Symbols 使用、サイズ 14pt。それぞれ `accessibilityIdentifier` (`articleEnrichmentStatusFetching` / `articleEnrichmentStatusUnfetched` / `articleEnrichmentStatusFailed`) と日本語 `accessibilityLabel` (Localizable.xcstrings から)
-- [ ] T023 [US2] `KnowledgeTree/Views/ArticleRow.swift` を更新する: `Article.enrichment?.status` で出し分けて `EnrichmentStatusBadge` を行末に配置 (succeeded のときは表示しない)
+- [X] T020 [US2] `KnowledgeTree/Services/ArticleEnrichmentService.swift` を更新する: retry + exponential backoff スケジュール (30s → 2min → 10min) を実装。`Task.sleep(for: .seconds(...))` で待機、cancel respect。retryCount を ArticleEnrichmentStore.upsert で永続化 (将来の再起動後も状態継続)。失敗時 status を `.failed` (retry 余地あり) または `.permanentlyFailed` (上限超) に更新
+- [X] T021 [US2] `KnowledgeTree/Services/ArticleEnrichmentService.swift` を更新する: `Network.NWPathMonitor` を統合。オフライン状態では retry の `Task.sleep` を skip して待機状態に。オンライン復帰時に `failed` ステータスの Article を再度キューイング
+- [X] T022 [P] [US2] `KnowledgeTree/Views/EnrichmentStatusBadge.swift` を新規作成。3 状態のアイコン (例: `arrow.triangle.2.circlepath` 取得中、`cloud.slash` 未取得、`exclamationmark.triangle` 取得失敗)。SF Symbols 使用、サイズ 14pt。それぞれ `accessibilityIdentifier` (`articleEnrichmentStatusFetching` / `articleEnrichmentStatusUnfetched` / `articleEnrichmentStatusFailed`) と日本語 `accessibilityLabel` (Localizable.xcstrings から)
+- [X] T023 [US2] `KnowledgeTree/Views/ArticleRow.swift` を更新する: `Article.enrichment?.status` で出し分けて `EnrichmentStatusBadge` を行末に配置 (succeeded のときは表示しない)
 - [ ] T024 [P] [US2] `KnowledgeTreeUITests/SaveArticleUITests.swift` に「取得失敗状態の行表示」テストを追加する。launch argument で seed: status .failed + .permanentlyFailed のレコードを 1 件ずつ → 起動後に対応する `accessibilityIdentifier` が表示されていることを assert
 
 **Checkpoint**: User Story 2 完成。失敗・retry・復帰の全フローが動く。spec 002 の機能スコープ達成。
