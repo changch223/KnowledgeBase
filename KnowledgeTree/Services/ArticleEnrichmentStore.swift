@@ -1,0 +1,120 @@
+//
+//  ArticleEnrichmentStore.swift
+//  KnowledgeTree
+//
+//  spec 002 — contracts/article-enrichment-store.md
+//
+
+import Foundation
+import SwiftData
+
+protocol ArticleEnrichmentStoreProtocol {
+    func upsert(
+        article: Article,
+        status: EnrichmentStatus,
+        canonicalTitle: String?,
+        summary: String?,
+        ogImageURL: String?,
+        rawHTML: String?,
+        retryCount: Int
+    ) throws
+
+    func fetchPendingArticles() throws -> [Article]
+    func deleteAll() throws
+}
+
+enum ArticleEnrichmentStoreError: Error {
+    case persistenceFailure(underlying: Error)
+}
+
+@MainActor
+final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
+    private let context: ModelContext
+    private let refreshTrigger: RefreshTrigger?
+
+    init(context: ModelContext, refreshTrigger: RefreshTrigger? = nil) {
+        self.context = context
+        self.refreshTrigger = refreshTrigger
+    }
+
+    func upsert(
+        article: Article,
+        status: EnrichmentStatus,
+        canonicalTitle: String?,
+        summary: String?,
+        ogImageURL: String?,
+        rawHTML: String?,
+        retryCount: Int
+    ) throws {
+        if let existing = article.enrichment {
+            existing.status = status
+            existing.canonicalTitle = canonicalTitle
+            existing.summary = summary
+            existing.ogImageURL = ogImageURL
+            existing.rawHTML = rawHTML
+            existing.retryCount = retryCount
+            existing.lastFetchedAt = Date()
+        } else {
+            let new = ArticleEnrichment(
+                article: article,
+                status: status,
+                canonicalTitle: canonicalTitle,
+                summary: summary,
+                ogImageURL: ogImageURL,
+                rawHTML: rawHTML,
+                lastFetchedAt: Date(),
+                retryCount: retryCount
+            )
+            context.insert(new)
+            article.enrichment = new
+        }
+        do {
+            try context.save()
+            refreshTrigger?.bump()
+        } catch {
+            throw ArticleEnrichmentStoreError.persistenceFailure(underlying: error)
+        }
+    }
+
+    func fetchPendingArticles() throws -> [Article] {
+        do {
+            // 1) enrichment 不在の Article
+            var noEnrichmentDescriptor = FetchDescriptor<Article>(
+                predicate: #Predicate<Article> { $0.enrichment == nil }
+            )
+            noEnrichmentDescriptor.fetchLimit = 1000
+            let noEnrichment = try context.fetch(noEnrichmentDescriptor)
+
+            // 2) status .pending / .failed の enrichment を持つ Article
+            var pendingDescriptor = FetchDescriptor<ArticleEnrichment>(
+                predicate: #Predicate<ArticleEnrichment> {
+                    $0.statusRaw == "pending" || $0.statusRaw == "failed"
+                }
+            )
+            pendingDescriptor.fetchLimit = 1000
+            let pendingEnrichments = try context.fetch(pendingDescriptor)
+            let pendingArticles = pendingEnrichments.map(\.article)
+
+            // 重複排除
+            var seen = Set<UUID>()
+            var result: [Article] = []
+            for article in noEnrichment + pendingArticles {
+                if seen.insert(article.id).inserted {
+                    result.append(article)
+                }
+            }
+            return result
+        } catch {
+            throw ArticleEnrichmentStoreError.persistenceFailure(underlying: error)
+        }
+    }
+
+    func deleteAll() throws {
+        do {
+            try context.delete(model: ArticleEnrichment.self)
+            try context.save()
+        } catch {
+            throw ArticleEnrichmentStoreError.persistenceFailure(underlying: error)
+        }
+    }
+}
