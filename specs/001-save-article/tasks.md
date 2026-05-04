@@ -32,11 +32,11 @@ description: "Task list for spec 001 — 記事保存 (Share Sheet 経由)"
 
 **Purpose**: 既存 scaffold の整理と新規ディレクトリ・設定の初期化。
 
-- [ ] T001 既存の `KnowledgeTree/Item.swift` を削除する (Article モデルに置き換える前提準備)
-- [ ] T002 既存の `KnowledgeTree/ContentView.swift` を削除する (ArticleListView に置き換える前提準備)
-- [ ] T003 [P] 新規ディレクトリを作成する: `KnowledgeTree/Models/`、`KnowledgeTree/Services/`、`KnowledgeTree/Views/`、`KnowledgeTree/Localization/`
-- [ ] T004 [P] App Group ID を確定する。形式は `group.<reverse-domain>.knowledgetree.shared`。値を `KnowledgeTree/Config.xcconfig` (新規) に `APP_GROUP_ID = group.<...>.shared` として記入し、両 target の Build Settings から参照可能にする
-- [ ] T005 [P] `KnowledgeTree/Localization/Localizable.xcstrings` を作成し、初期言語を「ja」に設定。research.md / R5 のキー一覧 (`share.duplicateMessage`、`share.errorNoURL`、`share.errorUnsupportedScheme`、`share.errorStorage`、`share.savedConfirmation`、`list.empty.title`、`list.deleteAction`) を日本語値で登録
+- [X] T001 既存の `KnowledgeTree/Item.swift` を削除する (Article モデルに置き換える前提準備)
+- [X] T002 既存の `KnowledgeTree/ContentView.swift` を削除する (ArticleListView に置き換える前提準備)
+- [X] T003 [P] 新規ディレクトリを作成する: `KnowledgeTree/Models/`、`KnowledgeTree/Services/`、`KnowledgeTree/Views/`、`KnowledgeTree/Localization/`
+- [X] T004 [P] App Group ID を確定する。形式は `group.<reverse-domain>.knowledgetree.shared`。値を `KnowledgeTree/Config.xcconfig` (新規) に `APP_GROUP_ID = group.<...>.shared` として記入し、両 target の Build Settings から参照可能にする
+- [X] T005 [P] `KnowledgeTree/Localization/Localizable.xcstrings` を作成し、初期言語を「ja」に設定。research.md / R5 のキー一覧 (`share.duplicateMessage`、`share.errorNoURL`、`share.errorUnsupportedScheme`、`share.errorStorage`、`share.savedConfirmation`、`list.empty.title`、`list.deleteAction`) を日本語値で登録
 
 ---
 
@@ -46,13 +46,13 @@ description: "Task list for spec 001 — 記事保存 (Share Sheet 経由)"
 
 **⚠️ CRITICAL**: このフェーズ完了前は user story 着手不可。
 
-- [ ] T006 [P] `KnowledgeTree/Models/Article.swift` を実装する。SwiftData `@Model` クラス、attributes は `id: UUID` (主キー、`@Attribute(.unique)`)、`url: String`、`title: String`、`savedAt: Date`。data-model.md の SwiftData macro 構成セクションに従う
-- [ ] T007 `KnowledgeTree/Services/ArticleStore.swift` を実装する。`ArticleStoreProtocol` (Sendable) と `SwiftDataArticleStore` 実装を定義。`exists(url:)` は `FetchDescriptor<Article>` + `#Predicate { $0.url == url }` + `fetchLimit = 1`。`insert` / `delete` / `fetchAllSortedBySavedAt` を実装。`ArticleStoreError.persistenceFailure(underlying:)` enum も定義 (contracts/article-store.md)
+- [X] T006 [P] `KnowledgeTree/Models/Article.swift` を実装する。SwiftData `@Model` クラス、attributes は `id: UUID` (主キー、`@Attribute(.unique)`)、`url: String`、`title: String`、`savedAt: Date`。data-model.md の SwiftData macro 構成セクションに従う
+- [X] T007 `KnowledgeTree/Services/ArticleStore.swift` を実装する。`ArticleStoreProtocol` (Sendable) と `SwiftDataArticleStore` 実装を定義。`exists(url:)` は `FetchDescriptor<Article>` + `#Predicate { $0.url == url }` + `fetchLimit = 1`。`insert` / `delete` / `fetchAllSortedBySavedAt` を実装。`ArticleStoreError.persistenceFailure(underlying:)` enum も定義 (contracts/article-store.md)
 - [ ] T008 `KnowledgeTree.xcodeproj` に新規 target `KnowledgeTreeShareExtension` (Share Extension テンプレート) を追加する。Bundle ID は app の `<bundle-id>.ShareExtension` 形式
 - [ ] T009 `KnowledgeTreeShareExtension/KnowledgeTreeShareExtension.entitlements` を作成し、App Group capability を T004 で決めた ID で有効化する
 - [ ] T010 既存 app target (`KnowledgeTree`) に App Group capability を追加し、entitlements file を生成・T004 の ID を登録する
 - [ ] T011 Xcode File Inspector で `KnowledgeTree/Models/Article.swift` と `KnowledgeTree/Services/ArticleStore.swift` の Target Membership を **`KnowledgeTree` と `KnowledgeTreeShareExtension` の両方** で ON にする
-- [ ] T012 `KnowledgeTree/KnowledgeTreeApp.swift` を更新する: `ModelConfiguration(schema:, groupContainer: .identifier(<APP_GROUP_ID>))` を使い、schema を `[Article.self]` に変更。失敗時の `fatalError` は許容範囲 (Constitution Code Quality Gate の例外)
+- [X] T012 `KnowledgeTree/KnowledgeTreeApp.swift` を更新する: `ModelConfiguration(schema:, groupContainer: .identifier(<APP_GROUP_ID>))` を使い、schema を `[Article.self]` に変更。失敗時の `fatalError` は許容範囲 (Constitution Code Quality Gate の例外)
 
 **Checkpoint**: 基盤完成。User story 着手可能。
 
@@ -68,20 +68,20 @@ description: "Task list for spec 001 — 記事保存 (Share Sheet 経由)"
 
 > **NOTE: テストは実装前に書き、まず FAIL することを確認してから実装に入る (TDD は spec で必須化されていないが、SwiftData / Share 系は副作用が多いため tests-first を推奨)**
 
-- [ ] T013 [P] [US1] `KnowledgeTreeTests/ArticleSavingServiceTests.swift` を作成する。`MockArticleStore` を内部で定義し、contracts/article-saving-service.md の "Tests" 表にある 8 ケース (通常保存 / URL 不在 / 非対応スキーム / Title 空→host fallback / Title 空+host nil→absoluteString fallback / 重複保存 / 重複後 savedAt 不変 / persistence エラー) を全て網羅
-- [ ] T014 [P] [US1] `KnowledgeTreeTests/SwiftDataArticleStoreTests.swift` を作成する。`ModelContainer(for: Article.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))` で in-memory Container を構築し、`SwiftDataArticleStore` の `insert` → `exists` → `fetchAllSortedBySavedAt` → `delete` の往復を検証
+- [X] T013 [P] [US1] `KnowledgeTreeTests/ArticleSavingServiceTests.swift` を作成する。`MockArticleStore` を内部で定義し、contracts/article-saving-service.md の "Tests" 表にある 8 ケース (通常保存 / URL 不在 / 非対応スキーム / Title 空→host fallback / Title 空+host nil→absoluteString fallback / 重複保存 / 重複後 savedAt 不変 / persistence エラー) を全て網羅
+- [X] T014 [P] [US1] `KnowledgeTreeTests/SwiftDataArticleStoreTests.swift` を作成する。`ModelContainer(for: Article.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))` で in-memory Container を構築し、`SwiftDataArticleStore` の `insert` → `exists` → `fetchAllSortedBySavedAt` → `delete` の往復を検証
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] `KnowledgeTree/Services/ArticleSavingService.swift` を実装する。`ArticleSavingServiceProtocol` (Sendable) と `DefaultArticleSavingService` 実装、`SaveResult` enum を定義 (contracts/article-saving-service.md)。validation 順序: missingURL → unsupportedScheme → 重複チェック (`store.exists(url:)`) → Title fallback → `Article` 生成 → `store.insert`
+- [X] T015 [US1] `KnowledgeTree/Services/ArticleSavingService.swift` を実装する。`ArticleSavingServiceProtocol` (Sendable) と `DefaultArticleSavingService` 実装、`SaveResult` enum を定義 (contracts/article-saving-service.md)。validation 順序: missingURL → unsupportedScheme → 重複チェック (`store.exists(url:)`) → Title fallback → `Article` 生成 → `store.insert`
 - [ ] T016 [US1] `KnowledgeTree/Services/ArticleSavingService.swift` の Target Membership を **`KnowledgeTree` と `KnowledgeTreeShareExtension` の両方** で ON にする
-- [ ] T017 [P] [US1] `KnowledgeTreeShareExtension/ShareReceivedItem.swift` を実装する。`url: URL?` と `suppliedTitle: String?` を持つ Sendable struct (contracts/share-received-item.md)
-- [ ] T018 [US1] `KnowledgeTreeShareExtension/ShareViewController.swift` を実装する。`UIViewController` を継承。`viewDidAppear` で `extensionContext.inputItems` から `NSExtensionItem` → `UTType.url` attachment → `loadItem(forTypeIdentifier:)` で URL 抽出 (research.md / R2 のスニペット参照)。`ShareReceivedItem` 経由で `DefaultArticleSavingService.save(...)` を呼び、`SaveResult` をユーザーに 1 秒以内表示してから `extensionContext.completeRequest(returningItems:nil)` で dismiss。表示文言は `Localizable.xcstrings` から取得 (`share.savedConfirmation` / `share.duplicateMessage` / `share.errorNoURL` / `share.errorUnsupportedScheme` / `share.errorStorage`)
-- [ ] T019 [US1] `KnowledgeTreeShareExtension/Info.plist` を編集し、`NSExtension.NSExtensionAttributes.NSExtensionActivationRule` に `NSExtensionActivationSupportsWebURLWithMaxCount = 1` を設定して URL のみ受理する
-- [ ] T020 [P] [US1] `KnowledgeTree/Views/EmptyStateView.swift` を実装する。`Localizable.xcstrings` の `list.empty.title` を表示する落ち着いた SwiftUI View。`accessibilityIdentifier("articleListEmpty")` を付与
-- [ ] T021 [US1] `KnowledgeTree/Views/ArticleListView.swift` を実装する。`@Query<Article>(sort: \.savedAt, order: .reverse)` で取得。0 件時は `EmptyStateView()` を、1 件以上あるときは `List` でタイトル(主)+URL(副) の行を表示。各行に `accessibilityIdentifier("articleListRow")`、行に `accessibilityLabel("\(title), \(url)")` を付与
-- [ ] T022 [US1] `KnowledgeTree/KnowledgeTreeApp.swift` の `WindowGroup` 内を `ContentView()` から `ArticleListView()` に置換
-- [ ] T023 [P] [US1] `KnowledgeTreeUITests/SaveArticleUITests.swift` を作成し、以下の UI テストを実装: (a) アプリ起動 → `articleListEmpty` 要素が表示される (空状態)、(b) シード経路で記事 1 件をテスト用 ModelContainer に投入後、`articleListRow` が 1 件表示される、(c) Acceptance Scenario 3 (新しい順並び) を 2 件シードで検証
+- [X] T017 [P] [US1] `KnowledgeTreeShareExtension/ShareReceivedItem.swift` を実装する。`url: URL?` と `suppliedTitle: String?` を持つ Sendable struct (contracts/share-received-item.md)
+- [X] T018 [US1] `KnowledgeTreeShareExtension/ShareViewController.swift` を実装する。`UIViewController` を継承。`viewDidAppear` で `extensionContext.inputItems` から `NSExtensionItem` → `UTType.url` attachment → `loadItem(forTypeIdentifier:)` で URL 抽出 (research.md / R2 のスニペット参照)。`ShareReceivedItem` 経由で `DefaultArticleSavingService.save(...)` を呼び、`SaveResult` をユーザーに 1 秒以内表示してから `extensionContext.completeRequest(returningItems:nil)` で dismiss。表示文言は `Localizable.xcstrings` から取得 (`share.savedConfirmation` / `share.duplicateMessage` / `share.errorNoURL` / `share.errorUnsupportedScheme` / `share.errorStorage`)
+- [X] T019 [US1] `KnowledgeTreeShareExtension/Info.plist` を編集し、`NSExtension.NSExtensionAttributes.NSExtensionActivationRule` に `NSExtensionActivationSupportsWebURLWithMaxCount = 1` を設定して URL のみ受理する
+- [X] T020 [P] [US1] `KnowledgeTree/Views/EmptyStateView.swift` を実装する。`Localizable.xcstrings` の `list.empty.title` を表示する落ち着いた SwiftUI View。`accessibilityIdentifier("articleListEmpty")` を付与
+- [X] T021 [US1] `KnowledgeTree/Views/ArticleListView.swift` を実装する。`@Query<Article>(sort: \.savedAt, order: .reverse)` で取得。0 件時は `EmptyStateView()` を、1 件以上あるときは `List` でタイトル(主)+URL(副) の行を表示。各行に `accessibilityIdentifier("articleListRow")`、行に `accessibilityLabel("\(title), \(url)")` を付与
+- [X] T022 [US1] `KnowledgeTree/KnowledgeTreeApp.swift` の `WindowGroup` 内を `ContentView()` から `ArticleListView()` に置換
+- [X] T023 [P] [US1] `KnowledgeTreeUITests/SaveArticleUITests.swift` を作成し、以下の UI テストを実装: (a) アプリ起動 → `articleListEmpty` 要素が表示される (空状態)、(b) シード経路で記事 1 件をテスト用 ModelContainer に投入後、`articleListRow` が 1 件表示される、(c) Acceptance Scenario 3 (新しい順並び) を 2 件シードで検証
 
 **Checkpoint**: User Story 1 完成。Share Sheet → 保存 → 一覧表示 → 重複拒否 が動く MVP 状態。
 
@@ -99,8 +99,8 @@ description: "Task list for spec 001 — 記事保存 (Share Sheet 経由)"
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] `KnowledgeTree/Views/SafariView.swift` を実装する。`UIViewControllerRepresentable` で `SFSafariViewController(url:)` をラップ (research.md / R4 のスニペット参照)。`accessibilityIdentifier("articleSafariView")` を root に付与
-- [ ] T026 [US2] `KnowledgeTree/Views/ArticleListView.swift` を更新する: `@State private var selectedArticle: Article?` を追加、List 行を `Button(action: { selectedArticle = article })` で wrap し、`.sheet(item: $selectedArticle) { SafariView(url: URL(string: $0.url)!) }` を追加。URL parse 失敗時は `nil` 行は無視 (本 spec ではスキーム validation 済なので発生しない想定)
+- [X] T025 [US2] `KnowledgeTree/Views/SafariView.swift` を実装する。`UIViewControllerRepresentable` で `SFSafariViewController(url:)` をラップ (research.md / R4 のスニペット参照)。`accessibilityIdentifier("articleSafariView")` を root に付与
+- [X] T026 [US2] `KnowledgeTree/Views/ArticleListView.swift` を更新する: `@State private var selectedArticle: Article?` を追加、List 行を `Button(action: { selectedArticle = article })` で wrap し、`.sheet(item: $selectedArticle) { SafariView(url: URL(string: $0.url)!) }` を追加。URL parse 失敗時は `nil` 行は無視 (本 spec ではスキーム validation 済なので発生しない想定)
 
 **Checkpoint**: User Story 2 完成。Acceptance Scenario 1〜2 が成立。
 
@@ -118,7 +118,7 @@ description: "Task list for spec 001 — 記事保存 (Share Sheet 経由)"
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] `KnowledgeTree/Views/ArticleListView.swift` を更新する: `List` の `ForEach` に `.onDelete { offsets in ... }` を追加し、対象 `Article` を `SwiftDataArticleStore.delete(_:)` 経由で削除。`@Environment(\.modelContext)` を使ってコンテキスト経由で削除すること (Apple HIG 準拠: 確認ダイアログなしの即削除)。スワイプアクションには `accessibilityIdentifier("articleDeleteAction")` と `Localizable.xcstrings` の `list.deleteAction` キーを使用
+- [X] T028 [US3] `KnowledgeTree/Views/ArticleListView.swift` を更新する: `List` の `ForEach` に `.onDelete { offsets in ... }` を追加し、対象 `Article` を `SwiftDataArticleStore.delete(_:)` 経由で削除。`@Environment(\.modelContext)` を使ってコンテキスト経由で削除すること (Apple HIG 準拠: 確認ダイアログなしの即削除)。スワイプアクションには `accessibilityIdentifier("articleDeleteAction")` と `Localizable.xcstrings` の `list.deleteAction` キーを使用
 
 **Checkpoint**: User Story 3 完成。spec 001 の全 user story が実装済み。
 
@@ -128,12 +128,12 @@ description: "Task list for spec 001 — 記事保存 (Share Sheet 経由)"
 
 **Purpose**: Quality Gate / Constitution 準拠の最終仕上げ。
 
-- [ ] T029 [P] アクセシビリティ確認: 全インタラクティブ要素 (`articleListRow`、`articleListEmpty`、`articleDeleteAction`、`articleSafariViewDoneButton`、`shareExtensionStatusLabel`) に `accessibilityIdentifier` が付与されていることを `grep -rn 'accessibilityIdentifier' KnowledgeTree/ KnowledgeTreeShareExtension/` で確認
-- [ ] T030 [P] 文言確認: `KnowledgeTree/Localization/Localizable.xcstrings` の全キーが日本語値を持ち、コード内に英語生文字列リテラルが含まれていないことを `grep -rn 'Text("[A-Za-z]' KnowledgeTree/ KnowledgeTreeShareExtension/` で確認 (Principle VII / FR-011 / SC-008)
+- [X] T029 [P] アクセシビリティ確認: 全インタラクティブ要素 (`articleListRow`、`articleListEmpty`、`articleDeleteAction`、`articleSafariViewDoneButton`、`shareExtensionStatusLabel`) に `accessibilityIdentifier` が付与されていることを `grep -rn 'accessibilityIdentifier' KnowledgeTree/ KnowledgeTreeShareExtension/` で確認
+- [X] T030 [P] 文言確認: `KnowledgeTree/Localization/Localizable.xcstrings` の全キーが日本語値を持ち、コード内に英語生文字列リテラルが含まれていないことを `grep -rn 'Text("[A-Za-z]' KnowledgeTree/ KnowledgeTreeShareExtension/` で確認 (Principle VII / FR-011 / SC-008)
 - [ ] T031 [P] パフォーマンス測定: Debug ビルドで 1000 件の `Article` を seed → Instruments の SwiftUI Time Profiler で 60 fps スクロールを確認 → 結果を `specs/001-save-article/perf-results.md` に保存して PR description に貼付 (SC-003)
 - [ ] T032 [P] パフォーマンス測定: 行タップから SVC 表示までの時間を Instruments で計測し 300 ms 以内を確認 → `specs/001-save-article/perf-results.md` に追記 (SC-004)
 - [ ] T033 quickstart.md の手動検証 (US1〜US3 + Edge Cases + Accessibility) を実機 / シミュレータで全項目実施し、各「Pass」を埋めた状態で PR description に貼付
-- [ ] T034 plan.md の Constitution Check 11 項目を最終確認し、すべて [x] のままであることを review (Phase 1 設計時の状態を維持)
+- [X] T034 plan.md の Constitution Check 11 項目を最終確認し、すべて [x] のままであることを review (Phase 1 設計時の状態を維持)
 - [ ] T035 Constitution の deferred TODO (`TARGETED_DEVICE_FAMILY = "1,2,7"` → `"1,2"` への絞り込み、macOS deployment target 整理) は別 PR で扱う前提で、本 PR description にリンクメモを残す
 
 ---
