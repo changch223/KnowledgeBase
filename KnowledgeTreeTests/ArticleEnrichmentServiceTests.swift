@@ -96,6 +96,9 @@ final class MockArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
 
     enum MockError: Error { case forced }
 
+    var lastPageCountFetched: Int = 0
+    var lastPageCountSkipped: Int = 0
+
     func upsert(
         article: Article,
         status: EnrichmentStatus,
@@ -103,10 +106,14 @@ final class MockArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
         summary: String?,
         ogImageURL: String?,
         rawHTML: String?,
-        retryCount: Int
+        retryCount: Int,
+        pageCountFetched: Int,
+        pageCountSkipped: Int
     ) throws {
         if shouldThrowOnUpsert { throw MockError.forced }
         upsertCount += 1
+        lastPageCountFetched = pageCountFetched
+        lastPageCountSkipped = pageCountSkipped
         lastUpsert = UpsertCall(
             status: status,
             canonicalTitle: canonicalTitle,

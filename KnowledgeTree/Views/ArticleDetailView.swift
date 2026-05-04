@@ -163,6 +163,21 @@ struct ArticleDetailView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+
+            // spec 007: マルチページ追跡の取得状況
+            if let enrichment = article.enrichment, enrichment.pageCountFetched > 1 {
+                if enrichment.pageCountSkipped > 0 {
+                    Text("detail.pages.skippedNotice \(enrichment.pageCountFetched)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("pagesSkippedNotice")
+                } else {
+                    Text("detail.pages.fetchedNotice \(enrichment.pageCountFetched)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("pagesFetchedNotice")
+                }
+            }
         }
     }
 

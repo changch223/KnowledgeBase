@@ -36,6 +36,28 @@
         }
       }
     },
+    "detail.pages.fetchedNotice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全 %lld ページ取得しました"
+          }
+        }
+      }
+    },
+    "detail.pages.skippedNotice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限に到達したため最初の %lld ページのみ取得しました"
+          }
+        }
+      }
+    },
     "detail.body.pending" : {
       "extractionState" : "manual",
       "localizations" : {
