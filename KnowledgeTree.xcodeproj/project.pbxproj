@@ -47,6 +47,7 @@
 		9B4C4D21D5C9F77E3D29181C /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7AFE8343846264A1B3D2BDF /* ShareViewController.swift */; };
 		A82984FB6D8D5E4DAAC3847A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C7DAD938E42AD2348CBDCB25 /* Localizable.xcstrings */; };
 		B691D7E1B0C6CEADA639BD7E /* KnowledgeExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED10A656104BD0A5554A675B /* KnowledgeExtractionService.swift */; };
+		B9ABDD2A94692428CB24885A /* KnowledgeTree/Models/Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */; };
 		BDA5AB60F9DB8361D24CEE5F /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
 		C00530BE916D1E20EF69C543 /* ArticleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D0C85FFA5FCF3E80E2BB02 /* ArticleListView.swift */; };
 		C148339AE6D8B458F717475E /* ArticleRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56ABEECD91F3865E53288B1 /* ArticleRow.swift */; };
@@ -111,6 +112,7 @@
 		2474495F5EEA27DC6A1A2C9C /* ArticleBody.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArticleBody.swift; sourceTree = "<group>"; };
 		25C3A7D470F33EE1E89933CB /* KnowledgeTree/SharedSchema.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/SharedSchema.swift; sourceTree = SOURCE_ROOT; };
 		27C609BAB0523A34CE9912F5 /* SwiftDataArticleStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SwiftDataArticleStoreTests.swift; sourceTree = "<group>"; };
+		2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/Tag.swift; sourceTree = SOURCE_ROOT; };
 		2B240E6C515F28CB5E2BCD18 /* ExtractedKnowledge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExtractedKnowledge.swift; sourceTree = "<group>"; };
 		34E458F44B8183F000D16663 /* EntityChip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EntityChip.swift; sourceTree = "<group>"; };
 		407EBE05EFE38E4F95246085 /* EmptyStateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -224,6 +226,7 @@
 			isa = PBXGroup;
 			children = (
 				25C3A7D470F33EE1E89933CB /* KnowledgeTree/SharedSchema.swift */,
+				2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -606,6 +609,7 @@
 				75E87507A77FBD3E1799BFE9 /* ArticleStore.swift in Sources */,
 				01F0666D01DBA709C14B1DD2 /* ArticleSavingService.swift in Sources */,
 				7B419E0AF410C069696AB487 /* KnowledgeTree/SharedSchema.swift in Sources */,
+				B9ABDD2A94692428CB24885A /* KnowledgeTree/Models/Tag.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

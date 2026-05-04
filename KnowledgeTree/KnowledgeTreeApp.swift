@@ -93,14 +93,20 @@ struct KnowledgeTreeApp: App {
             processingMonitor: processingMonitor
         )
 
+        // spec 008: TagStore
+        let tagStore = TagStore(context: context, refreshTrigger: refreshTrigger)
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
         serviceContainer.knowledgeService = knowledgeService
+        serviceContainer.tagStore = tagStore
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
         await bodyService.backfillAll()
         await knowledgeService.backfillAll()
+        // spec 008: 孤児タグの cleanup (起動時 1 回)
+        try? tagStore.cleanupOrphans()
     }
 }

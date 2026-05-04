@@ -16,4 +16,6 @@ final class ServiceContainer {
     var enrichmentService: ArticleEnrichmentServiceProtocol?
     var bodyService: BodyExtractionServiceProtocol?
     var knowledgeService: KnowledgeExtractionServiceProtocol?
+    /// spec 008: タグの CRUD を担当
+    var tagStore: TagStore?
 }

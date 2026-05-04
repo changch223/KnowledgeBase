@@ -26,6 +26,8 @@ struct ArticleDetailView: View {
     /// refresh.version の変化を SwiftUI が確実に tracking するための local @State。
     /// .onChange で increment され、LazyVStack の .id() に紐付く。
     @State private var refreshTick: Int = 0
+    /// spec 008: 関連記事タップで sheet を切り替えるための state
+    @State private var presentedRelatedArticle: Article?
 
     /// 1秒 Timer ポーリング: 5 つの通知経路がすべて穴になる場合の最終保険。
     /// completion (knowledge succeeded + body succeeded) になったら止まる条件で
@@ -76,6 +78,9 @@ struct ArticleDetailView: View {
                     // @Bindable article で ogImageURL の変化は auto observe される。
                     headerSection
 
+                    // spec 008: タグセクション (手動 + 自動提案)
+                    tagsSection
+
                     // knowledge / body セクションだけ refreshTick で rebuild する。
                     // 完了状態 (本文・知識サマリ) を確実に live update するため。
                     Group {
@@ -85,6 +90,12 @@ struct ArticleDetailView: View {
                         bodySection
                     }
                     .id(refreshTick)
+
+                    // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
+                    RelatedArticlesSection(article: article) { related in
+                        // タップで現在の sheet を上書き表示
+                        presentedRelatedArticle = related
+                    }
 
                     openOriginalButton
                 }
@@ -100,6 +111,9 @@ struct ArticleDetailView: View {
             }
             .sheet(item: $presentedSafariURL) { wrapper in
                 SafariView(url: wrapper.url)
+            }
+            .sheet(item: $presentedRelatedArticle) { related in
+                ArticleDetailView(article: related)
             }
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
@@ -138,6 +152,68 @@ struct ArticleDetailView: View {
     }
 
     // MARK: - Sections
+
+    /// spec 008: タグセクション (既存タグ chips + 自動提案 chips + 入力欄)
+    @ViewBuilder
+    private var tagsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("detail.tags.heading")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            // 既存タグ
+            if !article.tags.isEmpty {
+                FlowingTagsLayout {
+                    ForEach(article.tags) { tag in
+                        TagChip(
+                            name: tag.name,
+                            onRemove: { removeTag(name: tag.name) },
+                            isSuggested: false
+                        )
+                    }
+                }
+            }
+
+            // 自動提案
+            let existingNames = Set(article.tags.map(\.name))
+            let suggestions = SuggestedTagFinder.find(for: article, existingTagNames: existingNames)
+            if !suggestions.isEmpty {
+                Text("detail.suggestedTags.heading")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                FlowingTagsLayout {
+                    ForEach(suggestions) { suggestion in
+                        Button {
+                            addTag(rawName: suggestion.displayName)
+                        } label: {
+                            TagChip(
+                                name: suggestion.displayName,
+                                onRemove: nil,
+                                isSuggested: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // 入力欄
+            TagInputField { rawText in
+                addTag(rawName: rawText)
+            }
+        }
+        .accessibilityIdentifier("articleDetailTagsSection")
+    }
+
+    private func addTag(rawName: String) {
+        guard let store = services.tagStore else { return }
+        try? store.addTag(rawName: rawName, to: article)
+    }
+
+    private func removeTag(name: String) {
+        guard let store = services.tagStore else { return }
+        try? store.removeTag(normalizedName: name, from: article)
+    }
 
     @ViewBuilder
     private var headerSection: some View {

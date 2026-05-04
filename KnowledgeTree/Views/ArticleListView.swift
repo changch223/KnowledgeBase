@@ -2,11 +2,8 @@
 //  ArticleListView.swift
 //  KnowledgeTree
 //
-//  spec 001 — 一覧 / 内蔵ブラウザ起動 / スワイプ削除
-//  spec 002 — ArticleRow + サムネイル + status badge 表示
-//  spec 003 — タップ遷移先を Reader / SVC で出し分け
-//  spec 005 — タップで常に ArticleDetailView へ + 下部 BottomStatusBar
-//          + RefreshTrigger で relationship 経由の変更を確実に反映
+//  spec 001-005 / 008 — 一覧画面: 検索 / タグ一覧 / Detail sheet / BottomStatusBar /
+//  live update 5 並列メカニズム
 //
 
 import SwiftUI
@@ -17,47 +14,37 @@ struct ArticleListView: View {
     @Environment(ProcessingMonitor.self) private var monitor
     @Environment(RefreshTrigger.self) private var refresh
     @Environment(\.scenePhase) private var scenePhase
-    @Query(sort: \Article.savedAt, order: .reverse) private var articles: [Article]
+    @State private var searchQuery: String = ""
     @State private var selectedArticle: Article?
     @State private var refreshTick: Int = 0
 
     var body: some View {
-        // @State refreshTick は SwiftUI が必ず tracking する値。
-        // refresh.version の変化を onChange で検知して refreshTick を increment し、
-        // 各 ArticleRow に渡すことで relationship 経由の変更を確実に反映させる。
         NavigationStack {
             ZStack(alignment: .bottom) {
-                Group {
-                    if articles.isEmpty {
-                        EmptyStateView()
-                    } else {
-                        List {
-                            ForEach(articles) { article in
-                                Button {
-                                    selectedArticle = article
-                                } label: {
-                                    ArticleRow(article: article, refreshTick: refreshTick)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("articleListRow")
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        delete(article)
-                                    } label: {
-                                        Label("list.deleteAction", systemImage: "trash")
-                                    }
-                                    .accessibilityIdentifier("articleDeleteAction")
-                                }
-                            }
+                ArticleListContent(
+                    searchQuery: searchQuery,
+                    refreshTick: refreshTick,
+                    selectedArticle: $selectedArticle,
+                    monitorIsIdle: monitor.isIdle
+                )
+                .navigationTitle("list.title")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink(value: TagListDestination()) {
+                            Image(systemName: "tag")
                         }
-                        .safeAreaInset(edge: .bottom) {
-                            if !monitor.isIdle {
-                                Color.clear.frame(height: 60)
-                            }
-                        }
+                        .accessibilityIdentifier("tagListNavigationButton")
                     }
                 }
-                .navigationTitle("list.title")
+                .navigationDestination(for: TagListDestination.self) { _ in
+                    TagListView()
+                }
+                .navigationDestination(for: TagFilteredDestination.self) { dest in
+                    TagFilteredListView(tagName: dest.tagName)
+                }
+                .navigationDestination(for: EntityFilteredDestination.self) { dest in
+                    EntityFilteredListView(entityName: dest.entityName)
+                }
                 .sheet(item: $selectedArticle) { article in
                     ArticleDetailView(article: article)
                 }
@@ -66,17 +53,19 @@ struct ArticleListView: View {
                     .animation(.easeInOut(duration: 0.2), value: monitor.totalActiveCount)
                     .animation(.easeInOut(duration: 0.2), value: monitor.current?.id)
             }
+            .searchable(
+                text: $searchQuery,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: Text("search.placeholder")
+            )
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
             }
-            // SwiftData の didSave 通知 (同 process の同一 ModelContainer save 時)
             .onReceive(
                 NotificationCenter.default.publisher(for: ModelContext.didSave)
             ) { _ in
                 refreshTick &+= 1
             }
-            // CoreData レベル: 同 process の任意の context 変更で fire (save 前でも)
-            // SwiftData の Observation 連鎖で穴があった場合のフォールバック。
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: NSNotification.Name("NSManagedObjectContextObjectsDidChange")
@@ -84,8 +73,6 @@ struct ArticleListView: View {
             ) { _ in
                 refreshTick &+= 1
             }
-            // CoreData レベル: 別 process (Share Extension) からの save で fire。
-            // tick increment で View 再評価 → @Query が再フェッチ → 最新値表示。
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: NSNotification.Name("NSPersistentStoreRemoteChange")
@@ -93,10 +80,94 @@ struct ArticleListView: View {
             ) { _ in
                 refreshTick &+= 1
             }
-            // 前景復帰時の保険 (Share Extension 処理直後にアプリへ戻った場合等)
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
                     refreshTick &+= 1
+                }
+            }
+        }
+    }
+}
+
+/// inner View: searchQuery を init で受け取って動的 @Query を構築。
+/// SwiftData の動的 Predicate 構築には inner View pattern が公式 recommended (research.md R4)。
+private struct ArticleListContent: View {
+    let searchQuery: String
+    let refreshTick: Int
+    @Binding var selectedArticle: Article?
+    let monitorIsIdle: Bool
+
+    @Environment(\.modelContext) private var modelContext
+    @Query private var articles: [Article]
+
+    init(
+        searchQuery: String,
+        refreshTick: Int,
+        selectedArticle: Binding<Article?>,
+        monitorIsIdle: Bool
+    ) {
+        self.searchQuery = searchQuery
+        self.refreshTick = refreshTick
+        self._selectedArticle = selectedArticle
+        self.monitorIsIdle = monitorIsIdle
+        // 検索時は title contains の prefilter を SwiftData に投げる。
+        // relationship target (enrichment / extractedKnowledge / tags) は body 内で post-filter。
+        // 空クエリ時は全件 fetch (フィルター無し)。
+        // ただし「relationship target 内マッチ」を担保するため、検索時も全件 fetch して
+        // View 側で完全な matches() をかける (1000 記事規模で 200ms 以内想定)。
+        _articles = Query(
+            sort: \Article.savedAt,
+            order: .reverse
+        )
+    }
+
+    /// View 側 post-filter (research.md R1 の B 案)
+    private var filteredArticles: [Article] {
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return articles }
+        return articles.filter { SearchPredicate.matches(article: $0, query: q) }
+    }
+
+    var body: some View {
+        let visible = filteredArticles
+        return Group {
+            if visible.isEmpty {
+                if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    EmptyStateView()
+                } else {
+                    ContentUnavailableView(
+                        "search.empty.title",
+                        systemImage: "magnifyingglass"
+                    )
+                }
+            } else {
+                List {
+                    ForEach(visible) { article in
+                        Button {
+                            selectedArticle = article
+                        } label: {
+                            ArticleRow(
+                                article: article,
+                                refreshTick: refreshTick,
+                                searchQuery: searchQuery
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("articleListRow")
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                delete(article)
+                            } label: {
+                                Label("list.deleteAction", systemImage: "trash")
+                            }
+                            .accessibilityIdentifier("articleDeleteAction")
+                        }
+                    }
+                }
+                .safeAreaInset(edge: .bottom) {
+                    if !monitorIsIdle {
+                        Color.clear.frame(height: 60)
+                    }
                 }
             }
         }
@@ -108,23 +179,20 @@ struct ArticleListView: View {
     }
 }
 
+/// NavigationLink 用 Hashable destination
+struct TagListDestination: Hashable {}
+struct TagFilteredDestination: Hashable { let tagName: String }
+struct EntityFilteredDestination: Hashable { let entityName: String }
+
 #Preview("一覧") {
     let container = try! ModelContainer(
-        for: Article.self, ArticleEnrichment.self, ArticleBody.self,
+        for: Article.self, ArticleEnrichment.self, ArticleBody.self, Tag.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
     container.mainContext.insert(Article(url: "https://example.com/a", title: "サンプル記事 A"))
     container.mainContext.insert(Article(url: "https://example.com/b", title: "サンプル記事 B"))
     return ArticleListView()
         .modelContainer(container)
-        .environment(ProcessingMonitor())
-        .environment(RefreshTrigger())
-        .environment(ServiceContainer())
-}
-
-#Preview("空状態") {
-    ArticleListView()
-        .modelContainer(for: Article.self, inMemory: true)
         .environment(ProcessingMonitor())
         .environment(RefreshTrigger())
         .environment(ServiceContainer())

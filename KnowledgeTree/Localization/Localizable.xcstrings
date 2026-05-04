@@ -58,6 +58,136 @@
         }
       }
     },
+    "search.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を検索"
+          }
+        }
+      }
+    },
+    "search.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該当する記事がありません"
+          }
+        }
+      }
+    },
+    "search.field.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タイトル" } }
+      }
+    },
+    "search.field.canonicalTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "正式タイトル" } }
+      }
+    },
+    "search.field.essence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "要点" } }
+      }
+    },
+    "search.field.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "要約" } }
+      }
+    },
+    "search.field.keyFact" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "事実" } }
+      }
+    },
+    "search.field.entity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "登場" } }
+      }
+    },
+    "search.field.tag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ" } }
+      }
+    },
+    "tag.list.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ一覧" } }
+      }
+    },
+    "tag.list.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "まだタグがありません" } }
+      }
+    },
+    "tag.filtered.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "tag: %@" } }
+      }
+    },
+    "tag.filtered.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このタグの記事はありません" } }
+      }
+    },
+    "tag.input.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグを追加" } }
+      }
+    },
+    "tag.input.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "追加" } }
+      }
+    },
+    "detail.tags.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ" } }
+      }
+    },
+    "detail.related.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "関連記事" } }
+      }
+    },
+    "detail.suggestedTags.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI 提案" } }
+      }
+    },
+    "entity.filtered.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "entity: %@" } }
+      }
+    },
+    "entity.filtered.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "この entity を含む記事はありません" } }
+      }
+    },
     "detail.body.pending" : {
       "extractionState" : "manual",
       "localizations" : {

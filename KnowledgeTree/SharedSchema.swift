@@ -27,6 +27,7 @@ enum SharedSchema {
             ExtractedKnowledge.self,
             KeyFact.self,
             KnowledgeEntity.self,
+            Tag.self,  // spec 008
         ])
     }
 
