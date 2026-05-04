@@ -20,9 +20,18 @@ struct BottomStatusBar: View {
                     .tint(phaseTintColor(current.phase))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(phaseLabel(current.phase))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(phaseLabel(current.phase))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        // spec 006: chunked summarization 等の N/M 進捗
+                        if let index = current.progressIndex,
+                           let total = current.progressTotal {
+                            Text("\(index)/\(total)")
+                                .font(.caption2.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Text(current.articleTitle)
                         .font(.caption)
                         .lineLimit(1)

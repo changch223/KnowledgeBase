@@ -15,12 +15,11 @@ import Foundation
 struct KnowledgeExtractor {
     let session: LanguageModelSessionProtocol
 
-    /// Foundation Models on-device の context window 上限 (~4096 tokens)。
-    /// 実測 (zenn.dev/icare): 1,800 chars でも 4,096 token を超えるケース有 (記事末尾構造による)。
-    /// 1,200 chars × 1.7 ≒ 2,040 token + prompt overhead ~500 + safety margin で 4,096 内に確実に収まる。
-    /// 情報量は減るが、context window エラーで一切生成できないより冒頭優先で確実に走らせる方を優先。
-    /// 末尾を含む全文要約には将来 chunked summarization (spec 006 候補) で対応。
-    static let defaultMaxBodyChars = 1_200
+    /// 単発パス (本文 ≤ defaultMaxBodyChars) で使う上限。
+    /// spec 006 で 1,200 → 1,000 に変更し、超過時は chunked パスに振り分ける。
+    /// 1,000 chars × 1.7 token/char ≒ 1,700 token + prompt overhead ~500 token = 2,200 token、
+    /// margin 約 1,900 token (4,096 - 2,200)。
+    static let defaultMaxBodyChars = 1_000
 
     func extract(
         extractedText: String,
@@ -29,6 +28,31 @@ struct KnowledgeExtractor {
         let truncated = Self.truncate(text: extractedText, maxChars: maxBodyChars)
         let prompt = Self.buildPrompt(text: truncated)
         return try await session.generateKnowledge(prompt: prompt)
+    }
+
+    /// spec 006: 1 chunk を Foundation Models に渡して結果を ChunkResult として返す。
+    /// throw しない (失敗は ChunkResult.error に格納)。
+    func extractFromChunk(_ chunk: Chunk) async -> ChunkResult {
+        let prompt = Self.buildPrompt(text: chunk.text)
+        do {
+            let output = try await session.generateKnowledge(prompt: prompt)
+            return ChunkResult(chunkIndex: chunk.index, output: output, error: nil)
+        } catch {
+            return ChunkResult(chunkIndex: chunk.index, output: nil, error: error)
+        }
+    }
+
+    /// spec 006: 全 chunk の essence を統合して 1 つの essence + summary を生成。
+    /// 入力空 / 失敗時は nil を返す (Aggregator で fallback 処理)。
+    func extractMetaSummary(chunkEssences: [String]) async -> ExtractedKnowledgeOutput? {
+        let nonEmpty = chunkEssences.filter { !$0.isEmpty }
+        guard !nonEmpty.isEmpty else { return nil }
+        let prompt = Self.buildMetaSummaryPrompt(chunkEssences: nonEmpty)
+        do {
+            return try await session.generateKnowledge(prompt: prompt)
+        } catch {
+            return nil
+        }
     }
 
     /// 本文が長すぎる場合は冒頭から maxChars 文字に切り詰める。
@@ -59,6 +83,26 @@ struct KnowledgeExtractor {
 
         # 元記事本文
         \(text)
+        """
+    }
+
+    /// spec 006: meta-summary 専用 prompt。本文ではなく chunk 別 essence を入力に取る。
+    static func buildMetaSummaryPrompt(chunkEssences: [String]) -> String {
+        let numbered = chunkEssences.enumerated()
+            .map { "\($0.offset + 1). \($0.element)" }
+            .joined(separator: "\n")
+        return """
+        以下は記事の各部分から抽出した要点です。これらを統合して、記事全体の essence と summary を作ってください。
+
+        # 統合ルール (厳守)
+        - 各部分の要点に明示されている内容のみを使ってください
+        - 推測・補完・常識による情報の追加は行わないでください
+        - essence と summary は互いに矛盾しないでください
+        - keyFacts と entities は空配列で返してください (本 prompt では生成しません)
+        - すべて日本語で出力してください
+
+        # 各部分の要点
+        \(numbered)
         """
     }
 }

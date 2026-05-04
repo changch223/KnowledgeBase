@@ -169,7 +169,16 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var knowledgeSection: some View {
         if hasKnowledge, let knowledge = article.extractedKnowledge {
-            KnowledgeSummaryView(knowledge: knowledge)
+            VStack(alignment: .leading, spacing: 8) {
+                KnowledgeSummaryView(knowledge: knowledge)
+                // spec 006: 10000 文字超で要約対象外となった末尾がある場合の注記
+                if knowledge.skippedTailChars > 0 {
+                    Text("detail.knowledge.truncatedTailNotice")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("knowledgeTruncatedTailNotice")
+                }
+            }
         } else if let knowledge = article.extractedKnowledge {
             knowledgePlaceholder(status: knowledge.status)
         } else {

@@ -25,6 +25,17 @@
         }
       }
     },
+    "detail.knowledge.truncatedTailNotice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "※ 本文が長いため冒頭 10000 文字のみを要約対象としています"
+          }
+        }
+      }
+    },
     "detail.body.pending" : {
       "extractionState" : "manual",
       "localizations" : {

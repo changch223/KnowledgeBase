@@ -168,6 +168,9 @@ final class MockArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
     var calls: [Call] = []
     var pendingArticles: [Article] = []
     var shouldThrowOnUpsert = false
+    var lastChunkProcessedCount: Int = 0
+    var lastChunkTotalCount: Int = 0
+    var lastSkippedTailChars: Int = 0
 
     enum MockError: Error { case forced }
 
@@ -192,9 +195,15 @@ final class MockArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         status: ExtractionStatus,
         output: ExtractedKnowledgeOutput,
         modelVersion: String?,
-        durationMs: Int?
+        durationMs: Int?,
+        chunkProcessedCount: Int,
+        chunkTotalCount: Int,
+        skippedTailChars: Int
     ) throws {
         if shouldThrowOnUpsert { throw MockError.forced }
+        lastChunkProcessedCount = chunkProcessedCount
+        lastChunkTotalCount = chunkTotalCount
+        lastSkippedTailChars = skippedTailChars
         calls.append(Call(
             articleID: article.id,
             status: status,

@@ -21,11 +21,36 @@ protocol ArticleKnowledgeStoreProtocol {
         status: ExtractionStatus,
         output: ExtractedKnowledgeOutput,
         modelVersion: String?,
-        durationMs: Int?
+        durationMs: Int?,
+        chunkProcessedCount: Int,
+        chunkTotalCount: Int,
+        skippedTailChars: Int
     ) throws
 
     func fetchPendingArticles() throws -> [Article]
     func deleteAll() throws
+}
+
+extension ArticleKnowledgeStoreProtocol {
+    /// spec 005 互換: chunked 引数を default で 1/1/0 に固定する単発パス用の便利オーバーロード。
+    func upsertSucceeded(
+        article: Article,
+        status: ExtractionStatus,
+        output: ExtractedKnowledgeOutput,
+        modelVersion: String?,
+        durationMs: Int?
+    ) throws {
+        try upsertSucceeded(
+            article: article,
+            status: status,
+            output: output,
+            modelVersion: modelVersion,
+            durationMs: durationMs,
+            chunkProcessedCount: 1,
+            chunkTotalCount: 1,
+            skippedTailChars: 0
+        )
+    }
 }
 
 enum ArticleKnowledgeStoreError: Error {
@@ -77,7 +102,10 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         status: ExtractionStatus,
         output: ExtractedKnowledgeOutput,
         modelVersion: String?,
-        durationMs: Int?
+        durationMs: Int?,
+        chunkProcessedCount: Int,
+        chunkTotalCount: Int,
+        skippedTailChars: Int
     ) throws {
         let knowledge: ExtractedKnowledge
         if let existing = article.extractedKnowledge {
@@ -104,6 +132,10 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         knowledge.generatedAt = Date()
         knowledge.modelVersion = modelVersion
         knowledge.generationDurationMs = durationMs
+        // spec 006: chunked summarization のメタデータ
+        knowledge.chunkProcessedCount = chunkProcessedCount
+        knowledge.chunkTotalCount = chunkTotalCount
+        knowledge.skippedTailChars = skippedTailChars
 
         // KeyFacts: order を生成順で付与
         for (idx, factOutput) in output.keyFacts.enumerated() {

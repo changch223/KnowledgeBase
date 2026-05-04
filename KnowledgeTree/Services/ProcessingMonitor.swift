@@ -28,6 +28,11 @@ final class ProcessingMonitor {
         let articleTitle: String
         let phase: Phase
         let startedAt: Date
+        /// spec 006 chunked summarization 等で「N/M」進捗を表示するための完了済件数。
+        /// 単発処理では nil。
+        var progressIndex: Int?
+        /// spec 006: 総数 (chunks + meta-summary など)。単発処理では nil。
+        var progressTotal: Int?
     }
 
     private(set) var tasksByArticle: [UUID: ActiveTask] = [:]
@@ -47,14 +52,44 @@ final class ProcessingMonitor {
 
     var isIdle: Bool { tasksByArticle.isEmpty }
 
+    /// 単発処理 (spec 005 既存挙動) 用 start。progressIndex/Total なし。
     func start(_ phase: Phase, articleID: UUID, title: String) {
         let task = ActiveTask(
             id: articleID,
             articleTitle: title,
             phase: phase,
-            startedAt: Date()
+            startedAt: Date(),
+            progressIndex: nil,
+            progressTotal: nil
         )
         tasksByArticle[articleID] = task
+    }
+
+    /// spec 006: 進捗付き start。N/M 表示が必要な chunked パス等で使う。
+    func start(
+        _ phase: Phase,
+        articleID: UUID,
+        title: String,
+        progressIndex: Int,
+        progressTotal: Int
+    ) {
+        let task = ActiveTask(
+            id: articleID,
+            articleTitle: title,
+            phase: phase,
+            startedAt: Date(),
+            progressIndex: progressIndex,
+            progressTotal: progressTotal
+        )
+        tasksByArticle[articleID] = task
+    }
+
+    /// spec 006: 進捗を更新する。articleID が tasksByArticle に存在しないなら no-op。
+    /// progressIndex のみ更新、その他のフィールドは保持。
+    func updateProgress(articleID: UUID, index: Int) {
+        guard var existing = tasksByArticle[articleID] else { return }
+        existing.progressIndex = index
+        tasksByArticle[articleID] = existing
     }
 
     func finish(articleID: UUID) {

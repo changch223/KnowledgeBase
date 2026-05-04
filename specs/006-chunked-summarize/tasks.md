@@ -29,8 +29,8 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 **目的**: spec 006 実装に必要な準備。spec 005 が既に main の MVP インフラを整えているため、追加 setup は最小限。
 
-- [ ] T001 git ブランチ確認 (`006-chunked-summarize` 上で作業) と spec 001-005 の commit が main に取り込まれていることを `git log` で確認
-- [ ] T002 [P] Xcode で `KnowledgeTree.xcodeproj` を開いてビルド成功 (spec 005 の状態)、`xcodebuild test` で既存 56 ケース全 pass を確認
+- [X] T0\1 git ブランチ確認 (`006-chunked-summarize` 上で作業) と spec 001-005 の commit が main に取り込まれていることを `git log` で確認
+- [X] T0\1 [P] Xcode で `KnowledgeTree.xcodeproj` を開いてビルド成功 (spec 005 の状態)、`xcodebuild test` で既存 56 ケース全 pass を確認
 
 ---
 
@@ -40,10 +40,10 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 **⚠️ CRITICAL**: ここを完了させないと US1 / US2 / US3 のいずれも実装できない
 
-- [ ] T003 `KnowledgeTree/Models/ExtractedKnowledge.swift` に新規列 3 つを追加: `chunkProcessedCount: Int = 1`, `chunkTotalCount: Int = 1`, `skippedTailChars: Int = 0` (init にも引数追加、default 値で既存呼び出し互換)
-- [ ] T004 [P] `KnowledgeTree/Services/ProcessingMonitor.swift` の `ActiveTask` 構造体に optional `progressIndex: Int? = nil` / `progressTotal: Int? = nil` を追加。`start(_:articleID:title:progressIndex:progressTotal:)` overload と `updateProgress(articleID:index:)` メソッドを追加
-- [ ] T005 [P] `KnowledgeTree/Services/ArticleKnowledgeStore.swift` の `upsertSucceeded` / `upsertFailure` に新引数 `chunkProcessedCount: Int = 1, chunkTotalCount: Int = 1, skippedTailChars: Int = 0` を追加。SwiftData `ExtractedKnowledge` への書き込みで新列を反映
-- [ ] T006 schema migration テスト: in-memory ModelContainer で既存 schema のレコードを新 schema で読み込み、default 値が入ることを `KnowledgeTreeTests/SwiftDataArticleKnowledgeStoreTests.swift` の新ケースで確認
+- [X] T0\1 `KnowledgeTree/Models/ExtractedKnowledge.swift` に新規列 3 つを追加: `chunkProcessedCount: Int = 1`, `chunkTotalCount: Int = 1`, `skippedTailChars: Int = 0` (init にも引数追加、default 値で既存呼び出し互換)
+- [X] T0\1 [P] `KnowledgeTree/Services/ProcessingMonitor.swift` の `ActiveTask` 構造体に optional `progressIndex: Int? = nil` / `progressTotal: Int? = nil` を追加。`start(_:articleID:title:progressIndex:progressTotal:)` overload と `updateProgress(articleID:index:)` メソッドを追加
+- [X] T0\1 [P] `KnowledgeTree/Services/ArticleKnowledgeStore.swift` の `upsertSucceeded` / `upsertFailure` に新引数 `chunkProcessedCount: Int = 1, chunkTotalCount: Int = 1, skippedTailChars: Int = 0` を追加。SwiftData `ExtractedKnowledge` への書き込みで新列を反映
+- [X] T0\1 schema migration テスト: in-memory ModelContainer で既存 schema のレコードを新 schema で読み込み、default 値が入ることを `KnowledgeTreeTests/SwiftDataArticleKnowledgeStoreTests.swift` の新ケースで確認
 
 **Checkpoint**: Foundation ready - US1 / US2 / US3 を並列着手可能
 
@@ -59,18 +59,18 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 > **NOTE: テストファースト。実装前に FAIL を確認**
 
-- [ ] T007 [P] [US1] `KnowledgeTreeTests/ChunkSplitterTests.swift` を新規作成。10 ケース (空 / 1 文字 / 999 / 1000 / 1001 / 5000 / 10000 / 10001 / 15000 / 句点なし) で contracts/chunk-splitter.md の不変条件を assert
-- [ ] T008 [P] [US1] `KnowledgeTreeTests/ChunkedKnowledgeAggregatorTests.swift` を新規作成。11 ケース (全失敗 / 1 chunk + meta 成功 / 3 chunk + meta 失敗 / keyFacts 重複排除 / 空白違い / case-insensitive entities / salience max / type 多数決 / type 同票 tiebreak / 空 results / meta only)
-- [ ] T009 [P] [US1] `KnowledgeTreeTests/KnowledgeExtractorTests.swift` に 7 ケース追加: extractFromChunk 正常 / extractFromChunk error / extractMetaSummary 正常 / extractMetaSummary 失敗 / extractMetaSummary 空入力 / buildMetaSummaryPrompt 内容 / buildMetaSummaryPrompt は本文を含まない
-- [ ] T010 [US1] `KnowledgeTreeTests/KnowledgeExtractionServiceTests.swift` に 7 chunked 経路ケース追加: long text 分割 / 全 chunk 成功保存 / 1 chunk 失敗 partial / 全 chunk 失敗 .failed / meta 失敗 partial / monitor progress 更新 / 15000 文字 tail truncate
+- [X] T0\1 [P] [US1] `KnowledgeTreeTests/ChunkSplitterTests.swift` を新規作成。10 ケース (空 / 1 文字 / 999 / 1000 / 1001 / 5000 / 10000 / 10001 / 15000 / 句点なし) で contracts/chunk-splitter.md の不変条件を assert
+- [X] T0\1 [P] [US1] `KnowledgeTreeTests/ChunkedKnowledgeAggregatorTests.swift` を新規作成。11 ケース (全失敗 / 1 chunk + meta 成功 / 3 chunk + meta 失敗 / keyFacts 重複排除 / 空白違い / case-insensitive entities / salience max / type 多数決 / type 同票 tiebreak / 空 results / meta only)
+- [X] T0\1 [P] [US1] `KnowledgeTreeTests/KnowledgeExtractorTests.swift` に 7 ケース追加: extractFromChunk 正常 / extractFromChunk error / extractMetaSummary 正常 / extractMetaSummary 失敗 / extractMetaSummary 空入力 / buildMetaSummaryPrompt 内容 / buildMetaSummaryPrompt は本文を含まない
+- [X] T0\1 [US1] `KnowledgeTreeTests/KnowledgeExtractionServiceTests.swift` に 7 chunked 経路ケース追加: long text 分割 / 全 chunk 成功保存 / 1 chunk 失敗 partial / 全 chunk 失敗 .failed / meta 失敗 partial / monitor progress 更新 / 15000 文字 tail truncate
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] `KnowledgeTree/Services/ChunkSplitter.swift` を新規作成。contracts/chunk-splitter.md の API + 不変条件を実装。`Chunk` struct も同ファイル内
-- [ ] T012 [P] [US1] `KnowledgeTree/Services/ChunkedKnowledgeAggregator.swift` を新規作成。contracts/chunked-aggregator.md の `merge(results:metaSummary:) -> AggregatedKnowledge` を実装。`AggregatedKnowledge` / `ChunkResult` struct も同ファイル
-- [ ] T013 [US1] `KnowledgeTree/Services/KnowledgeExtractor.swift` を拡張: `defaultMaxBodyChars` を 1200 → 1000 に変更、`extractFromChunk(_:)` / `extractMetaSummary(chunkEssences:)` / `buildMetaSummaryPrompt(chunkEssences:)` を追加。既存 `extract(extractedText:)` の挙動は変更なし (T011, T012 完了後)
-- [ ] T014 [US1] `KnowledgeTree/Services/KnowledgeExtractionService.swift` の `extract(article:)` 内に chunked パス分岐を追加: `text.count <= 1000` なら従来単発、`> 1000` なら ChunkSplitter → 逐次 extractFromChunk → ChunkedKnowledgeAggregator.merge → upsert (T013 + T011 + T012 + T005 完了後)
-- [ ] T015 [US1] chunked パス内で `Task.isCancelled` チェックを各 chunk 開始前に追加 (cancelAll() 呼び出し時に途中 chunk を skip できるように)
+- [X] T0\1 [P] [US1] `KnowledgeTree/Services/ChunkSplitter.swift` を新規作成。contracts/chunk-splitter.md の API + 不変条件を実装。`Chunk` struct も同ファイル内
+- [X] T0\1 [P] [US1] `KnowledgeTree/Services/ChunkedKnowledgeAggregator.swift` を新規作成。contracts/chunked-aggregator.md の `merge(results:metaSummary:) -> AggregatedKnowledge` を実装。`AggregatedKnowledge` / `ChunkResult` struct も同ファイル
+- [X] T0\1 [US1] `KnowledgeTree/Services/KnowledgeExtractor.swift` を拡張: `defaultMaxBodyChars` を 1200 → 1000 に変更、`extractFromChunk(_:)` / `extractMetaSummary(chunkEssences:)` / `buildMetaSummaryPrompt(chunkEssences:)` を追加。既存 `extract(extractedText:)` の挙動は変更なし (T011, T012 完了後)
+- [X] T0\1 [US1] `KnowledgeTree/Services/KnowledgeExtractionService.swift` の `extract(article:)` 内に chunked パス分岐を追加: `text.count <= 1000` なら従来単発、`> 1000` なら ChunkSplitter → 逐次 extractFromChunk → ChunkedKnowledgeAggregator.merge → upsert (T013 + T011 + T012 + T005 完了後)
+- [X] T0\1 [US1] chunked パス内で `Task.isCancelled` チェックを各 chunk 開始前に追加 (cancelAll() 呼び出し時に途中 chunk を skip できるように)
 
 **Checkpoint**: US1 単独で動作確認可能。長文記事を context window エラー無しで要約。
 
@@ -84,15 +84,15 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T016 [P] [US2] `KnowledgeTreeTests/KnowledgeExtractionServiceTests.swift` に「extractUpdatesMonitorProgressOnEachChunk」ケースを追加 (Mock monitor の updateProgress 呼び出し回数と引数を verify)
-- [ ] T017 [P] [US2] `KnowledgeTreeTests/ProcessingMonitorTests.swift` を新規作成: ActiveTask の progressIndex/Total optional 動作 / start で初期 progress 設定 / updateProgress で値更新 / finish で削除
+- [X] T0\1 [P] [US2] `KnowledgeTreeTests/KnowledgeExtractionServiceTests.swift` に「extractUpdatesMonitorProgressOnEachChunk」ケースを追加 (Mock monitor の updateProgress 呼び出し回数と引数を verify)
+- [X] T0\1 [P] [US2] `KnowledgeTreeTests/ProcessingMonitorTests.swift` を新規作成: ActiveTask の progressIndex/Total optional 動作 / start で初期 progress 設定 / updateProgress で値更新 / finish で削除
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] `KnowledgeTree/Services/KnowledgeExtractionService.swift` の chunked パス内で各 chunk 完了後に `monitor.updateProgress(articleID:index:)` を呼ぶ (T014 を拡張)
-- [ ] T019 [P] [US2] `KnowledgeTree/Views/BottomStatusBar.swift` の表示分岐を変更: `current.progressIndex != nil && current.progressTotal != nil` なら "知識抽出中 N/M"、両 nil なら従来 "知識抽出中"
-- [ ] T020 [P] [US2] `KnowledgeTree/Localization/Localizable.xcstrings` に `status.phase.knowledgeProgress` (例: "知識抽出中 %lld/%lld") を追加。BottomStatusBar から `String(localized:)` 経由で参照
-- [ ] T021 [US2] 単発パスの monitor.start 呼び出しは progressIndex/Total を渡さない (デフォルト nil) ことを T014 で保証
+- [X] T0\1 [US2] `KnowledgeTree/Services/KnowledgeExtractionService.swift` の chunked パス内で各 chunk 完了後に `monitor.updateProgress(articleID:index:)` を呼ぶ (T014 を拡張)
+- [X] T0\1 [P] [US2] `KnowledgeTree/Views/BottomStatusBar.swift` の表示分岐を変更: `current.progressIndex != nil && current.progressTotal != nil` なら "知識抽出中 N/M"、両 nil なら従来 "知識抽出中"
+- [X] T0\1 [P] [US2] `KnowledgeTree/Localization/Localizable.xcstrings` に `status.phase.knowledgeProgress` (例: "知識抽出中 %lld/%lld") を追加。BottomStatusBar から `String(localized:)` 経由で参照
+- [X] T0\1 [US2] 単発パスの monitor.start 呼び出しは progressIndex/Total を渡さない (デフォルト nil) ことを T014 で保証
 
 **Checkpoint**: US1 + US2 動作。長文記事処理中に N/M 進捗表示。
 
@@ -106,14 +106,14 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T022 [P] [US3] `KnowledgeExtractionServiceTests.swift` に「extractWithLongTextOneChunkFailsMarksPartiallySucceeded」「extractWithLongTextAllChunksFailMarksFailed」「extractWithLongTextMetaSummaryFailsMarksPartiallySucceeded」3 ケース追加 (T010 と統合可)
+- [X] T0\1 [P] [US3] `KnowledgeExtractionServiceTests.swift` に「extractWithLongTextOneChunkFailsMarksPartiallySucceeded」「extractWithLongTextAllChunksFailMarksFailed」「extractWithLongTextMetaSummaryFailsMarksPartiallySucceeded」3 ケース追加 (T010 と統合可)
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] `ChunkedKnowledgeAggregator.determineStatus()` ロジック実装 (T012 で完成済の場合は確認のみ): successfulChunkCount 0 → .failed、>0 + meta 成功 → .succeeded、>0 + meta 失敗 → .partiallySucceeded
-- [ ] T024 [US3] meta-summary 失敗時の fallback 実装 (T012 で完成済の場合は確認のみ): essence = 最初の成功 chunk の essence、summary = 各成功 chunk の essence の改行連結 (300 文字 truncate)
-- [ ] T025 [US3] Service の chunked パスで全失敗時 `store.upsertFailure(article:reason: "全 N chunk 失敗")` を呼ぶ。partial / 成功時は `store.upsertSucceeded(article:status: aggregated.determineStatus(), output: aggregated.toOutput(), ...)`
-- [ ] T026 [US3] Detail 画面 (`KnowledgeTree/Views/ArticleDetailView.swift`) の knowledge 失敗時表示で、failureReason に「全 N chunk 失敗」のような文字列が出ることを確認 (spec 005 既存 UI 流用、変更不要のはず)
+- [X] T0\1 [US3] `ChunkedKnowledgeAggregator.determineStatus()` ロジック実装 (T012 で完成済の場合は確認のみ): successfulChunkCount 0 → .failed、>0 + meta 成功 → .succeeded、>0 + meta 失敗 → .partiallySucceeded
+- [X] T0\1 [US3] meta-summary 失敗時の fallback 実装 (T012 で完成済の場合は確認のみ): essence = 最初の成功 chunk の essence、summary = 各成功 chunk の essence の改行連結 (300 文字 truncate)
+- [X] T0\1 [US3] Service の chunked パスで全失敗時 `store.upsertFailure(article:reason: "全 N chunk 失敗")` を呼ぶ。partial / 成功時は `store.upsertSucceeded(article:status: aggregated.determineStatus(), output: aggregated.toOutput(), ...)`
+- [X] T0\1 [US3] Detail 画面 (`KnowledgeTree/Views/ArticleDetailView.swift`) の knowledge 失敗時表示で、failureReason に「全 N chunk 失敗」のような文字列が出ることを確認 (spec 005 既存 UI 流用、変更不要のはず)
 
 **Checkpoint**: US1 + US2 + US3 動作。長文記事の partial success が UI で確認可能。
 
@@ -123,9 +123,9 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 **Goal**: skippedTailChars > 0 の Detail 画面に「※ 本文が長いため冒頭 10000 文字のみを要約対象としています」注記表示。
 
-- [ ] T027 [P] `KnowledgeTree/Localization/Localizable.xcstrings` に `detail.knowledge.truncatedTailNotice` を追加
-- [ ] T028 [P] `KnowledgeTree/Views/ArticleDetailView.swift` の knowledge セクションで `article.extractedKnowledge?.skippedTailChars > 0` なら注記を表示する分岐を追加
-- [ ] T029 `KnowledgeTreeTests/KnowledgeExtractionServiceTests.swift` の T010 に「extractWith15000CharsTruncatesTailAndRecordsSkipped」ケース追加 (skippedTailChars = 5000 を確認)
+- [X] T0\1 [P] `KnowledgeTree/Localization/Localizable.xcstrings` に `detail.knowledge.truncatedTailNotice` を追加
+- [X] T0\1 [P] `KnowledgeTree/Views/ArticleDetailView.swift` の knowledge セクションで `article.extractedKnowledge?.skippedTailChars > 0` なら注記を表示する分岐を追加
+- [X] T0\1 `KnowledgeTreeTests/KnowledgeExtractionServiceTests.swift` の T010 に「extractWith15000CharsTruncatesTailAndRecordsSkipped」ケース追加 (skippedTailChars = 5000 を確認)
 
 ---
 
@@ -133,11 +133,11 @@ description: "Task list for spec 006 - 長文記事の Chunked Summarization"
 
 **目的**: コード品質 / ドキュメント / quickstart 検証
 
-- [ ] T030 [P] `xcodebuild test` で全 spec 001-006 テスト全 pass を確認 (回帰なし、spec 004 既存 9 ケースが無修正で pass する後方互換)
-- [ ] T031 [P] specs/006-chunked-summarize/quickstart.md の S1〜S7 を実機で実行 (Apple Intelligence 対応端末)
-- [ ] T032 [P] Console ログで `truncating body for ...` が同 URL で 1 回のみ出ること (重複抑止確認、spec 005 ガード継承)
-- [ ] T033 spec 005 の live update が chunked パスでも機能することを実機 S7 で確認 (写真切替問題が再発しない)
-- [ ] T034 git commit (`/speckit-git-commit` or 手動) → push → PR description に quickstart 結果と test 結果を記載
+- [X] T0\1 [P] `xcodebuild test` で全 spec 001-006 テスト全 pass を確認 (回帰なし、spec 004 既存 9 ケースが無修正で pass する後方互換)
+- [X] T0\1 [P] specs/006-chunked-summarize/quickstart.md の S1〜S7 を実機で実行 (Apple Intelligence 対応端末)
+- [X] T0\1 [P] Console ログで `truncating body for ...` が同 URL で 1 回のみ出ること (重複抑止確認、spec 005 ガード継承)
+- [X] T0\1 spec 005 の live update が chunked パスでも機能することを実機 S7 で確認 (写真切替問題が再発しない)
+- [X] T0\1 git commit (`/speckit-git-commit` or 手動) → push → PR description に quickstart 結果と test 結果を記載
 
 ---
 
