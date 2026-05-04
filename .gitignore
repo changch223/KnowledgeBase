@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Xcode — user-specific
+xcuserdata/
+*.xcuserstate
+
+# Xcode — build artifacts
+build/
+DerivedData/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Obsidian (personal editor state)
+.obsidian/
+
+# Claude Code — local-only settings
+.claude/settings.local.json
