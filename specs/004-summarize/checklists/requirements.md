@@ -1,7 +1,7 @@
-# Specification Quality Checklist: 要約 (Apple Foundation Models)
+# Specification Quality Checklist: 知識抽出 + 要約
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-05-04
+**Created**: 2026-05-04 (revised — 「ただの要約」→「knowledge 抽出」→ 最終的に **両方** を 1 セッションで生成する統合 spec として再々設計)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,12 +31,13 @@
 
 ## Notes
 
-- **本プロジェクト初の Apple Foundation Models 利用 spec**。Constitution Additional Constraints「AI: Apple Foundation Models」を初実装。
-- **新規ネットワーク非依存**: Foundation Models はオンデバイス実行のため、Constitution Principle I の Network Access Justification セクションは不要。spec 002 の justification はそのまま継続有効。
-- **Apple Intelligence 不可能時のフォールバック (US3)** は Constitution Principle IV と Principle V の両方が要求する graceful degradation。「設定で有効化してください」の押しつけ表示は禁止 (Principle V)。
-- **「AI 生成」ラベル必須 (FR-008)** は Constitution Principle III「ソースに基づいた知識生成」の透明性要件を実装に落とした規約。grep で網羅性を audit 可能 (SC-007)。
-- **ハルシネーション検出は MVP 外** (Out of Scope)。代替: 「AI 生成」ラベル + ユーザーが元記事を確認できる動線 (Reader View 内の本文表示 + 元記事を開くボタン from spec 003)。
-- **要約品質目標 90%** (SC-003) は Apple Foundation Models 単独の現実的目標。クラウド大モデル (ChatGPT 等) に劣る可能性は assumptions に明示。残り 10% (生成失敗) は UI 上に何も出さない (Principle V) で UX を保護。
-- **streaming 表示は本 spec では行わない** (バックグラウンド生成のため)。`PartiallyGenerated<T>` 経由のリアルタイム streaming UI は将来 AI チャット spec で初導入。
-- 用語ポリシーは spec 001-003 と同じ: ユーザー視点の機能名 (Apple Intelligence、要約、Reader View) は記述、フレームワーク識別子 (`SystemLanguageModel`、`LanguageModelSession`、`@Generable` 等) は plan.md / tasks.md で扱う。
-- 設定画面 (要約 ON/OFF、enrichment ON/OFF 含む) は別 spec。本 spec は OS の Apple Intelligence 設定状態に従うのみ。
+- **再々設計版**: 旧 draft「ただの要約」→ 中間 draft「knowledge 抽出のみ」→ **最終: 4 出力 (essence + summary + key facts + entities) を 1 セッションで生成する統合 spec**。要約と構造化抽出の両方をユーザーは欲しい (要約 = 人間が読む / 構造化抽出 = アプリが処理する) ため、`@Generable struct` に 4 つのフィールドを並べて 1 回の Foundation Models 生成で全部得る方式に統一。電力・時間効率も最適。
+- **3 つの新規エンティティ** (`ExtractedKnowledge`、`KeyFact`、`KnowledgeEntity`) を導入。`ExtractedKnowledge` が essence と summary を直接持ち、子に `KeyFact` と `KnowledgeEntity` を持つ階層構造。すべて Article への non-optional 参照で Principle III を構造レベルで遵守。
+- **将来 spec の基礎データ層**: cross-article entity 集約 (spec 005)、knowledge graph、AI チャット (RAG)、カテゴリ自動学習、検索 — すべて本 spec のデータに依存。
+- **新規ネットワーク非依存**: Foundation Models on-device 実行のため Constitution Principle I の Network Access Justification は不要。spec 002 の justification はそのまま継続有効。
+- **ハルシネーション抑止**: 主に 3 層で対応 — (1) `@Generable` の Guide で field 単位制約、(2) prompt 末尾で「推測・補完禁止 + essence と summary と key facts は互いに矛盾しない」(FR-020)、(3) 「AI 生成」ラベル + Reader View で本文と並べて見比べる動線。自動検証は MVP 外 (SC-009 で sampling 計測のみ)。
+- **部分成功 `.partiallySucceeded`** を導入: 4 出力のうち 1 つ以上取れた中間状態を扱う。完全失敗より価値があるため UI 表示する (空サブセクションは隠す)。
+- **Apple Intelligence 不可能時 (US3)** は Principle IV と V の両方が要求する graceful degradation。spec 001-003 の機能を一切壊さない。
+- 用語ポリシー: ユーザー視点の機能名 (Apple Intelligence、知識サマリ、Reader View) は記述、フレームワーク識別子 (`SystemLanguageModel`、`LanguageModelSession`、`@Generable`、`@Guide` 等) は plan.md / tasks.md で扱う。
+- **ディレクトリ名 `004-summarize` と spec 内容 (knowledge 抽出 + 要約) の不一致**: 後で `git mv` で `004-extract-knowledge` 等にリネーム可能。本 commit では directory name は据え置き、spec.md / branch_name (spec 内記載) のみ更新。
+- **Out of Scope**: knowledge graph、AI チャット、ハルシネーション自動検証、本文ハイライト、設定画面、多言語、widget、export 等。MVP を 1 記事ごとの抽出 + 表示に厳格に絞り、後続 spec に拡張余地を残す。
