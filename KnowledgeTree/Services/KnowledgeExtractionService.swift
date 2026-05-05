@@ -34,6 +34,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let maxChunks: Int
     /// spec 009: chunked summarization の incremental 永続化先 (default は no-op で後方互換)
     private let chunkProgressStore: ChunkProgressStoreProtocol
+    /// spec 012: knowledge 抽出 succeeded 後の auto-tag 用 (default nil で後方互換)
+    private let tagStore: TagStore?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -46,7 +48,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         extractionVersion: Int = 1,
         chunkSizeChars: Int = 1_000,
         maxChunks: Int = 30,
-        chunkProgressStore: ChunkProgressStoreProtocol? = nil
+        chunkProgressStore: ChunkProgressStoreProtocol? = nil,
+        tagStore: TagStore? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -58,6 +61,14 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.maxChunks = maxChunks
         // @MainActor isolated init は default 引数で書けないため nil 受け → fallback で NoopChunkProgressStore
         self.chunkProgressStore = chunkProgressStore ?? NoopChunkProgressStore()
+        self.tagStore = tagStore
+    }
+
+    /// spec 012: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる auto-tag hook。
+    /// tagStore が nil なら no-op (後方互換)。
+    private func applyAutoTagsIfPossible(article: Article) {
+        guard let tagStore else { return }
+        AutoTagApplier.apply(to: article, using: tagStore)
     }
 
     func extract(article: Article) async {
@@ -144,6 +155,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                         modelVersion: nil,
                         durationMs: durationMs
                     )
+                    // spec 012: 単一パス auto-tag hook
+                    applyAutoTagsIfPossible(article: article)
                 }
             case .failure(let error):
                 let reason = String(describing: error)
@@ -304,6 +317,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                 skippedTailChars: skippedTail
             )
             try? chunkProgressStore.cleanup(knowledge: knowledge)
+            // spec 012: chunked パス auto-tag hook
+            applyAutoTagsIfPossible(article: article)
         case .pending, .extracting, .skipped:
             break
         }

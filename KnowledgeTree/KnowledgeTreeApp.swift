@@ -86,7 +86,10 @@ struct KnowledgeTreeApp: App {
             refreshTrigger: refreshTrigger
         )
 
-        // spec 004 + 009 + 010: 知識抽出 service
+        // spec 008: TagStore (spec 012 で knowledgeService に inject するため先に構築)
+        let tagStore = TagStore(context: context, refreshTrigger: refreshTrigger)
+
+        // spec 004 + 009 + 010 + 012: 知識抽出 service (auto-tag 用 tagStore を inject)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -96,7 +99,8 @@ struct KnowledgeTreeApp: App {
             extractor: knowledgeExtractor,
             store: knowledgeStore,
             processingMonitor: processingMonitor,
-            chunkProgressStore: chunkProgressStore
+            chunkProgressStore: chunkProgressStore,
+            tagStore: tagStore
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -121,9 +125,6 @@ struct KnowledgeTreeApp: App {
             bodyExtractionService: bodyService,
             processingMonitor: processingMonitor
         )
-
-        // spec 008: TagStore
-        let tagStore = TagStore(context: context, refreshTrigger: refreshTrigger)
 
         // spec 009: BackgroundExtractionQueue + Runner
         let articleStore = SwiftDataArticleStore(context: context)
