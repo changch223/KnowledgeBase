@@ -718,6 +718,17 @@
         }
       }
     },
+    "status.phase.tagBackfilling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ整理中"
+          }
+        }
+      }
+    },
     "tag.filtered.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {

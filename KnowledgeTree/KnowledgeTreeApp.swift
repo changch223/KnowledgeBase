@@ -150,5 +150,13 @@ struct KnowledgeTreeApp: App {
         await knowledgeService.backfillAll()
         // spec 008: 孤児タグの cleanup (起動時 1 回)
         try? tagStore.cleanupOrphans()
+
+        // spec 013: 既存記事への auto-tag backfill (1 度限り、永続フラグで重複防止)
+        let backfillRunner = AutoTagBackfillRunner(
+            context: context,
+            tagStore: tagStore,
+            processingMonitor: processingMonitor
+        )
+        await backfillRunner.run()
     }
 }

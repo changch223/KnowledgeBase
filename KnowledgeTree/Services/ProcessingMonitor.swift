@@ -14,9 +14,10 @@ import Observation
 @Observable
 final class ProcessingMonitor {
     enum Phase: Int, Comparable, Sendable {
-        case enrichment = 0   // メタデータ取得中
-        case body = 1         // 本文抽出中
-        case knowledge = 2    // 知識抽出中 (AI)
+        case enrichment = 0      // メタデータ取得中
+        case body = 1            // 本文抽出中
+        case knowledge = 2       // 知識抽出中 (AI)
+        case tagBackfilling = 3  // spec 013: 既存記事への auto-tag backfill 中
 
         static func < (lhs: Phase, rhs: Phase) -> Bool {
             lhs.rawValue < rhs.rawValue

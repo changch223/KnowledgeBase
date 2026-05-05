@@ -62,17 +62,19 @@ struct BottomStatusBar: View {
 
     private func phaseLabel(_ phase: ProcessingMonitor.Phase) -> LocalizedStringKey {
         switch phase {
-        case .enrichment: return "status.phase.enrichment"
-        case .body:       return "status.phase.body"
-        case .knowledge:  return "status.phase.knowledge"
+        case .enrichment:     return "status.phase.enrichment"
+        case .body:           return "status.phase.body"
+        case .knowledge:      return "status.phase.knowledge"
+        case .tagBackfilling: return "status.phase.tagBackfilling"
         }
     }
 
     private func phaseTintColor(_ phase: ProcessingMonitor.Phase) -> Color {
         switch phase {
-        case .enrichment: return .secondary
-        case .body:       return .blue
-        case .knowledge:  return .purple
+        case .enrichment:     return .secondary
+        case .body:           return .blue
+        case .knowledge:      return .purple
+        case .tagBackfilling: return .green  // spec 013: タグ整理中
         }
     }
 }
