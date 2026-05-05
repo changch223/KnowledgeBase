@@ -6,6 +6,7 @@
 //  spec 002 — enrichment relationship 追加
 //  spec 003 — body relationship 追加
 //  spec 004 — extractedKnowledge relationship 追加
+//  spec 008 — tags relationship 追加 (Tag 多対多)
 //
 
 import Foundation
@@ -26,6 +27,11 @@ final class Article {
 
     @Relationship(deleteRule: .cascade, inverse: \ExtractedKnowledge.article)
     var extractedKnowledge: ExtractedKnowledge?
+
+    /// spec 008: Article ↔ Tag 多対多。Tag 側 inverse は Tag.articles。
+    /// Article 削除時は relationship のみ解除され Tag は残る。
+    /// 孤児タグの削除は TagStore が責任を持つ。
+    @Relationship var tags: [Tag] = []
 
     init(id: UUID = UUID(), url: String, title: String, savedAt: Date = Date()) {
         self.id = id

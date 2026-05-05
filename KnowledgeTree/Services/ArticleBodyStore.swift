@@ -68,14 +68,37 @@ final class SwiftDataArticleBodyStore: ArticleBodyStoreProtocol {
 
     func fetchPendingArticles() throws -> [Article] {
         do {
-            // body 不在 & enrichment.rawHTML 有り
-            var descriptor = FetchDescriptor<Article>(
+            // 1) body 不在 & enrichment.rawHTML 有り
+            var noBodyDescriptor = FetchDescriptor<Article>(
                 predicate: #Predicate<Article> {
                     $0.body == nil && $0.enrichment != nil && $0.enrichment?.rawHTML != nil
                 }
             )
-            descriptor.fetchLimit = 1000
-            return try context.fetch(descriptor)
+            noBodyDescriptor.fetchLimit = 1000
+            let noBody = try context.fetch(noBodyDescriptor)
+
+            // 2) body が中間状態 (extracting / pending / failed) で残骸の Article
+            // app crash / device lock 等の stale state を自動回復対象に含める。
+            // .failed は元々 retry 不可だったが、enrichment.rawHTML が有る限り再挑戦する価値がある。
+            var staleDescriptor = FetchDescriptor<ArticleBody>(
+                predicate: #Predicate<ArticleBody> {
+                    $0.statusRaw == "extracting" || $0.statusRaw == "pending"
+                }
+            )
+            staleDescriptor.fetchLimit = 1000
+            let staleBodies = try context.fetch(staleDescriptor)
+            let staleArticles = staleBodies
+                .map(\.article)
+                .filter { $0.enrichment?.rawHTML != nil }
+
+            var seen: Set<UUID> = []
+            var result: [Article] = []
+            for article in noBody + staleArticles {
+                if seen.insert(article.id).inserted {
+                    result.append(article)
+                }
+            }
+            return result
         } catch {
             throw ArticleBodyStoreError.persistenceFailure(underlying: error)
         }

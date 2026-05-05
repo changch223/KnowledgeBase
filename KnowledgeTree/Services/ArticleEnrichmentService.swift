@@ -44,6 +44,10 @@ final class DefaultArticleEnrichmentService: ArticleEnrichmentServiceProtocol {
     private let maxDownloadBytes: Int
     private let rawHTMLCacheLimit: Int
     private let backoffSchedule: [Duration]
+    /// spec 007: マルチページ追跡の上限。
+    private let maxPages: Int
+    /// spec 007: ページ間の遅延。
+    private let delayBetweenPages: Duration
 
     private let pathMonitor: NWPathMonitor
     private var isOnline: Bool = true
@@ -57,7 +61,9 @@ final class DefaultArticleEnrichmentService: ArticleEnrichmentServiceProtocol {
         userAgent: String = "KnowledgeTree/1.0 (iOS)",
         maxDownloadBytes: Int = 5 * 1024 * 1024,
         rawHTMLCacheLimit: Int = 2 * 1024 * 1024,
-        backoffSchedule: [Duration] = [.seconds(30), .seconds(120), .seconds(600)]
+        backoffSchedule: [Duration] = [.seconds(30), .seconds(120), .seconds(600)],
+        maxPages: Int = 5,
+        delayBetweenPages: Duration = .seconds(1)
     ) {
         self.session = session
         self.store = store
@@ -67,6 +73,8 @@ final class DefaultArticleEnrichmentService: ArticleEnrichmentServiceProtocol {
         self.maxDownloadBytes = maxDownloadBytes
         self.rawHTMLCacheLimit = rawHTMLCacheLimit
         self.backoffSchedule = backoffSchedule
+        self.maxPages = maxPages
+        self.delayBetweenPages = delayBetweenPages
         self.pathMonitor = NWPathMonitor()
         startPathMonitoring()
     }
@@ -127,99 +135,92 @@ final class DefaultArticleEnrichmentService: ArticleEnrichmentServiceProtocol {
     private func performEnrichment(article: Article, url: URL) async {
         let articleID = article.id
         let articleTitle = article.title
-        processingMonitor?.start(.enrichment, articleID: articleID, title: articleTitle)
+        processingMonitor?.start(
+            .enrichment,
+            articleID: articleID,
+            title: articleTitle,
+            progressIndex: 0,
+            progressTotal: maxPages
+        )
         defer { processingMonitor?.finish(articleID: articleID) }
 
-        var attempt = article.enrichment?.retryCount ?? 0
-
-        while attempt <= backoffSchedule.count {
-            // Wait for online
-            while !isOnline {
-                if Task.isCancelled { return }
-                try? await Task.sleep(for: .seconds(5))
-            }
+        // Wait for online
+        while !isOnline {
             if Task.isCancelled { return }
+            try? await Task.sleep(for: .seconds(5))
+        }
+        if Task.isCancelled { return }
 
+        try? store.upsert(
+            article: article, status: .fetching,
+            canonicalTitle: article.enrichment?.canonicalTitle,
+            summary: article.enrichment?.summary,
+            ogImageURL: article.enrichment?.ogImageURL,
+            rawHTML: article.enrichment?.rawHTML,
+            retryCount: article.enrichment?.retryCount ?? 0,
+            pageCountFetched: article.enrichment?.pageCountFetched ?? 1,
+            pageCountSkipped: article.enrichment?.pageCountSkipped ?? 0
+        )
+
+        let crawler = MultiPageCrawler(
+            session: session,
+            userAgent: userAgent,
+            maxPages: maxPages,
+            delayBetweenPages: delayBetweenPages,
+            maxDownloadBytes: maxDownloadBytes,
+            firstPageRetrySchedule: backoffSchedule
+        )
+
+        let result = await crawler.crawl(initialURL: url) { [weak self] pageIndex in
+            await MainActor.run { [weak self] in
+                self?.processingMonitor?.updateProgress(
+                    articleID: articleID,
+                    index: pageIndex
+                )
+            }
+        }
+
+        if Task.isCancelled { return }
+
+        switch result.stopReason {
+        case .firstPageFailed:
             try? store.upsert(
-                article: article, status: .fetching,
-                canonicalTitle: article.enrichment?.canonicalTitle,
-                summary: article.enrichment?.summary,
-                ogImageURL: article.enrichment?.ogImageURL,
-                rawHTML: article.enrichment?.rawHTML,
-                retryCount: attempt
+                article: article, status: .permanentlyFailed,
+                canonicalTitle: nil, summary: nil, ogImageURL: nil, rawHTML: nil,
+                retryCount: result.firstPageRetryCount,
+                pageCountFetched: 0,
+                pageCountSkipped: 0
+            )
+            return
+
+        case .completed, .maxPagesReached, .loopDetected, .crossDomainBlocked, .fetchFailed:
+            // 1 ページ目以上 fetched: succeeded で保存
+            let metadata = result.firstPageMetadata
+            // 連結 HTML が rawHTMLCacheLimit を超えるなら nil
+            let rawHTML: String?
+            if let combined = result.combinedHTML, combined.count <= rawHTMLCacheLimit {
+                rawHTML = combined
+            } else {
+                rawHTML = nil
+            }
+            try? store.upsert(
+                article: article,
+                status: .succeeded,
+                canonicalTitle: metadata?.canonicalTitle,
+                summary: metadata?.summary,
+                ogImageURL: metadata?.ogImageURL?.absoluteString,
+                rawHTML: rawHTML,
+                retryCount: result.firstPageRetryCount,
+                pageCountFetched: result.pageCountFetched,
+                pageCountSkipped: result.pageCountSkipped
             )
 
-            do {
-                let (parsed, rawHTML) = try await fetchAndParse(url: url)
-                try store.upsert(
-                    article: article,
-                    status: .succeeded,
-                    canonicalTitle: parsed.canonicalTitle,
-                    summary: parsed.summary,
-                    ogImageURL: parsed.ogImageURL?.absoluteString,
-                    rawHTML: rawHTML,
-                    retryCount: attempt
-                )
-                if let bodyExtractionService {
-                    Task {
-                        await bodyExtractionService.extract(article: article)
-                    }
+            if let bodyExtractionService {
+                Task {
+                    await bodyExtractionService.extract(article: article)
                 }
-                return
-            } catch {
-                attempt += 1
-                if attempt > backoffSchedule.count {
-                    try? store.upsert(
-                        article: article, status: .permanentlyFailed,
-                        canonicalTitle: nil, summary: nil, ogImageURL: nil, rawHTML: nil,
-                        retryCount: attempt
-                    )
-                    return
-                }
-                try? store.upsert(
-                    article: article, status: .failed,
-                    canonicalTitle: article.enrichment?.canonicalTitle,
-                    summary: article.enrichment?.summary,
-                    ogImageURL: article.enrichment?.ogImageURL,
-                    rawHTML: article.enrichment?.rawHTML,
-                    retryCount: attempt
-                )
-                let waitDuration = backoffSchedule[attempt - 1]
-                try? await Task.sleep(for: waitDuration)
-                if Task.isCancelled { return }
             }
         }
-    }
-
-    private func fetchAndParse(url: URL) async throws -> (MetadataParser.ParsedMetadata, String?) {
-        var request = URLRequest(url: url, timeoutInterval: 30)
-        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch let error as URLError {
-            throw ArticleEnrichmentError.network(error)
-        }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw ArticleEnrichmentError.network(URLError(.badServerResponse))
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            throw ArticleEnrichmentError.httpError(http.statusCode)
-        }
-        guard data.count <= maxDownloadBytes else {
-            throw ArticleEnrichmentError.tooLarge
-        }
-        let contentType = http.value(forHTTPHeaderField: "Content-Type")
-        guard let html = MetadataParser.decodeHTML(data: data, contentType: contentType) else {
-            throw ArticleEnrichmentError.decodingFailed
-        }
-
-        let parsed = MetadataParser.parse(html: html, baseURL: url)
-        let rawHTML: String? = data.count <= rawHTMLCacheLimit ? html : nil
-        return (parsed, rawHTML)
     }
 
     func backfillAll() async {

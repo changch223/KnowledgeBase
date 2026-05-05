@@ -21,11 +21,14 @@ struct ArticleDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(RefreshTrigger.self) private var refresh
     @Environment(ServiceContainer.self) private var services
+    @Environment(ProcessingMonitor.self) private var monitor
     @State private var presentedSafariURL: ArticleDetailSafariWrapper?
     @State private var isRetryingKnowledge: Bool = false
     /// refresh.version の変化を SwiftUI が確実に tracking するための local @State。
     /// .onChange で increment され、LazyVStack の .id() に紐付く。
     @State private var refreshTick: Int = 0
+    /// spec 008: 関連記事タップで sheet を切り替えるための state
+    @State private var presentedRelatedArticle: Article?
 
     /// 1秒 Timer ポーリング: 5 つの通知経路がすべて穴になる場合の最終保険。
     /// completion (knowledge succeeded + body succeeded) になったら止まる条件で
@@ -76,6 +79,9 @@ struct ArticleDetailView: View {
                     // @Bindable article で ogImageURL の変化は auto observe される。
                     headerSection
 
+                    // spec 008: タグセクション (手動 + 自動提案)
+                    tagsSection
+
                     // knowledge / body セクションだけ refreshTick で rebuild する。
                     // 完了状態 (本文・知識サマリ) を確実に live update するため。
                     Group {
@@ -85,6 +91,12 @@ struct ArticleDetailView: View {
                         bodySection
                     }
                     .id(refreshTick)
+
+                    // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
+                    RelatedArticlesSection(article: article) { related in
+                        // タップで現在の sheet を上書き表示
+                        presentedRelatedArticle = related
+                    }
 
                     openOriginalButton
                 }
@@ -100,6 +112,9 @@ struct ArticleDetailView: View {
             }
             .sheet(item: $presentedSafariURL) { wrapper in
                 SafariView(url: wrapper.url)
+            }
+            .sheet(item: $presentedRelatedArticle) { related in
+                ArticleDetailView(article: related)
             }
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
@@ -139,6 +154,68 @@ struct ArticleDetailView: View {
 
     // MARK: - Sections
 
+    /// spec 008: タグセクション (既存タグ chips + 自動提案 chips + 入力欄)
+    @ViewBuilder
+    private var tagsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("detail.tags.heading")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            // 既存タグ
+            if !article.tags.isEmpty {
+                FlowingTagsLayout {
+                    ForEach(article.tags) { tag in
+                        TagChip(
+                            name: tag.name,
+                            onRemove: { removeTag(name: tag.name) },
+                            isSuggested: false
+                        )
+                    }
+                }
+            }
+
+            // 自動提案
+            let existingNames = Set(article.tags.map(\.name))
+            let suggestions = SuggestedTagFinder.find(for: article, existingTagNames: existingNames)
+            if !suggestions.isEmpty {
+                Text("detail.suggestedTags.heading")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                FlowingTagsLayout {
+                    ForEach(suggestions) { suggestion in
+                        Button {
+                            addTag(rawName: suggestion.displayName)
+                        } label: {
+                            TagChip(
+                                name: suggestion.displayName,
+                                onRemove: nil,
+                                isSuggested: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // 入力欄
+            TagInputField { rawText in
+                addTag(rawName: rawText)
+            }
+        }
+        .accessibilityIdentifier("articleDetailTagsSection")
+    }
+
+    private func addTag(rawName: String) {
+        guard let store = services.tagStore else { return }
+        try? store.addTag(rawName: rawName, to: article)
+    }
+
+    private func removeTag(name: String) {
+        guard let store = services.tagStore else { return }
+        try? store.removeTag(normalizedName: name, from: article)
+    }
+
     @ViewBuilder
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -163,13 +240,37 @@ struct ArticleDetailView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+
+            // spec 007: マルチページ追跡の取得状況
+            if let enrichment = article.enrichment, enrichment.pageCountFetched > 1 {
+                if enrichment.pageCountSkipped > 0 {
+                    Text("detail.pages.skippedNotice \(enrichment.pageCountFetched)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("pagesSkippedNotice")
+                } else {
+                    Text("detail.pages.fetchedNotice \(enrichment.pageCountFetched)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("pagesFetchedNotice")
+                }
+            }
         }
     }
 
     @ViewBuilder
     private var knowledgeSection: some View {
         if hasKnowledge, let knowledge = article.extractedKnowledge {
-            KnowledgeSummaryView(knowledge: knowledge)
+            VStack(alignment: .leading, spacing: 8) {
+                KnowledgeSummaryView(knowledge: knowledge)
+                // spec 006: 10000 文字超で要約対象外となった末尾がある場合の注記
+                if knowledge.skippedTailChars > 0 {
+                    Text("detail.knowledge.truncatedTailNotice")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("knowledgeTruncatedTailNotice")
+                }
+            }
         } else if let knowledge = article.extractedKnowledge {
             knowledgePlaceholder(status: knowledge.status)
         } else {
@@ -209,7 +310,9 @@ struct ArticleDetailView: View {
                     .accessibilityIdentifier("knowledgeFailureReason")
             }
 
-            if status == .failed && bodySucceeded {
+            // .failed または .extracting で stale (active task 無し) なら再試行ボタンを表示
+            // .extracting + active task 在り は本当に処理中なので非表示
+            if shouldShowRetryButton(status: status) {
                 Button {
                     retryKnowledge()
                 } label: {
@@ -226,6 +329,23 @@ struct ArticleDetailView: View {
             }
 
             Divider().padding(.top, 4)
+        }
+    }
+
+    /// 再試行ボタンの表示判定:
+    /// - body が succeeded であること (前提条件)
+    /// - status が .failed: 通常の再試行
+    /// - status が .extracting で、ProcessingMonitor に active task が無い: stale 状態 → 再開可能
+    private func shouldShowRetryButton(status: ExtractionStatus?) -> Bool {
+        guard bodySucceeded else { return false }
+        switch status {
+        case .failed:
+            return true
+        case .extracting:
+            // active task が在れば本当に処理中、無ければ stale
+            return monitor.tasksByArticle[article.id] == nil
+        default:
+            return false
         }
     }
 

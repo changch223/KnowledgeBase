@@ -16,11 +16,38 @@ protocol ArticleEnrichmentStoreProtocol {
         summary: String?,
         ogImageURL: String?,
         rawHTML: String?,
-        retryCount: Int
+        retryCount: Int,
+        pageCountFetched: Int,
+        pageCountSkipped: Int
     ) throws
 
     func fetchPendingArticles() throws -> [Article]
     func deleteAll() throws
+}
+
+extension ArticleEnrichmentStoreProtocol {
+    /// spec 002 互換: pageCount 引数を 1/0 (default 単一ページ) に固定する便利オーバーロード。
+    func upsert(
+        article: Article,
+        status: EnrichmentStatus,
+        canonicalTitle: String?,
+        summary: String?,
+        ogImageURL: String?,
+        rawHTML: String?,
+        retryCount: Int
+    ) throws {
+        try upsert(
+            article: article,
+            status: status,
+            canonicalTitle: canonicalTitle,
+            summary: summary,
+            ogImageURL: ogImageURL,
+            rawHTML: rawHTML,
+            retryCount: retryCount,
+            pageCountFetched: 1,
+            pageCountSkipped: 0
+        )
+    }
 }
 
 enum ArticleEnrichmentStoreError: Error {
@@ -44,7 +71,9 @@ final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
         summary: String?,
         ogImageURL: String?,
         rawHTML: String?,
-        retryCount: Int
+        retryCount: Int,
+        pageCountFetched: Int,
+        pageCountSkipped: Int
     ) throws {
         if let existing = article.enrichment {
             existing.status = status
@@ -54,6 +83,8 @@ final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
             existing.rawHTML = rawHTML
             existing.retryCount = retryCount
             existing.lastFetchedAt = Date()
+            existing.pageCountFetched = pageCountFetched
+            existing.pageCountSkipped = pageCountSkipped
         } else {
             let new = ArticleEnrichment(
                 article: article,
@@ -63,7 +94,9 @@ final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
                 ogImageURL: ogImageURL,
                 rawHTML: rawHTML,
                 lastFetchedAt: Date(),
-                retryCount: retryCount
+                retryCount: retryCount,
+                pageCountFetched: pageCountFetched,
+                pageCountSkipped: pageCountSkipped
             )
             context.insert(new)
             article.enrichment = new
@@ -85,10 +118,13 @@ final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
             noEnrichmentDescriptor.fetchLimit = 1000
             let noEnrichment = try context.fetch(noEnrichmentDescriptor)
 
-            // 2) status .pending / .failed の enrichment を持つ Article
+            // 2) status .pending / .failed / .fetching の enrichment を持つ Article
+            // .fetching は app crash / device lock 等で stale state になっている可能性 (spec 008+)
             var pendingDescriptor = FetchDescriptor<ArticleEnrichment>(
                 predicate: #Predicate<ArticleEnrichment> {
-                    $0.statusRaw == "pending" || $0.statusRaw == "failed"
+                    $0.statusRaw == "pending"
+                        || $0.statusRaw == "failed"
+                        || $0.statusRaw == "fetching"
                 }
             )
             pendingDescriptor.fetchLimit = 1000

@@ -15,7 +15,7 @@ import FoundationModels
 // MARK: - Generable Output Types (transient、生成スキーマ)
 
 @Generable
-struct ExtractedKnowledgeOutput {
+struct ExtractedKnowledgeOutput: Codable {
     @Guide(description: "1 文 / 150 字以内 / 元記事の主題と核心 / 元記事に明示されている内容のみ")
     let essence: String
 
@@ -30,7 +30,7 @@ struct ExtractedKnowledgeOutput {
 }
 
 @Generable
-struct KeyFactOutput {
+struct KeyFactOutput: Codable {
     @Guide(description: "事実の 1 文 (200 字以内)、元記事に明示されている内容のみ")
     let statement: String
 
@@ -39,7 +39,7 @@ struct KeyFactOutput {
 }
 
 @Generable
-enum FactType {
+enum FactType: String, Codable {
     case event       // 出来事
     case claim       // 主張・意見
     case statistic   // 数値・統計
@@ -48,7 +48,7 @@ enum FactType {
 }
 
 @Generable
-struct KnowledgeEntityOutput {
+struct KnowledgeEntityOutput: Codable {
     @Guide(description: "固有名詞 (30 字以内)")
     let name: String
 
@@ -60,7 +60,7 @@ struct KnowledgeEntityOutput {
 }
 
 @Generable
-enum EntityType {
+enum EntityType: String, Codable {
     case person        // 人物
     case organization  // 組織・企業
     case location      // 場所

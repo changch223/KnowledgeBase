@@ -27,6 +27,15 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let processingMonitor: ProcessingMonitor?
     private let minimumTextLength: Int
     private let extractionVersion: Int
+    /// spec 006: chunked パスに切り替える本文長の閾値。これ以下は単発パス。
+    private let chunkSizeChars: Int
+    /// spec 006: 1 記事あたりの最大 chunk 数。10000 文字超は冒頭 10 chunk のみ要約。
+    /// spec 010 で default を 30 に拡張 (階層化対応で 30000 文字までフルカバー)。
+    private let maxChunks: Int
+    /// spec 009: chunked summarization の incremental 永続化先 (default は no-op で後方互換)
+    private let chunkProgressStore: ChunkProgressStoreProtocol
+    /// spec 012: knowledge 抽出 succeeded 後の auto-tag 用 (default nil で後方互換)
+    private let tagStore: TagStore?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -36,7 +45,11 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         availabilityChecker: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
         processingMonitor: ProcessingMonitor? = nil,
         minimumTextLength: Int = 200,
-        extractionVersion: Int = 1
+        extractionVersion: Int = 1,
+        chunkSizeChars: Int = 1_000,
+        maxChunks: Int = 30,
+        chunkProgressStore: ChunkProgressStoreProtocol? = nil,
+        tagStore: TagStore? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -44,6 +57,18 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.processingMonitor = processingMonitor
         self.minimumTextLength = minimumTextLength
         self.extractionVersion = extractionVersion
+        self.chunkSizeChars = chunkSizeChars
+        self.maxChunks = maxChunks
+        // @MainActor isolated init は default 引数で書けないため nil 受け → fallback で NoopChunkProgressStore
+        self.chunkProgressStore = chunkProgressStore ?? NoopChunkProgressStore()
+        self.tagStore = tagStore
+    }
+
+    /// spec 012: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる auto-tag hook。
+    /// tagStore が nil なら no-op (後方互換)。
+    private func applyAutoTagsIfPossible(article: Article) {
+        guard let tagStore else { return }
+        AutoTagApplier.apply(to: article, using: tagStore)
     }
 
     func extract(article: Article) async {
@@ -55,13 +80,15 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             return
         }
 
-        // 冪等性チェック (succeeded / partiallySucceeded / extracting は早期 return)
+        // 冪等性チェック: 完了済 (succeeded/partiallySucceeded) のみ早期 return。
+        // .extracting は app crash / lock 等で stale 状態になっている可能性があるため
+        // 続行 (本当に in-flight ならば冒頭の activeTasks dedup で待機される)。
         if let existing = article.extractedKnowledge {
             switch existing.status {
-            case .succeeded, .partiallySucceeded, .extracting:
+            case .succeeded, .partiallySucceeded:
                 return
-            case .pending, .failed, .skipped:
-                break  // 続行
+            case .pending, .failed, .skipped, .extracting:
+                break  // 続行 (extracting は stale state として再開可能)
             }
         }
 
@@ -93,46 +120,207 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private func performExtraction(article: Article, text: String) async {
         let articleID = article.id
         let articleTitle = article.title
-        processingMonitor?.start(.knowledge, articleID: articleID, title: articleTitle)
-        defer { processingMonitor?.finish(articleID: articleID) }
 
         try? store.upsertStatus(article: article, status: .extracting)
 
-        if text.count > KnowledgeExtractor.defaultMaxBodyChars {
-            logger.notice("knowledge truncating body for \(article.url, privacy: .public): \(text.count) chars → \(KnowledgeExtractor.defaultMaxBodyChars) chars")
+        // spec 006: 本文長で chunked / 単発を切り替え
+        if text.count <= chunkSizeChars {
+            // === 単発パス (spec 004 既存挙動) ===
+            processingMonitor?.start(.knowledge, articleID: articleID, title: articleTitle)
+            defer { processingMonitor?.finish(articleID: articleID) }
+
+            let startTime = Date()
+            let result: Result<ExtractedKnowledgeOutput, Error>
+            do {
+                let output = try await extractor.extract(extractedText: text)
+                result = .success(output)
+            } catch {
+                result = .failure(error)
+            }
+            let durationMs = Int(Date().timeIntervalSince(startTime) * 1000)
+
+            if Task.isCancelled { return }
+
+            switch result {
+            case .success(let output):
+                let status = Self.determineStatus(output: output)
+                logger.notice("knowledge result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) facts=\(output.keyFacts.count) entities=\(output.entities.count)")
+                if status == .failed {
+                    try? store.upsertFailure(article: article, reason: "AI が記事から知識を抽出できませんでした")
+                } else {
+                    try? store.upsertSucceeded(
+                        article: article,
+                        status: status,
+                        output: output,
+                        modelVersion: nil,
+                        durationMs: durationMs
+                    )
+                    // spec 012: 単一パス auto-tag hook
+                    applyAutoTagsIfPossible(article: article)
+                }
+            case .failure(let error):
+                let reason = String(describing: error)
+                logger.error("knowledge generation failed for \(article.url, privacy: .public): \(reason, privacy: .public)")
+                try? store.upsertFailure(article: article, reason: reason)
+            }
+        } else {
+            // === Chunked パス (spec 006) ===
+            await performChunkedExtraction(
+                article: article,
+                articleID: articleID,
+                articleTitle: articleTitle,
+                text: text
+            )
         }
+    }
+
+    /// spec 006 + 009 + 010: chunked summarization orchestration。
+    /// - chunks <= 10: spec 006 既存パス (単一 meta-summary)
+    /// - chunks > 10: spec 010 階層パス (lvl1 → lvl2 中間 meta → lvl3 最終 meta)
+    /// - 各 chunk 完了で chunkProgressStore.add で incremental 永続化 (spec 009)
+    /// - リジューム時は既完了 chunkIndex を skip
+    /// - 完了で chunkProgressStore.cleanup
+    private func performChunkedExtraction(
+        article: Article,
+        articleID: UUID,
+        articleTitle: String,
+        text: String
+    ) async {
+        let split = ChunkSplitter.split(
+            text: text,
+            maxChars: chunkSizeChars,
+            maxChunks: maxChunks
+        )
+        let chunks = split.chunks
+        let skippedTail = split.skippedTailChars
+
+        // spec 010: chunks > 10 で階層化
+        let useHierarchical = chunks.count > 10
+        let lvl2GroupCount = useHierarchical
+            ? Int((Double(chunks.count) / 10.0).rounded(.up))
+            : 0
+        let totalSteps = chunks.count + lvl2GroupCount + 1
+
+        processingMonitor?.start(
+            .knowledge,
+            articleID: articleID,
+            title: articleTitle,
+            progressIndex: 0,
+            progressTotal: totalSteps
+        )
+        defer { processingMonitor?.finish(articleID: articleID) }
+
+        // === lvl1 chunks の incremental resume (spec 009) ===
+        try? store.upsertStatus(article: article, status: .extracting)
+        guard let knowledge = article.extractedKnowledge else { return }
+
+        let completed: [LoadedChunkProgress] = (try? chunkProgressStore.fetchAll(knowledge: knowledge)) ?? []
+        let completedIndices = Set(completed.map(\.chunkIndex))
+
+        logger.notice("knowledge chunked start for \(article.url, privacy: .public): \(text.count) chars → \(chunks.count) chunks (alreadyCompleted: \(completedIndices.count), hierarchical: \(useHierarchical), skippedTail: \(skippedTail))")
+
+        processingMonitor?.updateProgress(articleID: articleID, index: completedIndices.count)
 
         let startTime = Date()
-        let result: Result<ExtractedKnowledgeOutput, Error>
-        do {
-            let output = try await extractor.extract(extractedText: text)
-            result = .success(output)
-        } catch {
-            result = .failure(error)
+        // 既完了の output を ChunkResult として復元
+        var results: [ChunkResult] = completed.map {
+            ChunkResult(chunkIndex: $0.chunkIndex, output: $0.output, error: nil)
         }
-        let durationMs = Int(Date().timeIntervalSince(startTime) * 1000)
+
+        // 残り chunks のみ処理
+        for chunk in chunks where !completedIndices.contains(chunk.index) {
+            if Task.isCancelled { return }
+            let result = await extractor.extractFromChunk(chunk)
+            results.append(result)
+            // incremental save
+            if let output = result.output {
+                try? chunkProgressStore.add(
+                    knowledge: knowledge,
+                    chunkIndex: chunk.index,
+                    output: output
+                )
+            }
+            processingMonitor?.updateProgress(articleID: articleID, index: results.count)
+            if let error = result.error {
+                logger.error("knowledge chunk \(chunk.index + 1)/\(chunks.count) failed for \(article.url, privacy: .public): \(String(describing: error), privacy: .public)")
+            }
+        }
 
         if Task.isCancelled { return }
 
-        switch result {
-        case .success(let output):
-            let status = Self.determineStatus(output: output)
-            logger.notice("knowledge result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) facts=\(output.keyFacts.count) entities=\(output.entities.count)")
-            if status == .failed {
-                try? store.upsertFailure(article: article, reason: "AI が記事から知識を抽出できませんでした")
-            } else {
-                try? store.upsertSucceeded(
-                    article: article,
-                    status: status,
-                    output: output,
-                    modelVersion: nil,
-                    durationMs: durationMs
-                )
+        // === lvl2 / lvl3 (spec 010 階層化) ===
+        let aggregated: AggregatedKnowledge
+        let metaCallCount: Int
+
+        if useHierarchical {
+            // chunkIndex 昇順に sort
+            let sortedResults = results.sorted { $0.chunkIndex < $1.chunkIndex }
+            let groups = HierarchicalChunkedSummarizer.makeGroups(sortedResults, groupSize: 10)
+
+            let intermediates = await HierarchicalChunkedSummarizer.runIntermediateMetaSummaries(
+                groups: groups,
+                extractor: extractor
+            ) { [weak self] groupIndex in
+                await MainActor.run {
+                    self?.processingMonitor?.updateProgress(
+                        articleID: articleID,
+                        index: results.count + groupIndex
+                    )
+                }
             }
-        case .failure(let error):
-            let reason = String(describing: error)
-            logger.error("knowledge generation failed for \(article.url, privacy: .public): \(reason, privacy: .public)")
-            try? store.upsertFailure(article: article, reason: reason)
+
+            if Task.isCancelled { return }
+
+            let lvl3 = await HierarchicalChunkedSummarizer.runFinalMetaSummary(
+                intermediateResults: intermediates,
+                extractor: extractor
+            )
+            processingMonitor?.updateProgress(articleID: articleID, index: totalSteps)
+
+            aggregated = ChunkedKnowledgeAggregator.mergeHierarchical(
+                lvl1Results: sortedResults,
+                lvl2Results: intermediates,
+                lvl3Result: lvl3
+            )
+            metaCallCount = intermediates.compactMap { $0.output }.count + (lvl3 != nil ? 1 : 0)
+        } else {
+            // spec 006 既存パス (単一 meta-summary)
+            let chunkEssences = results.compactMap { $0.output?.essence }
+            let metaSummary = await extractor.extractMetaSummary(chunkEssences: chunkEssences)
+            processingMonitor?.updateProgress(articleID: articleID, index: totalSteps)
+            aggregated = ChunkedKnowledgeAggregator.merge(results: results, metaSummary: metaSummary)
+            metaCallCount = aggregated.metaSummarySucceeded ? 1 : 0
+        }
+
+        let durationMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        let status = aggregated.determineStatus()
+
+        logger.notice("knowledge chunked result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) processed=\(aggregated.successfulChunkCount)/\(chunks.count) hierarchical=\(useHierarchical) facts=\(aggregated.keyFacts.count) entities=\(aggregated.entities.count) metaCalls=\(metaCallCount) skippedTail=\(skippedTail)")
+
+        switch status {
+        case .failed:
+            try? store.upsertFailure(
+                article: article,
+                reason: "全 \(chunks.count) chunk 失敗"
+            )
+            try? chunkProgressStore.cleanup(knowledge: knowledge)
+        case .succeeded, .partiallySucceeded:
+            let processedCount = aggregated.successfulChunkCount + metaCallCount
+            try? store.upsertSucceeded(
+                article: article,
+                status: status,
+                output: aggregated.toOutput(),
+                modelVersion: nil,
+                durationMs: durationMs,
+                chunkProcessedCount: processedCount,
+                chunkTotalCount: totalSteps,
+                skippedTailChars: skippedTail
+            )
+            try? chunkProgressStore.cleanup(knowledge: knowledge)
+            // spec 012: chunked パス auto-tag hook
+            applyAutoTagsIfPossible(article: article)
+        case .pending, .extracting, .skipped:
+            break
         }
     }
 

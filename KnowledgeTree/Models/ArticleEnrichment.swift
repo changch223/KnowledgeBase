@@ -20,6 +20,11 @@ final class ArticleEnrichment {
     var lastFetchedAt: Date?
     var retryCount: Int
 
+    /// spec 007: 実際に取得したページ数 (1 = 単一ページ、2-5 = マルチページ追跡)。
+    var pageCountFetched: Int
+    /// spec 007: 上限到達 / fetch エラーで打ち切ったページの推定残数。
+    var pageCountSkipped: Int
+
     init(
         id: UUID = UUID(),
         article: Article,
@@ -29,7 +34,9 @@ final class ArticleEnrichment {
         ogImageURL: String? = nil,
         rawHTML: String? = nil,
         lastFetchedAt: Date? = nil,
-        retryCount: Int = 0
+        retryCount: Int = 0,
+        pageCountFetched: Int = 1,
+        pageCountSkipped: Int = 0
     ) {
         self.id = id
         self.article = article
@@ -40,6 +47,8 @@ final class ArticleEnrichment {
         self.rawHTML = rawHTML
         self.lastFetchedAt = lastFetchedAt
         self.retryCount = retryCount
+        self.pageCountFetched = pageCountFetched
+        self.pageCountSkipped = pageCountSkipped
     }
 }
 

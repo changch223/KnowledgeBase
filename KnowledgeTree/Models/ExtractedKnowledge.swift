@@ -29,11 +29,23 @@ final class ExtractedKnowledge {
     var generationDurationMs: Int?
     var failureReason: String?
 
+    /// spec 006: chunked summarization で実際に成功した chunk 数 (含 meta-summary)。
+    /// 単発パス (本文 ≤ 1000 文字) では 1。chunked パスでは N+1 (chunk N 個 + meta 1 個)。
+    var chunkProcessedCount: Int
+    /// spec 006: 総 chunk 数 (chunks + meta-summary)。単発パスでは 1。
+    var chunkTotalCount: Int
+    /// spec 006: 10 chunk 上限超過で要約対象外となった末尾文字数。0 〜 (text.count - 10000)。
+    var skippedTailChars: Int
+
     @Relationship(deleteRule: .cascade, inverse: \KeyFact.knowledge)
     var keyFacts: [KeyFact] = []
 
     @Relationship(deleteRule: .cascade, inverse: \KnowledgeEntity.knowledge)
     var entities: [KnowledgeEntity] = []
+
+    /// spec 009: chunked summarization の各 chunk 完了結果。完了で cleanup される。
+    @Relationship(deleteRule: .cascade, inverse: \KnowledgeChunkProgress.knowledge)
+    var chunkProgress: [KnowledgeChunkProgress] = []
 
     init(
         id: UUID = UUID(),
@@ -45,7 +57,10 @@ final class ExtractedKnowledge {
         modelVersion: String? = nil,
         extractionVersion: Int = 1,
         generationDurationMs: Int? = nil,
-        failureReason: String? = nil
+        failureReason: String? = nil,
+        chunkProcessedCount: Int = 1,
+        chunkTotalCount: Int = 1,
+        skippedTailChars: Int = 0
     ) {
         self.id = id
         self.article = article
@@ -57,6 +72,9 @@ final class ExtractedKnowledge {
         self.extractionVersion = extractionVersion
         self.generationDurationMs = generationDurationMs
         self.failureReason = failureReason
+        self.chunkProcessedCount = chunkProcessedCount
+        self.chunkTotalCount = chunkTotalCount
+        self.skippedTailChars = skippedTailChars
     }
 }
 

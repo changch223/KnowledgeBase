@@ -20,9 +20,18 @@ struct BottomStatusBar: View {
                     .tint(phaseTintColor(current.phase))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(phaseLabel(current.phase))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(phaseLabel(current.phase))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        // spec 006: chunked summarization 等の N/M 進捗
+                        if let index = current.progressIndex,
+                           let total = current.progressTotal {
+                            Text("\(index)/\(total)")
+                                .font(.caption2.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Text(current.articleTitle)
                         .font(.caption)
                         .lineLimit(1)
@@ -53,17 +62,19 @@ struct BottomStatusBar: View {
 
     private func phaseLabel(_ phase: ProcessingMonitor.Phase) -> LocalizedStringKey {
         switch phase {
-        case .enrichment: return "status.phase.enrichment"
-        case .body:       return "status.phase.body"
-        case .knowledge:  return "status.phase.knowledge"
+        case .enrichment:     return "status.phase.enrichment"
+        case .body:           return "status.phase.body"
+        case .knowledge:      return "status.phase.knowledge"
+        case .tagBackfilling: return "status.phase.tagBackfilling"
         }
     }
 
     private func phaseTintColor(_ phase: ProcessingMonitor.Phase) -> Color {
         switch phase {
-        case .enrichment: return .secondary
-        case .body:       return .blue
-        case .knowledge:  return .purple
+        case .enrichment:     return .secondary
+        case .body:           return .blue
+        case .knowledge:      return .purple
+        case .tagBackfilling: return .green  // spec 013: タグ整理中
         }
     }
 }

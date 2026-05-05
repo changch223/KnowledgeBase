@@ -21,11 +21,36 @@ protocol ArticleKnowledgeStoreProtocol {
         status: ExtractionStatus,
         output: ExtractedKnowledgeOutput,
         modelVersion: String?,
-        durationMs: Int?
+        durationMs: Int?,
+        chunkProcessedCount: Int,
+        chunkTotalCount: Int,
+        skippedTailChars: Int
     ) throws
 
     func fetchPendingArticles() throws -> [Article]
     func deleteAll() throws
+}
+
+extension ArticleKnowledgeStoreProtocol {
+    /// spec 005 互換: chunked 引数を default で 1/1/0 に固定する単発パス用の便利オーバーロード。
+    func upsertSucceeded(
+        article: Article,
+        status: ExtractionStatus,
+        output: ExtractedKnowledgeOutput,
+        modelVersion: String?,
+        durationMs: Int?
+    ) throws {
+        try upsertSucceeded(
+            article: article,
+            status: status,
+            output: output,
+            modelVersion: modelVersion,
+            durationMs: durationMs,
+            chunkProcessedCount: 1,
+            chunkTotalCount: 1,
+            skippedTailChars: 0
+        )
+    }
 }
 
 enum ArticleKnowledgeStoreError: Error {
@@ -77,7 +102,10 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         status: ExtractionStatus,
         output: ExtractedKnowledgeOutput,
         modelVersion: String?,
-        durationMs: Int?
+        durationMs: Int?,
+        chunkProcessedCount: Int,
+        chunkTotalCount: Int,
+        skippedTailChars: Int
     ) throws {
         let knowledge: ExtractedKnowledge
         if let existing = article.extractedKnowledge {
@@ -104,6 +132,10 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         knowledge.generatedAt = Date()
         knowledge.modelVersion = modelVersion
         knowledge.generationDurationMs = durationMs
+        // spec 006: chunked summarization のメタデータ
+        knowledge.chunkProcessedCount = chunkProcessedCount
+        knowledge.chunkTotalCount = chunkTotalCount
+        knowledge.skippedTailChars = skippedTailChars
 
         // KeyFacts: order を生成順で付与
         for (idx, factOutput) in output.keyFacts.enumerated() {
@@ -135,16 +167,39 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
 
     func fetchPendingArticles() throws -> [Article] {
         do {
-            // ArticleBody が succeeded 状態 & ExtractedKnowledge 不在 の Article を取得
-            var descriptor = FetchDescriptor<Article>(
+            // 1) body が succeeded で knowledge 不在の Article
+            var noKnowledgeDescriptor = FetchDescriptor<Article>(
                 predicate: #Predicate<Article> { article in
                     article.extractedKnowledge == nil &&
                     article.body != nil &&
                     article.body?.statusRaw == "succeeded"
                 }
             )
-            descriptor.fetchLimit = 1000
-            return try context.fetch(descriptor)
+            noKnowledgeDescriptor.fetchLimit = 1000
+            let noKnowledge = try context.fetch(noKnowledgeDescriptor)
+
+            // 2) 中間状態 (extracting / pending) で残骸になった ExtractedKnowledge を持つ Article
+            // app crash / device lock 等で stale state に陥った場合の自動回復対象。
+            var staleDescriptor = FetchDescriptor<ExtractedKnowledge>(
+                predicate: #Predicate<ExtractedKnowledge> {
+                    $0.statusRaw == "extracting" || $0.statusRaw == "pending"
+                }
+            )
+            staleDescriptor.fetchLimit = 1000
+            let staleKnowledges = try context.fetch(staleDescriptor)
+            let staleArticles = staleKnowledges
+                .map(\.article)
+                .filter { $0.body?.status == .succeeded }
+
+            // 重複排除
+            var seen: Set<UUID> = []
+            var result: [Article] = []
+            for article in noKnowledge + staleArticles {
+                if seen.insert(article.id).inserted {
+                    result.append(article)
+                }
+            }
+            return result
         } catch {
             throw ArticleKnowledgeStoreError.persistenceFailure(underlying: error)
         }

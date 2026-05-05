@@ -10,6 +10,9 @@
 //  spec 004 — ExtractedKnowledge / KeyFact / KnowledgeEntity schema +
 //             KnowledgeExtractionService bootstrap + 3 service chain backfill
 //  spec 005 — ProcessingMonitor / RefreshTrigger / ServiceContainer を Environment 経由で配信
+//  spec 011 — TabView 化 (ライブラリ / AI ブレイン)。ArticleListView は内部 NavigationStack
+//             を保持しているのでそのまま配置 (改修なし)。AIBrainView 側は内部に独自
+//             NavigationStack を持つ。
 //
 
 import SwiftUI
@@ -20,6 +23,13 @@ struct KnowledgeTreeApp: App {
     @State private var processingMonitor = ProcessingMonitor()
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
+
+    @MainActor
+    init() {
+        // spec 009: BGTaskScheduler への register は launch 最早タイミングで必須。
+        // bootstrap (.task) では遅すぎる (View 描画後なので、launch 時 BGTask 通知を取りこぼす)。
+        BackgroundExtractionScheduler.shared.registerHandler()
+    }
 
     var sharedModelContainer: ModelContainer = {
         // CoreData / SwiftData が ApplicationSupport directory を自動 create する前に
@@ -40,13 +50,25 @@ struct KnowledgeTreeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ArticleListView()
-                .environment(processingMonitor)
-                .environment(refreshTrigger)
-                .environment(serviceContainer)
-                .task {
-                    await bootstrap()
-                }
+            TabView {
+                ArticleListView()
+                    .tabItem {
+                        Label("library.tab.title", systemImage: "books.vertical")
+                    }
+                    .accessibilityIdentifier("tab.library")
+
+                AIBrainView()
+                    .tabItem {
+                        Label("aibrain.tab.title", systemImage: "brain")
+                    }
+                    .accessibilityIdentifier("tab.aibrain")
+            }
+            .environment(processingMonitor)
+            .environment(refreshTrigger)
+            .environment(serviceContainer)
+            .task {
+                await bootstrap()
+            }
         }
         .modelContainer(sharedModelContainer)
     }
@@ -58,7 +80,16 @@ struct KnowledgeTreeApp: App {
 
         let context = sharedModelContainer.mainContext
 
-        // spec 004: 知識抽出 service
+        // spec 009: ChunkProgressStore (incremental 永続化)
+        let chunkProgressStore = SwiftDataChunkProgressStore(
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+
+        // spec 008: TagStore (spec 012 で knowledgeService に inject するため先に構築)
+        let tagStore = TagStore(context: context, refreshTrigger: refreshTrigger)
+
+        // spec 004 + 009 + 010 + 012: 知識抽出 service (auto-tag 用 tagStore を inject)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -67,7 +98,9 @@ struct KnowledgeTreeApp: App {
         let knowledgeService = DefaultKnowledgeExtractionService(
             extractor: knowledgeExtractor,
             store: knowledgeStore,
-            processingMonitor: processingMonitor
+            processingMonitor: processingMonitor,
+            chunkProgressStore: chunkProgressStore,
+            tagStore: tagStore
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -93,14 +126,37 @@ struct KnowledgeTreeApp: App {
             processingMonitor: processingMonitor
         )
 
+        // spec 009: BackgroundExtractionQueue + Runner
+        let articleStore = SwiftDataArticleStore(context: context)
+        let bgQueue = BackgroundExtractionQueue(context: context, refreshTrigger: refreshTrigger)
+        let bgRunner = BackgroundExtractionRunner(
+            knowledgeService: knowledgeService,
+            articleStore: articleStore,
+            queue: bgQueue
+        )
+        BackgroundExtractionScheduler.shared.queueProvider = { [weak bgQueue] in bgQueue }
+        BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
         serviceContainer.knowledgeService = knowledgeService
+        serviceContainer.tagStore = tagStore
+        serviceContainer.backgroundQueue = bgQueue
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
         await bodyService.backfillAll()
         await knowledgeService.backfillAll()
+        // spec 008: 孤児タグの cleanup (起動時 1 回)
+        try? tagStore.cleanupOrphans()
+
+        // spec 013: 既存記事への auto-tag backfill (1 度限り、永続フラグで重複防止)
+        let backfillRunner = AutoTagBackfillRunner(
+            context: context,
+            tagStore: tagStore,
+            processingMonitor: processingMonitor
+        )
+        await backfillRunner.run()
     }
 }
