@@ -43,6 +43,53 @@ struct AggregatedKnowledge: Sendable {
 }
 
 enum ChunkedKnowledgeAggregator {
+    /// spec 010: 階層的 chunked summarization の集約。
+    /// keyFacts / entities は lvl1 chunks のみから集約 (spec 006 と同じロジック)。
+    /// essence / summary の決定:
+    ///   - lvl3 成功 → lvl3 値
+    ///   - lvl3 失敗 + lvl2 1+ 成功 → 最初の lvl2 essence + 全 lvl2 essence の改行連結
+    ///   - lvl2 全失敗 + lvl1 1+ 成功 → 最初の lvl1 essence + 全 lvl1 essence の改行連結
+    ///   - lvl1 全失敗 → 空 (status は .failed になる)
+    static func mergeHierarchical(
+        lvl1Results: [ChunkResult],
+        lvl2Results: [IntermediateMetaResult],
+        lvl3Result: ExtractedKnowledgeOutput?
+    ) -> AggregatedKnowledge {
+        let lvl1Successful = lvl1Results.compactMap { $0.output }
+        let lvl2Successful = lvl2Results.compactMap { $0.output }
+
+        let mergedKeyFacts = mergeKeyFacts(from: lvl1Successful)
+        let mergedEntities = mergeEntities(from: lvl1Successful)
+
+        let essence: String
+        let summary: String
+        if let lvl3 = lvl3Result {
+            essence = lvl3.essence
+            summary = lvl3.summary
+        } else if !lvl2Successful.isEmpty {
+            essence = lvl2Successful.first?.essence ?? ""
+            let joined = lvl2Successful.map(\.essence).filter { !$0.isEmpty }.joined(separator: "\n")
+            summary = String(joined.prefix(300))
+        } else if let firstLvl1 = lvl1Successful.first {
+            essence = firstLvl1.essence
+            let joined = lvl1Successful.map(\.essence).filter { !$0.isEmpty }.joined(separator: "\n")
+            summary = String(joined.prefix(300))
+        } else {
+            essence = ""
+            summary = ""
+        }
+
+        return AggregatedKnowledge(
+            essence: essence,
+            summary: summary,
+            keyFacts: mergedKeyFacts,
+            entities: mergedEntities,
+            successfulChunkCount: lvl1Successful.count,
+            totalChunkCount: lvl1Results.count,
+            metaSummarySucceeded: lvl3Result != nil
+        )
+    }
+
     /// 全 chunk の結果 + meta-summary 結果を統合する。
     static func merge(
         results: [ChunkResult],

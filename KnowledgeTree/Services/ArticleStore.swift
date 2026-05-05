@@ -13,6 +13,8 @@ protocol ArticleStoreProtocol {
     func insert(_ article: Article) throws
     func delete(_ article: Article) throws
     func fetchAllSortedBySavedAt() throws -> [Article]
+    /// spec 009: BackgroundExtractionRunner が queue から取り出した articleID で fetch
+    func fetchByID(_ id: UUID) throws -> Article?
 }
 
 enum ArticleStoreError: Error {
@@ -63,6 +65,18 @@ final class SwiftDataArticleStore: ArticleStoreProtocol {
         )
         do {
             return try context.fetch(descriptor)
+        } catch {
+            throw ArticleStoreError.persistenceFailure(underlying: error)
+        }
+    }
+
+    func fetchByID(_ id: UUID) throws -> Article? {
+        var descriptor = FetchDescriptor<Article>(
+            predicate: #Predicate<Article> { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        do {
+            return try context.fetch(descriptor).first
         } catch {
             throw ArticleStoreError.persistenceFailure(underlying: error)
         }

@@ -21,6 +21,13 @@ struct KnowledgeTreeApp: App {
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
 
+    @MainActor
+    init() {
+        // spec 009: BGTaskScheduler への register は launch 最早タイミングで必須。
+        // bootstrap (.task) では遅すぎる (View 描画後なので、launch 時 BGTask 通知を取りこぼす)。
+        BackgroundExtractionScheduler.shared.registerHandler()
+    }
+
     var sharedModelContainer: ModelContainer = {
         // CoreData / SwiftData が ApplicationSupport directory を自動 create する前に
         // 先回りで作成しておく。実機初回起動時の "Sandbox access denied" recovery ログ
@@ -58,7 +65,13 @@ struct KnowledgeTreeApp: App {
 
         let context = sharedModelContainer.mainContext
 
-        // spec 004: 知識抽出 service
+        // spec 009: ChunkProgressStore (incremental 永続化)
+        let chunkProgressStore = SwiftDataChunkProgressStore(
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+
+        // spec 004 + 009 + 010: 知識抽出 service
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -67,7 +80,8 @@ struct KnowledgeTreeApp: App {
         let knowledgeService = DefaultKnowledgeExtractionService(
             extractor: knowledgeExtractor,
             store: knowledgeStore,
-            processingMonitor: processingMonitor
+            processingMonitor: processingMonitor,
+            chunkProgressStore: chunkProgressStore
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -96,11 +110,23 @@ struct KnowledgeTreeApp: App {
         // spec 008: TagStore
         let tagStore = TagStore(context: context, refreshTrigger: refreshTrigger)
 
+        // spec 009: BackgroundExtractionQueue + Runner
+        let articleStore = SwiftDataArticleStore(context: context)
+        let bgQueue = BackgroundExtractionQueue(context: context, refreshTrigger: refreshTrigger)
+        let bgRunner = BackgroundExtractionRunner(
+            knowledgeService: knowledgeService,
+            articleStore: articleStore,
+            queue: bgQueue
+        )
+        BackgroundExtractionScheduler.shared.queueProvider = { [weak bgQueue] in bgQueue }
+        BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
         serviceContainer.knowledgeService = knowledgeService
         serviceContainer.tagStore = tagStore
+        serviceContainer.backgroundQueue = bgQueue
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

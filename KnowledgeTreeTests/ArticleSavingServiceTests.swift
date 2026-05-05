@@ -126,4 +126,8 @@ final class MockArticleStore: ArticleStoreProtocol {
     func fetchAllSortedBySavedAt() throws -> [Article] {
         articles.sorted(by: { $0.savedAt > $1.savedAt })
     }
+
+    func fetchByID(_ id: UUID) throws -> Article? {
+        articles.first { $0.id == id }
+    }
 }

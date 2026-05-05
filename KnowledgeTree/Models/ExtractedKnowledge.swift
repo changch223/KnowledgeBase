@@ -43,6 +43,10 @@ final class ExtractedKnowledge {
     @Relationship(deleteRule: .cascade, inverse: \KnowledgeEntity.knowledge)
     var entities: [KnowledgeEntity] = []
 
+    /// spec 009: chunked summarization の各 chunk 完了結果。完了で cleanup される。
+    @Relationship(deleteRule: .cascade, inverse: \KnowledgeChunkProgress.knowledge)
+    var chunkProgress: [KnowledgeChunkProgress] = []
+
     init(
         id: UUID = UUID(),
         article: Article,

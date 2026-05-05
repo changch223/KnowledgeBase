@@ -18,4 +18,6 @@ final class ServiceContainer {
     var knowledgeService: KnowledgeExtractionServiceProtocol?
     /// spec 008: タグの CRUD を担当
     var tagStore: TagStore?
+    /// spec 009: BG queue (Detail UI で「待機中」表示判定 + chunked 開始時の enqueue)
+    var backgroundQueue: BackgroundExtractionQueueProtocol?
 }

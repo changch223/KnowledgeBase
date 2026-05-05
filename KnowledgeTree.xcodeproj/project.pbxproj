@@ -21,6 +21,7 @@
 		2C7BE469E43051659B8A8631 /* ShareReceivedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01189E9AC116AC5458E3AB9 /* ShareReceivedItem.swift */; };
 		2EC3441CEFBEF8DF1FB70526 /* KnowledgeTreeShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 96EEDA0FCDD359F239CB79BC /* KnowledgeTreeShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2EF3F336C164EA894A26A94E /* BodyExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4136B36681EBF3E30C9529D3 /* BodyExtractor.swift */; };
+		30B24AAB5639B2CA823EA95B /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A14A3DC4A8F82B5A6E1D6C /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift */; };
 		363B63B33C1E014DF99D4500 /* MetadataParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65C204DC081527C3310E6D86 /* MetadataParserTests.swift */; };
 		37D0759ED946C9DEB81D03F2 /* SwiftDataArticleStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27C609BAB0523A34CE9912F5 /* SwiftDataArticleStoreTests.swift */; };
 		3E7FD76E147156A05E7AF6B6 /* ExtractedKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B240E6C515F28CB5E2BCD18 /* ExtractedKnowledge.swift */; };
@@ -51,6 +52,7 @@
 		BDA5AB60F9DB8361D24CEE5F /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
 		C00530BE916D1E20EF69C543 /* ArticleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D0C85FFA5FCF3E80E2BB02 /* ArticleListView.swift */; };
 		C148339AE6D8B458F717475E /* ArticleRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56ABEECD91F3865E53288B1 /* ArticleRow.swift */; };
+		C22006D3F9B5238D72286421 /* KnowledgeTree/Models/KnowledgeChunkProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC8D5B56BB26E900B5688CCB /* KnowledgeTree/Models/KnowledgeChunkProgress.swift */; };
 		C97A323DDD292B7A9B42E44E /* ExtractedKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B240E6C515F28CB5E2BCD18 /* ExtractedKnowledge.swift */; };
 		CE147F90856D5124AB26A0AE /* ArticleBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2474495F5EEA27DC6A1A2C9C /* ArticleBody.swift */; };
 		D0A7163044AD6586C0ED3FE5 /* MetadataParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F77A71660BE285226F33F7 /* MetadataParser.swift */; };
@@ -143,10 +145,12 @@
 		B7CD08A241E853DA536ABE3F /* ArticleSavingService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArticleSavingService.swift; sourceTree = "<group>"; };
 		B8608FDB94A3B6C6D7596729 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B9DEA5F7EA8C1DE8FA14639B /* BodyExtractionService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BodyExtractionService.swift; sourceTree = "<group>"; };
+		C0A14A3DC4A8F82B5A6E1D6C /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift; sourceTree = SOURCE_ROOT; };
 		C14ED9EF7A66FD49E5660B66 /* ReaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		C7DAD938E42AD2348CBDCB25 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C9F77A71660BE285226F33F7 /* MetadataParser.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataParser.swift; sourceTree = "<group>"; };
 		CB3034D4B4EDD8C04538288B /* ArticleSavingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArticleSavingServiceTests.swift; sourceTree = "<group>"; };
+		CC8D5B56BB26E900B5688CCB /* KnowledgeTree/Models/KnowledgeChunkProgress.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/KnowledgeChunkProgress.swift; sourceTree = SOURCE_ROOT; };
 		CD828242CA9B7FC35046F821 /* KnowledgeSummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeSummaryView.swift; sourceTree = "<group>"; };
 		CEDF24678D79BD3813C37A1D /* Article.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Article.swift; sourceTree = "<group>"; };
 		D42A97583A892351D045AC7F /* ReaderToolbar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
@@ -227,6 +231,8 @@
 			children = (
 				25C3A7D470F33EE1E89933CB /* KnowledgeTree/SharedSchema.swift */,
 				2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */,
+				CC8D5B56BB26E900B5688CCB /* KnowledgeTree/Models/KnowledgeChunkProgress.swift */,
+				C0A14A3DC4A8F82B5A6E1D6C /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -610,6 +616,8 @@
 				01F0666D01DBA709C14B1DD2 /* ArticleSavingService.swift in Sources */,
 				7B419E0AF410C069696AB487 /* KnowledgeTree/SharedSchema.swift in Sources */,
 				B9ABDD2A94692428CB24885A /* KnowledgeTree/Models/Tag.swift in Sources */,
+				C22006D3F9B5238D72286421 /* KnowledgeTree/Models/KnowledgeChunkProgress.swift in Sources */,
+				30B24AAB5639B2CA823EA95B /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -762,6 +770,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers = app.KnowledgeTree.chunkedKnowledgeExtraction;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -806,6 +815,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers = app.KnowledgeTree.chunkedKnowledgeExtraction;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
