@@ -16,9 +16,15 @@ final class Tag {
     @Attribute(.unique) var name: String
     @Relationship(inverse: \Article.tags) var articles: [Article] = []
 
-    init(name: String) {
+    /// spec 015: AutoCategoryClassifier で 1 回推論された Category 名 (CategorySeed.allSeeds のいずれか)。
+    /// nil = 未分類 (新規 Tag 直後 / Foundation Models 利用不可時の初期状態)。
+    /// SwiftData lightweight migration で既存 Tag は nil 初期化、AutoCategoryBackfillRunner が後追い分類。
+    var categoryRaw: String?
+
+    init(name: String, categoryRaw: String? = nil) {
         // name は呼び出し側で必ず TagNormalizer.normalize 済を渡すこと。
         // 防御的に再正規化までは行わない (パフォーマンス + 呼び出し責務明示)。
         self.name = name
+        self.categoryRaw = categoryRaw
     }
 }

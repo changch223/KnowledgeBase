@@ -13,6 +13,22 @@ enum DS {
     // MARK: - Color
 
     enum Color {
+        // === spec 015: DESIGN.md target に従った single accent + parchment 系 ===
+
+        /// KnowledgeTree Action Blue (#0a4d8c) — single brand-level interactive color。
+        /// 全 view で interactive 要素 (link / pill CTA / focus ring / accent border) に使用。
+        static let actionBlue       = SwiftUI.Color(red: 10.0/255.0, green: 77.0/255.0, blue: 140.0/255.0)
+        /// Focus ring 用 (#1565b8)
+        static let actionBlueFocus  = SwiftUI.Color(red: 21.0/255.0, green: 101.0/255.0, blue: 184.0/255.0)
+        /// Parchment off-white (#faf8f3) — 庭の地面メタファー。AI ブレインタブ背景・カードに使用。
+        static let parchment        = SwiftUI.Color(red: 250.0/255.0, green: 248.0/255.0, blue: 243.0/255.0)
+        /// Knowledge tile (#f5f5f7) — KnowledgeMap node fill (廃止 view、alias 経由)
+        static let knowledgeTile    = SwiftUI.Color(red: 245.0/255.0, green: 245.0/255.0, blue: 247.0/255.0)
+        /// Tag chip / AI badge fill (#eaeaef)
+        static let tagFill          = SwiftUI.Color(red: 234.0/255.0, green: 234.0/255.0, blue: 239.0/255.0)
+
+        // === spec 014 既存 (維持) ===
+
         // Surface
         static let surfacePrimary   = SwiftUI.Color(.systemBackground)
         static let surfaceSecondary = SwiftUI.Color(.secondarySystemBackground)
@@ -22,21 +38,32 @@ enum DS {
         static let overlayLight  = SwiftUI.Color.primary.opacity(0.10)
         static let overlayMedium = SwiftUI.Color.primary.opacity(0.15)
 
-        // AI brand gradient (PowerGaugeCard, KnowledgeMapView)
-        static let aiBrandStart      = SwiftUI.Color.accentColor.opacity(0.15)
-        static let aiBrandEnd        = SwiftUI.Color.purple.opacity(0.15)
-        static let aiBrandEdge       = SwiftUI.Color.secondary.opacity(0.25)
-        static let aiBrandNodeFill   = SwiftUI.Color.accentColor.opacity(0.15)
-        static let aiBrandNodeStroke = SwiftUI.Color.accentColor.opacity(0.55)
-
-        // Processing phase tints (BottomStatusBar)
-        static let phaseEnrichment = SwiftUI.Color.secondary
-        static let phaseBody       = SwiftUI.Color.blue
-        static let phaseKnowledge  = SwiftUI.Color.purple
-        static let phaseTagging    = SwiftUI.Color.green
-
         // Text
         static let textEmphasis = SwiftUI.Color.primary.opacity(0.85)
+
+        // === spec 015 で「廃止予定」だが廃止 view (PowerGauge / KnowledgeMap / RecentActivityCards) が
+        // 参照中なので alias として残す。将来 spec で view 自体削除時に一緒に削除。
+        // 全て actionBlue 系に統一されているため、視覚的には Apple-quiet 路線と整合。
+
+        /// @deprecated (alias for spec 014 → 015 migration)
+        static let aiBrandStart      = actionBlue.opacity(0.10)
+        /// @deprecated
+        static let aiBrandEnd        = actionBlue.opacity(0.20)
+        /// @deprecated
+        static let aiBrandEdge       = SwiftUI.Color.secondary.opacity(0.25)
+        /// @deprecated
+        static let aiBrandNodeFill   = actionBlue.opacity(0.10)
+        /// @deprecated
+        static let aiBrandNodeStroke = actionBlue.opacity(0.55)
+
+        /// @deprecated — phase tints は全て actionBlue 統一 (Apple single-accent rule)
+        static let phaseEnrichment = actionBlue
+        /// @deprecated
+        static let phaseBody       = actionBlue
+        /// @deprecated
+        static let phaseKnowledge  = actionBlue
+        /// @deprecated
+        static let phaseTagging    = actionBlue
     }
 
     // MARK: - Spacing

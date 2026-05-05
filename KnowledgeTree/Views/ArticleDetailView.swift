@@ -29,6 +29,8 @@ struct ArticleDetailView: View {
     @State private var refreshTick: Int = 0
     /// spec 008: 関連記事タップで sheet を切り替えるための state
     @State private var presentedRelatedArticle: Article?
+    /// spec 016: 本文 DisclosureGroup の展開状態。初期 collapsed、毎回 sheet 起動時にリセット。
+    @State private var isBodyExpanded: Bool = false
 
     /// 1秒 Timer ポーリング: 5 つの通知経路がすべて穴になる場合の最終保険。
     /// completion (knowledge succeeded + body succeeded) になったら止まる条件で
@@ -364,16 +366,26 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var bodySection: some View {
         if !paragraphs.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Spacing.xl) {
-                Text("detail.section.body")
-                    .font(DS.Typography.sectionTitle)
-                ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
-                    Text(p)
-                        .font(.body)
-                        .lineSpacing(DS.Typography.bodyLineSpacing)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            DisclosureGroup(
+                isExpanded: $isBodyExpanded,
+                content: {
+                    VStack(alignment: .leading, spacing: DS.Spacing.xl) {
+                        ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
+                            Text(p)
+                                .font(.body)
+                                .lineSpacing(DS.Typography.bodyLineSpacing)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(.top, DS.Spacing.md)
+                },
+                label: {
+                    Text("reader.bodyDisclosureLabel")
+                        .font(DS.Typography.sectionTitle)
                 }
-            }
+            )
+            .accessibilityIdentifier("reader.bodyDisclosure")
+            .accessibilityHint(Text("タップして本文を展開"))
         } else if let body = article.body, body.status == .failed || body.status == .permanentlyFailed {
             Text("detail.body.failed")
                 .font(.callout)

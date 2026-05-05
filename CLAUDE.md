@@ -5,9 +5,27 @@ Active features in flight:
 - spec 011 — UI リブランディング + AI ブレインタブ追加 — ✅ 実装 + commit `8b8671e` (本ブランチ `011-ai-brain-tab`、未マージ)。Tab 化 / PowerGauge / KnowledgeMap (Canvas + force-directed) / RecentActivity / 知積リブランディング 全部完成。Unit テスト 18/18 PASS。実機検証 (quickstart.md SC-001〜SC-008) と Instruments 60fps 計測のみ未実施。
 - spec 012 — タグ自動付与 (AI Auto-Tag) — ✅ 実装 + commit `0e6e299` (本ブランチ `012-auto-tag`、未マージ)。AutoTagApplier 純粋関数 + KnowledgeExtractionService の hook 2 箇所 + bootstrap で TagStore inject。新 schema ゼロ。Unit テスト 7/7 PASS、既存テスト全回帰 PASS。
 - spec 013 — 既存記事への auto-tag backfill — ✅ 実装 + commit `dc877bd` + main マージ済 (PR #2 / merge `47a9338`)。AutoTagBackfillRunner + BackfillFlagStore + ProcessingMonitor.Phase `.tagBackfilling`。Unit テスト 7/7 PASS。
-- spec 014 — 統一デザインシステム + Phase 3/4 視覚改善 — ✅ 実装 (遡及 spec、本ブランチ `014-design-system`、未 commit)。`DesignSystem.swift` 新規 + 18 view DS.* 適用 + AI ブレイン系再設計 (PowerGauge/KnowledgeMap/RecentActivity) + ArticleRow / Detail / EmptyStateView polish + Reduce Motion 対応。19 file changed +413/-248 行、新 schema ゼロ。実機検証 (quickstart SC-001〜SC-007) のみ未実施。
+- spec 014 — 統一デザインシステム + Phase 3/4 視覚改善 — ✅ 実装 + commit `b78c2f4` + PR #3 OPEN (本ブランチ `014-design-system`)。
+- spec 015 — AI ブレイン v2 + DesignSystem migration + Category 階層 — ✅ 実装 (本ブランチ `015-ai-brain-v2-categories`、未 commit)。AIBrainView v2 (Stats Row + Insight Card + Category List) + DESIGN.md target に DesignSystem 移行 (9 token alias 残し + 5 token 追加) + Tag.categoryRaw lightweight migration + AutoCategoryClassifier + AutoCategoryBackfillRunner + ProcessingMonitor.Phase `.categoryClassifying` + BottomStatusBar phase tint actionBlue 統一。Unit テスト 12/12 PASS、既存テスト全回帰 PASS。実機検証で B1 バグ + 4 UX 要望が判明 → spec 016 へ。
+- spec 016 — Category 詳細画面 + ArticleRow 時間軸 + 本文折りたたみ — ✅ 実装 (本ブランチ `016-category-detail-view`、未 commit)。CategoryFilteredListView 新設 + CategoryFilter 純関数 enum で B1 バグ根本解決 (タップ先 = Category 全 Tag union 記事一覧、数字 = 実体一致) + タグフィルター OR (上位 5 + 「+N ▼」展開) + ArticleRow に SavedAtFormatter 時間軸表示 (今日/昨日/N 日前/絶対) + ArticleDetailView bodySection を DisclosureGroup 折りたたみ + KnowledgeCategoryRow.topTagName 削除。Unit テスト 15/15 PASS (CategoryFilteredListViewTests 9 + ArticleRowSavedAtTests 6)。既存テスト全回帰 PASS (BodyExtractorTests 2 件は spec 016 前から既存 FAIL、本 spec 起因ではない)。実機検証 (quickstart SC-001〜SC-009) のみ未実施。
 
-Read these first for the current planning context (spec 013 = newest plan):
+Read these first for the current planning context (spec 016 = newest plan):
+
+**spec 016 (Category 詳細画面 + ArticleRow 時間軸 + 本文折りたたみ)**:
+- plan: `specs/016-category-detail-view/plan.md` — 新規 1 view + 改修 5 view + Hashable destination 1 つ / Constitution Check 全 PASS
+- research: `specs/016-category-detail-view/research.md` — R1〜R10 (destination 配置 / +N 展開 UX / savedAt フォーマット / DisclosureGroup 位置 / Tag 集計 / カウント仕様 / テスト戦略 / xcstrings / navigationDestination / topTagName 削除)
+- data-model: `specs/016-category-detail-view/data-model.md` — 既存 @Model 再利用 + transient struct 1 つ (CategoryFilteredDestination)
+- contracts: `specs/016-category-detail-view/contracts/{category-filtered-list-view, category-filtered-destination, article-row-saved-at, article-detail-body-disclosure}.md`
+- quickstart: `specs/016-category-detail-view/quickstart.md` — 9 検証シナリオ (B1 修正 / OR フィルター / +N 展開 / 60 秒以内反映 / savedAt 表示 / 本文折りたたみ / Reduce Motion / 既存回帰 / unit test)
+
+**spec 015 (AI ブレイン v2 + DesignSystem migration + Category)**:
+- plan: `specs/015-ai-brain-v2-categories/plan.md`
+- research: `specs/015-ai-brain-v2-categories/research.md` (R1〜R10)
+- data-model: `specs/015-ai-brain-v2-categories/data-model.md`
+- contracts: `specs/015-ai-brain-v2-categories/contracts/{auto-category-classifier, auto-category-backfill-runner, ai-brain-stats-row, ai-insight-card, knowledge-category-row}.md`
+- quickstart: `specs/015-ai-brain-v2-categories/quickstart.md` (12 検証シナリオ)
+
+**spec 013 (既存記事への auto-tag backfill)**:
 
 **spec 013 (既存記事への auto-tag backfill)**:
 - plan: `specs/013-auto-tag-backfill/plan.md` — bootstrap 末尾 1 ブロック / 純 UI 拡張 / 新 service 1 つ + protocol 1 つ

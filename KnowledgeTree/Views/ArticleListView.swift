@@ -189,6 +189,8 @@ private struct ArticleListContent: View {
 struct TagListDestination: Hashable {}
 struct TagFilteredDestination: Hashable { let tagName: String }
 struct EntityFilteredDestination: Hashable { let entityName: String }
+/// spec 016: AI ブレインタブの Category 行タップ → CategoryFilteredListView 遷移
+struct CategoryFilteredDestination: Hashable { let category: Category }
 
 #Preview("一覧") {
     let container = try! ModelContainer(

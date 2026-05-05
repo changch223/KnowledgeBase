@@ -62,19 +62,17 @@ struct BottomStatusBar: View {
 
     private func phaseLabel(_ phase: ProcessingMonitor.Phase) -> LocalizedStringKey {
         switch phase {
-        case .enrichment:     return "status.phase.enrichment"
-        case .body:           return "status.phase.body"
-        case .knowledge:      return "status.phase.knowledge"
-        case .tagBackfilling: return "status.phase.tagBackfilling"
+        case .enrichment:          return "status.phase.enrichment"
+        case .body:                return "status.phase.body"
+        case .knowledge:           return "status.phase.knowledge"
+        case .tagBackfilling:      return "status.phase.tagBackfilling"
+        case .categoryClassifying: return "status.phase.categoryClassifying"
         }
     }
 
+    /// spec 015: 全 phase で単一 actionBlue を返す (Apple single-accent rule、DESIGN.md 準拠)。
+    /// phase 識別は phaseLabel のテキストのみで担保。
     private func phaseTintColor(_ phase: ProcessingMonitor.Phase) -> Color {
-        switch phase {
-        case .enrichment:     return DS.Color.phaseEnrichment
-        case .body:           return DS.Color.phaseBody
-        case .knowledge:      return DS.Color.phaseKnowledge
-        case .tagBackfilling: return DS.Color.phaseTagging
-        }
+        DS.Color.actionBlue
     }
 }
