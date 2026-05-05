@@ -1,6 +1,19 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "・%@" : {
+
+    },
+    "%@ ↔ %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ ↔ %2$@"
+          }
+        }
+      }
+    },
     "%@: %@" : {
       "localizations" : {
         "ja" : {
@@ -14,6 +27,28 @@
     "%lld" : {
 
     },
+    "%lld 知識  ·  %lld キーファクト" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 知識  ·  %2$lld キーファクト"
+          }
+        }
+      }
+    },
+    "%lld 記事を吸収済" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 記事を吸収済"
+          }
+        }
+      }
+    },
     "%lld/%lld" : {
       "localizations" : {
         "ja" : {
@@ -26,6 +61,50 @@
     },
     "+%lld" : {
 
+    },
+    "AI パワー: %lld 記事、%lld 知識、%lld キーファクト" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI パワー: %1$lld 記事、%2$lld 知識、%3$lld キーファクト"
+          }
+        }
+      }
+    },
+    "AI ブレイン" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ブレイン"
+          }
+        }
+      }
+    },
+    "aibrain.map.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレッジマップは空です"
+          }
+        }
+      }
+    },
+    "aibrain.tab.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ブレイン"
+          }
+        }
+      }
     },
     "detail.body.failed" : {
       "extractionState" : "manual",
@@ -465,6 +544,17 @@
         }
       }
     },
+    "library.tab.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ"
+          }
+        }
+      }
+    },
     "list.deleteAction" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -798,28 +888,6 @@
         }
       }
     },
-    "aibrain.tab.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI ブレイン"
-          }
-        }
-      }
-    },
-    "library.tab.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ライブラリ"
-          }
-        }
-      }
-    },
     "Your AI is growing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -831,101 +899,13 @@
         }
       }
     },
-    "AI ブレイン" : {
+    "タグ %@、%lld 記事" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI ブレイン"
-          }
-        }
-      }
-    },
-    "%lld 記事を吸収済" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 記事を吸収済"
-          }
-        }
-      }
-    },
-    "%lld 知識  ·  %lld キーファクト" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld 知識  ·  %2$lld キーファクト"
-          }
-        }
-      }
-    },
-    "AI パワー: %lld 記事、%lld 知識、%lld キーファクト" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI パワー: %1$lld 記事、%2$lld 知識、%3$lld キーファクト"
-          }
-        }
-      }
-    },
-    "今週 %lld 件 新たに吸収" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今週 %lld 件 新たに吸収"
-          }
-        }
-      }
-    },
-    "今週はまだ吸収していません" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今週はまだ吸収していません"
-          }
-        }
-      }
-    },
-    "今週の吸収: %lld 件" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今週の吸収: %lld 件"
-          }
-        }
-      }
-    },
-    "最近育ったテーマ" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近育ったテーマ"
-          }
-        }
-      }
-    },
-    "新しい繋がり" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しい繋がり"
+            "value" : "タグ %1$@、%2$lld 記事"
           }
         }
       }
@@ -952,24 +932,57 @@
         }
       }
     },
-    "aibrain.map.empty.title" : {
+    "今週 %lld 件 新たに吸収" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ナレッジマップは空です"
+            "value" : "今週 %lld 件 新たに吸収"
           }
         }
       }
     },
-    "タグ %@、%lld 記事" : {
+    "今週の吸収: %lld 件" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "タグ %1$@、%2$lld 記事"
+            "value" : "今週の吸収: %lld 件"
+          }
+        }
+      }
+    },
+    "今週はまだ吸収していません" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週はまだ吸収していません"
+          }
+        }
+      }
+    },
+    "最近育ったテーマ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近育ったテーマ"
+          }
+        }
+      }
+    },
+    "新しい繋がり" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい繋がり"
           }
         }
       }
