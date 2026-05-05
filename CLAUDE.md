@@ -1,27 +1,21 @@
 <!-- SPECKIT START -->
 Active features in flight:
-- spec 001-005 — ✅ 実装 + main マージ済 + commit `0fad9fd`。
-- spec 006 — 長文記事の Chunked Summarization — ✅ 実装 + commit `74d167b` (origin/008-search-tags-graph)。
-- spec 007 — マルチページ記事の自動追跡 + 本文統合 — ✅ 実装 + commit `640c89c`。
-- spec 008 — 振り返り支援 (検索 + タグ + エンティティ横断 + 自動提案) — ✅ 実装 + commit `8f3ce4a` + 続く `fbcde69` で stale `.extracting` 自動回復 hot-fix。
-- spec 009 — バックグラウンド AI 抽出継続 (BGTaskScheduler + incremental save) — 📐 spec + plan + research + data-model + contracts + quickstart 完了 (未実装)。
-- spec 010 — 階層的 chunked summarization (超長文 30000 文字対応) — 📐 spec + plan + research + data-model + contracts + quickstart 完了 (未実装)。
+- spec 001-008 — ✅ 実装 + main マージ済 (spec 001-005 commit `0fad9fd` / spec 006 `74d167b` / spec 007 `640c89c` / spec 008 `8f3ce4a` + hot-fix `fbcde69`).
+- spec 009-010 — ✅ 実装 + commit `adc2221` (BGTaskScheduler incremental save + 階層的 chunked summarization).
+- spec 011 — UI リブランディング + AI ブレインタブ追加 — ✅ 実装 (本ブランチ `011-ai-brain-tab` 未マージ、未 commit)。Tab 化 / PowerGauge / KnowledgeMap (Canvas + force-directed) / RecentActivity / 知積リブランディング 全部完成。Unit テスト 18/18 PASS。実機検証 (quickstart.md SC-001〜SC-008) と Instruments 60fps 計測のみ未実施。
 
-Read these first for the current planning context:
+Read these first for the current planning context (spec 011 = newest plan):
 
-**spec 009 (background extraction)**:
-- plan: `specs/009-background-extraction/plan.md`
-- research: `specs/009-background-extraction/research.md` (R1〜R10)
-- data-model: `specs/009-background-extraction/data-model.md`
-- contracts: `specs/009-background-extraction/contracts/{chunk-progress-store,background-scheduler,background-runner,knowledge-extraction-service}.md`
-- quickstart: `specs/009-background-extraction/quickstart.md`
+**spec 011 (UI リブランディング + AI ブレインタブ)**:
+- plan: `specs/011-ai-brain-tab/plan.md` — TabView 化 / 純 UI 拡張 / 新 @Model ゼロ / Constitution Check 全 pass
+- research: `specs/011-ai-brain-tab/research.md` — R1〜R8 (TabView 環境注入、Canvas force-directed、@Query 集計、7 日 predicate、CFBundleDisplayName、エッジ計算、新繋がり判定)
+- data-model: `specs/011-ai-brain-tab/data-model.md` — 既存 @Model 再利用 + transient 型 (MapNode / MapEdge / MapGraph / RecentActivitySnapshot)
+- contracts: `specs/011-ai-brain-tab/contracts/{ai-brain-view,knowledge-map-builder,power-gauge-card,recent-activity-cards}.md`
+- quickstart: `specs/011-ai-brain-tab/quickstart.md` — 7 検証シナリオ (空状態 / カウントアップ / 60fps / live update / 既存回帰 / タブステート保持 / a11y)
 
-**spec 010 (hierarchical summarization)**:
-- plan: `specs/010-hierarchical-summary/plan.md`
-- research: `specs/010-hierarchical-summary/research.md`
-- data-model: `specs/010-hierarchical-summary/data-model.md`
-- contracts: `specs/010-hierarchical-summary/contracts/`
-- quickstart: `specs/010-hierarchical-summary/quickstart.md`
+**spec 009 / 010 (実装済)**:
+- spec 009 plan: `specs/009-background-extraction/plan.md`
+- spec 010 plan: `specs/010-hierarchical-summary/plan.md`
 
 For spec 006-008 reference:
 - spec 006 plan: `specs/006-chunked-summarize/plan.md`

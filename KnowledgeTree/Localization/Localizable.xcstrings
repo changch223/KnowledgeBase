@@ -786,6 +786,182 @@
           }
         }
       }
+    },
+    "aibrain.tab.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ブレイン"
+          }
+        }
+      }
+    },
+    "library.tab.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ"
+          }
+        }
+      }
+    },
+    "Your AI is growing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your AI is growing"
+          }
+        }
+      }
+    },
+    "AI ブレイン" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ブレイン"
+          }
+        }
+      }
+    },
+    "%lld 記事を吸収済" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 記事を吸収済"
+          }
+        }
+      }
+    },
+    "%lld 知識  ·  %lld キーファクト" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 知識  ·  %2$lld キーファクト"
+          }
+        }
+      }
+    },
+    "AI パワー: %lld 記事、%lld 知識、%lld キーファクト" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI パワー: %1$lld 記事、%2$lld 知識、%3$lld キーファクト"
+          }
+        }
+      }
+    },
+    "今週 %lld 件 新たに吸収" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週 %lld 件 新たに吸収"
+          }
+        }
+      }
+    },
+    "今週はまだ吸収していません" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週はまだ吸収していません"
+          }
+        }
+      }
+    },
+    "今週の吸収: %lld 件" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週の吸収: %lld 件"
+          }
+        }
+      }
+    },
+    "最近育ったテーマ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近育ったテーマ"
+          }
+        }
+      }
+    },
+    "新しい繋がり" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい繋がり"
+          }
+        }
+      }
+    },
+    "まだありません" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだありません"
+          }
+        }
+      }
+    },
+    "まだ記事がありません。Safari から記事を保存しよう！" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ記事がありません。Safari から記事を保存しよう！"
+          }
+        }
+      }
+    },
+    "aibrain.map.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレッジマップは空です"
+          }
+        }
+      }
+    },
+    "タグ %@、%lld 記事" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ %1$@、%2$lld 記事"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

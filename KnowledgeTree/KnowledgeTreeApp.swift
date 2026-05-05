@@ -10,6 +10,9 @@
 //  spec 004 — ExtractedKnowledge / KeyFact / KnowledgeEntity schema +
 //             KnowledgeExtractionService bootstrap + 3 service chain backfill
 //  spec 005 — ProcessingMonitor / RefreshTrigger / ServiceContainer を Environment 経由で配信
+//  spec 011 — TabView 化 (ライブラリ / AI ブレイン)。ArticleListView は内部 NavigationStack
+//             を保持しているのでそのまま配置 (改修なし)。AIBrainView 側は内部に独自
+//             NavigationStack を持つ。
 //
 
 import SwiftUI
@@ -47,13 +50,25 @@ struct KnowledgeTreeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ArticleListView()
-                .environment(processingMonitor)
-                .environment(refreshTrigger)
-                .environment(serviceContainer)
-                .task {
-                    await bootstrap()
-                }
+            TabView {
+                ArticleListView()
+                    .tabItem {
+                        Label("library.tab.title", systemImage: "books.vertical")
+                    }
+                    .accessibilityIdentifier("tab.library")
+
+                AIBrainView()
+                    .tabItem {
+                        Label("aibrain.tab.title", systemImage: "brain")
+                    }
+                    .accessibilityIdentifier("tab.aibrain")
+            }
+            .environment(processingMonitor)
+            .environment(refreshTrigger)
+            .environment(serviceContainer)
+            .task {
+                await bootstrap()
+            }
         }
         .modelContainer(sharedModelContainer)
     }
