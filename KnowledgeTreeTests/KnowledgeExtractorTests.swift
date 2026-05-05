@@ -97,10 +97,24 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var callCount = 0
     var lastPrompt: String?
 
+    /// spec 018: Digest 用 mock 出力 (デフォルトは空 cards)
+    var nextDigestResult: Result<DigestOutput, Error> = .success(DigestOutput(cards: []))
+    var digestCallCount = 0
+    var lastDigestPrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
         switch nextResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateDigest(prompt: String) async throws -> DigestOutput {
+        digestCallCount += 1
+        lastDigestPrompt = prompt
+        switch nextDigestResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

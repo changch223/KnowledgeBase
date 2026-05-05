@@ -30,6 +30,7 @@ enum SharedSchema {
             Tag.self,  // spec 008
             KnowledgeChunkProgress.self,           // spec 009
             BackgroundExtractionQueueEntry.self,   // spec 009
+            KnowledgeDigest.self,                  // spec 018
         ])
     }
 

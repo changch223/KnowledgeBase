@@ -57,6 +57,13 @@ struct KnowledgeTreeApp: App {
                     }
                     .accessibilityIdentifier("tab.library")
 
+                // spec 018: 知識 Clip タブ (3rd タブ、Library と AI ブレインの間)
+                KnowledgeClipView()
+                    .tabItem {
+                        Label("clip.tab.title", systemImage: "lightbulb.fill")
+                    }
+                    .accessibilityIdentifier("tab.knowledgeClip")
+
                 AIBrainView()
                     .tabItem {
                         Label("aibrain.tab.title", systemImage: "brain")
@@ -97,18 +104,31 @@ struct KnowledgeTreeApp: App {
             categoryClassifier: categoryClassifier
         )
 
-        // spec 004 + 009 + 010 + 012: 知識抽出 service (auto-tag 用 tagStore を inject)
+        // spec 018: KnowledgeDigestService (Foundation + Fallback) を先に構築、
+        // KnowledgeExtractionService に inject する
+        let session = FoundationModelLanguageModelSession()
+        let availability = SystemLanguageModelAvailabilityChecker()
+        let fallbackDigestService = FallbackKnowledgeDigestService(context: context)
+        let digestService: KnowledgeDigestService = FoundationModelsKnowledgeDigestService(
+            session: session,
+            context: context,
+            availability: availability,
+            fallback: fallbackDigestService
+        )
+
+        // spec 004 + 009 + 010 + 012 + 018: 知識抽出 service (auto-tag 用 tagStore + digest stale 化 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
         )
-        let knowledgeExtractor = KnowledgeExtractor(session: FoundationModelLanguageModelSession())
+        let knowledgeExtractor = KnowledgeExtractor(session: session)
         let knowledgeService = DefaultKnowledgeExtractionService(
             extractor: knowledgeExtractor,
             store: knowledgeStore,
             processingMonitor: processingMonitor,
             chunkProgressStore: chunkProgressStore,
-            tagStore: tagStore
+            tagStore: tagStore,
+            digestService: digestService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -151,6 +171,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.knowledgeService = knowledgeService
         serviceContainer.tagStore = tagStore
         serviceContainer.backgroundQueue = bgQueue
+        serviceContainer.digestService = digestService  // spec 018
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
@@ -174,5 +195,8 @@ struct KnowledgeTreeApp: App {
             processingMonitor: processingMonitor
         )
         await categoryBackfillRunner.run()
+
+        // spec 018: 起動時の stale Digest 全再集約 (新記事追加分が反映される)
+        try? await digestService.regenerateAllStale()
     }
 }

@@ -1,7 +1,13 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "・" : {
+
+    },
     "・%@" : {
+
+    },
+    "·" : {
 
     },
     "(%lld)" : {
@@ -70,6 +76,9 @@
           }
         }
       }
+    },
+    "%lld 記事から" : {
+
     },
     "%lld 記事を吸収済" : {
       "extractionState" : "manual",
@@ -273,6 +282,182 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "+%lld 件のタグ ▼"
+          }
+        }
+      }
+    },
+    "clip.card.staleLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新あり"
+          }
+        }
+      }
+    },
+    "clip.detail.articles.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元記事"
+          }
+        }
+      }
+    },
+    "clip.detail.entities.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連する概念"
+          }
+        }
+      }
+    },
+    "clip.detail.keyFacts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重要ポイント"
+          }
+        }
+      }
+    },
+    "clip.detail.summary.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "総まとめ"
+          }
+        }
+      }
+    },
+    "clip.empty.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Sheet で「知積」を選択して記事を保存しましょう"
+          }
+        }
+      }
+    },
+    "clip.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari から記事を保存しましょう"
+          }
+        }
+      }
+    },
+    "clip.extracting.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が知識を集約中です..."
+          }
+        }
+      }
+    },
+    "clip.filteredEmpty.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「全部」に切り替えると保存済みの全期間で見られます"
+          }
+        }
+      }
+    },
+    "clip.filteredEmpty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該当期間に記事がありません"
+          }
+        }
+      }
+    },
+    "clip.generating.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初回は数十秒かかることがあります"
+          }
+        }
+      }
+    },
+    "clip.generating.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI がまとめを生成中です..."
+          }
+        }
+      }
+    },
+    "clip.filter.all" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部"
+          }
+        }
+      }
+    },
+    "clip.filter.days7" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 日"
+          }
+        }
+      }
+    },
+    "clip.filter.days30" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 日"
+          }
+        }
+      }
+    },
+    "clip.tab.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "知識 Clip"
           }
         }
       }

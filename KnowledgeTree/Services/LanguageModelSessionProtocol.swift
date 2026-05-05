@@ -69,6 +69,29 @@ enum EntityType: String, Codable {
     case work          // 作品 (本・記事・動画等)
 }
 
+// MARK: - spec 018: 知識 Clip タブ用 Generable Output
+
+@Generable
+struct DigestOutput: Codable {
+    @Guide(description: "Category 内の記事を統合した 1〜3 個のカード。1 つにまとまるなら 1 個、トピックが散らばるなら最大 3 個に分割。")
+    let cards: [DigestCardOutput]
+}
+
+@Generable
+struct DigestCardOutput: Codable {
+    @Guide(description: "このカードの要点を 150 字以内で日本語で要約")
+    let summary: String
+
+    @Guide(description: "重要なキーファクト 3 個 (各 30 字程度)")
+    let topKeyFacts: [String]
+
+    @Guide(description: "関連する重要エンティティ名 3 個 (人物 / 概念 / 製品名)")
+    let topEntityNames: [String]
+
+    @Guide(description: "このカードに対応する元記事の ID list (UUID 文字列)")
+    let sourceArticleIDs: [String]
+}
+
 // MARK: - Generable → Stored 変換ヘルパ
 
 extension FactType {
@@ -84,6 +107,9 @@ extension EntityType {
 
 protocol LanguageModelSessionProtocol: Sendable {
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput
+
+    /// spec 018: Category 統合ダイジェスト生成
+    func generateDigest(prompt: String) async throws -> DigestOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -94,6 +120,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: ExtractedKnowledgeOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 018: Category 統合ダイジェスト生成
+    func generateDigest(prompt: String) async throws -> DigestOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: DigestOutput.self
         ) {
             prompt
         }

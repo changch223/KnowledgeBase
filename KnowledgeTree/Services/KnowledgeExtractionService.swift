@@ -36,6 +36,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let chunkProgressStore: ChunkProgressStoreProtocol
     /// spec 012: knowledge 抽出 succeeded 後の auto-tag 用 (default nil で後方互換)
     private let tagStore: TagStore?
+    /// spec 018: knowledge 抽出 succeeded 後の Category Digest 再集約用 (default nil で後方互換)
+    private let digestService: KnowledgeDigestService?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -49,7 +51,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         chunkSizeChars: Int = 1_000,
         maxChunks: Int = 30,
         chunkProgressStore: ChunkProgressStoreProtocol? = nil,
-        tagStore: TagStore? = nil
+        tagStore: TagStore? = nil,
+        digestService: KnowledgeDigestService? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -62,6 +65,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         // @MainActor isolated init は default 引数で書けないため nil 受け → fallback で NoopChunkProgressStore
         self.chunkProgressStore = chunkProgressStore ?? NoopChunkProgressStore()
         self.tagStore = tagStore
+        self.digestService = digestService
     }
 
     /// spec 012: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる auto-tag hook。
@@ -69,6 +73,21 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private func applyAutoTagsIfPossible(article: Article) {
         guard let tagStore else { return }
         AutoTagApplier.apply(to: article, using: tagStore)
+    }
+
+    /// spec 018: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる Digest stale 化 hook。
+    /// digestService が nil なら no-op (後方互換)。
+    /// 該当記事の Tag.categoryRaw から Category を引いて該当 Category の Digest を stale 化。
+    private func markDigestStaleIfPossible(article: Article) {
+        guard let digestService else { return }
+        // article.tags はこの時点で applyAutoTagsIfPossible により設定済み
+        let categoryNames = Set(article.tags.compactMap(\.categoryRaw))
+        for name in categoryNames {
+            guard let category = CategorySeed.allSeeds.first(where: { $0.name == name }) else {
+                continue
+            }
+            digestService.markStale(for: category)
+        }
     }
 
     func extract(article: Article) async {
@@ -157,6 +176,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                     )
                     // spec 012: 単一パス auto-tag hook
                     applyAutoTagsIfPossible(article: article)
+                    // spec 018: Category Digest stale 化 hook
+                    markDigestStaleIfPossible(article: article)
                 }
             case .failure(let error):
                 let reason = String(describing: error)
@@ -319,6 +340,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             try? chunkProgressStore.cleanup(knowledge: knowledge)
             // spec 012: chunked パス auto-tag hook
             applyAutoTagsIfPossible(article: article)
+            // spec 018: Category Digest stale 化 hook (chunked パス)
+            markDigestStaleIfPossible(article: article)
         case .pending, .extracting, .skipped:
             break
         }
