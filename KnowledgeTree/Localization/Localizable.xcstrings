@@ -11,6 +11,19 @@
         }
       }
     },
+    "%lld" : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
     "+%lld" : {
 
     },
@@ -23,169 +36,6 @@
             "value" : "本文を抽出できませんでした。元記事を開いてください。"
           }
         }
-      }
-    },
-    "detail.knowledge.truncatedTailNotice" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "※ 本文が長いため冒頭 10000 文字のみを要約対象としています"
-          }
-        }
-      }
-    },
-    "detail.pages.fetchedNotice" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全 %lld ページ取得しました"
-          }
-        }
-      }
-    },
-    "detail.pages.skippedNotice" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上限に到達したため最初の %lld ページのみ取得しました"
-          }
-        }
-      }
-    },
-    "search.placeholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "記事を検索"
-          }
-        }
-      }
-    },
-    "search.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "該当する記事がありません"
-          }
-        }
-      }
-    },
-    "search.field.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タイトル" } }
-      }
-    },
-    "search.field.canonicalTitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "正式タイトル" } }
-      }
-    },
-    "search.field.essence" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "要点" } }
-      }
-    },
-    "search.field.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "要約" } }
-      }
-    },
-    "search.field.keyFact" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "事実" } }
-      }
-    },
-    "search.field.entity" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "登場" } }
-      }
-    },
-    "search.field.tag" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ" } }
-      }
-    },
-    "tag.list.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ一覧" } }
-      }
-    },
-    "tag.list.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "まだタグがありません" } }
-      }
-    },
-    "tag.filtered.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "tag: %@" } }
-      }
-    },
-    "tag.filtered.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このタグの記事はありません" } }
-      }
-    },
-    "tag.input.placeholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグを追加" } }
-      }
-    },
-    "tag.input.add" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "追加" } }
-      }
-    },
-    "detail.tags.heading" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ" } }
-      }
-    },
-    "detail.related.heading" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "関連記事" } }
-      }
-    },
-    "detail.suggestedTags.heading" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI 提案" } }
-      }
-    },
-    "entity.filtered.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "entity: %@" } }
-      }
-    },
-    "entity.filtered.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "この entity を含む記事はありません" } }
       }
     },
     "detail.body.pending" : {
@@ -221,17 +71,6 @@
         }
       }
     },
-    "detail.knowledge.retry" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "知識抽出を再試行"
-          }
-        }
-      }
-    },
     "detail.knowledge.pending" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -239,6 +78,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "知識抽出を準備中..."
+          }
+        }
+      }
+    },
+    "detail.knowledge.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "知識抽出を再試行"
           }
         }
       }
@@ -254,6 +104,17 @@
         }
       }
     },
+    "detail.knowledge.truncatedTailNotice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "※ 本文が長いため冒頭 10000 文字のみを要約対象としています"
+          }
+        }
+      }
+    },
     "detail.openOriginal" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -261,6 +122,45 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "元記事を開く"
+          }
+        }
+      }
+    },
+    "detail.pages.fetchedNotice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全 %lld ページ取得しました"
+          }
+        }
+      }
+    },
+    "detail.pages.fetchedNotice %lld" : {
+
+    },
+    "detail.pages.skippedNotice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限に到達したため最初の %lld ページのみ取得しました"
+          }
+        }
+      }
+    },
+    "detail.pages.skippedNotice %lld" : {
+
+    },
+    "detail.related.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連記事"
           }
         }
       }
@@ -283,6 +183,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "知識サマリ"
+          }
+        }
+      }
+    },
+    "detail.suggestedTags.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 提案"
+          }
+        }
+      }
+    },
+    "detail.tags.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ"
           }
         }
       }
@@ -330,6 +252,31 @@
           }
         }
       }
+    },
+    "entity.filtered.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この entity を含む記事はありません"
+          }
+        }
+      }
+    },
+    "entity.filtered.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "entity: %@"
+          }
+        }
+      }
+    },
+    "entity.filtered.title %@" : {
+
     },
     "knowledge.aiGeneratedLabel" : {
       "extractionState" : "manual",
@@ -584,6 +531,105 @@
         }
       }
     },
+    "search.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該当する記事がありません"
+          }
+        }
+      }
+    },
+    "search.field.canonicalTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正式タイトル"
+          }
+        }
+      }
+    },
+    "search.field.entity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登場"
+          }
+        }
+      }
+    },
+    "search.field.essence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要点"
+          }
+        }
+      }
+    },
+    "search.field.keyFact" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "事実"
+          }
+        }
+      }
+    },
+    "search.field.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要約"
+          }
+        }
+      }
+    },
+    "search.field.tag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ"
+          }
+        }
+      }
+    },
+    "search.field.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タイトル"
+          }
+        }
+      }
+    },
+    "search.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を検索"
+          }
+        }
+      }
+    },
     "share.duplicateMessage" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -668,6 +714,75 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "知識抽出中"
+          }
+        }
+      }
+    },
+    "tag.filtered.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このタグの記事はありません"
+          }
+        }
+      }
+    },
+    "tag.filtered.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tag: %@"
+          }
+        }
+      }
+    },
+    "tag.filtered.title %@" : {
+
+    },
+    "tag.input.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加"
+          }
+        }
+      }
+    },
+    "tag.input.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグを追加"
+          }
+        }
+      }
+    },
+    "tag.list.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだタグがありません"
+          }
+        }
+      }
+    },
+    "tag.list.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ一覧"
           }
         }
       }

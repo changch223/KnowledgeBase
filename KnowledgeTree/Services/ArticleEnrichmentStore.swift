@@ -118,10 +118,13 @@ final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
             noEnrichmentDescriptor.fetchLimit = 1000
             let noEnrichment = try context.fetch(noEnrichmentDescriptor)
 
-            // 2) status .pending / .failed の enrichment を持つ Article
+            // 2) status .pending / .failed / .fetching の enrichment を持つ Article
+            // .fetching は app crash / device lock 等で stale state になっている可能性 (spec 008+)
             var pendingDescriptor = FetchDescriptor<ArticleEnrichment>(
                 predicate: #Predicate<ArticleEnrichment> {
-                    $0.statusRaw == "pending" || $0.statusRaw == "failed"
+                    $0.statusRaw == "pending"
+                        || $0.statusRaw == "failed"
+                        || $0.statusRaw == "fetching"
                 }
             )
             pendingDescriptor.fetchLimit = 1000

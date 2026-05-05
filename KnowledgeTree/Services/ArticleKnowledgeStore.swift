@@ -167,16 +167,39 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
 
     func fetchPendingArticles() throws -> [Article] {
         do {
-            // ArticleBody が succeeded 状態 & ExtractedKnowledge 不在 の Article を取得
-            var descriptor = FetchDescriptor<Article>(
+            // 1) body が succeeded で knowledge 不在の Article
+            var noKnowledgeDescriptor = FetchDescriptor<Article>(
                 predicate: #Predicate<Article> { article in
                     article.extractedKnowledge == nil &&
                     article.body != nil &&
                     article.body?.statusRaw == "succeeded"
                 }
             )
-            descriptor.fetchLimit = 1000
-            return try context.fetch(descriptor)
+            noKnowledgeDescriptor.fetchLimit = 1000
+            let noKnowledge = try context.fetch(noKnowledgeDescriptor)
+
+            // 2) 中間状態 (extracting / pending) で残骸になった ExtractedKnowledge を持つ Article
+            // app crash / device lock 等で stale state に陥った場合の自動回復対象。
+            var staleDescriptor = FetchDescriptor<ExtractedKnowledge>(
+                predicate: #Predicate<ExtractedKnowledge> {
+                    $0.statusRaw == "extracting" || $0.statusRaw == "pending"
+                }
+            )
+            staleDescriptor.fetchLimit = 1000
+            let staleKnowledges = try context.fetch(staleDescriptor)
+            let staleArticles = staleKnowledges
+                .map(\.article)
+                .filter { $0.body?.status == .succeeded }
+
+            // 重複排除
+            var seen: Set<UUID> = []
+            var result: [Article] = []
+            for article in noKnowledge + staleArticles {
+                if seen.insert(article.id).inserted {
+                    result.append(article)
+                }
+            }
+            return result
         } catch {
             throw ArticleKnowledgeStoreError.persistenceFailure(underlying: error)
         }

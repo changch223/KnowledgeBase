@@ -21,6 +21,7 @@ struct ArticleDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(RefreshTrigger.self) private var refresh
     @Environment(ServiceContainer.self) private var services
+    @Environment(ProcessingMonitor.self) private var monitor
     @State private var presentedSafariURL: ArticleDetailSafariWrapper?
     @State private var isRetryingKnowledge: Bool = false
     /// refresh.version の変化を SwiftUI が確実に tracking するための local @State。
@@ -309,7 +310,9 @@ struct ArticleDetailView: View {
                     .accessibilityIdentifier("knowledgeFailureReason")
             }
 
-            if status == .failed && bodySucceeded {
+            // .failed または .extracting で stale (active task 無し) なら再試行ボタンを表示
+            // .extracting + active task 在り は本当に処理中なので非表示
+            if shouldShowRetryButton(status: status) {
                 Button {
                     retryKnowledge()
                 } label: {
@@ -326,6 +329,23 @@ struct ArticleDetailView: View {
             }
 
             Divider().padding(.top, 4)
+        }
+    }
+
+    /// 再試行ボタンの表示判定:
+    /// - body が succeeded であること (前提条件)
+    /// - status が .failed: 通常の再試行
+    /// - status が .extracting で、ProcessingMonitor に active task が無い: stale 状態 → 再開可能
+    private func shouldShowRetryButton(status: ExtractionStatus?) -> Bool {
+        guard bodySucceeded else { return false }
+        switch status {
+        case .failed:
+            return true
+        case .extracting:
+            // active task が在れば本当に処理中、無ければ stale
+            return monitor.tasksByArticle[article.id] == nil
+        default:
+            return false
         }
     }
 

@@ -63,13 +63,15 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             return
         }
 
-        // 冪等性チェック (succeeded / partiallySucceeded / extracting は早期 return)
+        // 冪等性チェック: 完了済 (succeeded/partiallySucceeded) のみ早期 return。
+        // .extracting は app crash / lock 等で stale 状態になっている可能性があるため
+        // 続行 (本当に in-flight ならば冒頭の activeTasks dedup で待機される)。
         if let existing = article.extractedKnowledge {
             switch existing.status {
-            case .succeeded, .partiallySucceeded, .extracting:
+            case .succeeded, .partiallySucceeded:
                 return
-            case .pending, .failed, .skipped:
-                break  // 続行
+            case .pending, .failed, .skipped, .extracting:
+                break  // 続行 (extracting は stale state として再開可能)
             }
         }
 
