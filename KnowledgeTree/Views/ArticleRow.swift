@@ -73,7 +73,7 @@ struct ArticleRow: View {
             // Leading edge accent: knowledge 完了記事のみ表示
             if knowledgeAvailable {
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(DS.Color.aiBrandEnd)
+                    .fill(DS.Color.actionBlue)
                     .frame(width: 3)
                     .padding(.trailing, DS.Spacing.sm)
                     .accessibilityHidden(true)
@@ -108,10 +108,18 @@ struct ArticleRow: View {
                             }
                         }
 
-                        Text(article.url)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        HStack(spacing: DS.Spacing.sm) {
+                            Text(article.url)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Spacing.sm)
+                            Text(SavedAtFormatter.format(article.savedAt))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .accessibilityIdentifier("articleRowSavedAt")
+                        }
 
                         // spec 004: 「AI 生成」カプセルバッジ
                         if knowledgeAvailable {
@@ -121,10 +129,10 @@ struct ArticleRow: View {
                                 Text("knowledge.aiGeneratedLabel")
                                     .font(DS.Typography.aiLabel)
                             }
-                            .foregroundStyle(DS.Color.aiBrandEnd)
+                            .foregroundStyle(DS.Color.actionBlue)
                             .padding(.horizontal, DS.Spacing.sm)
                             .padding(.vertical, DS.Spacing.xxs)
-                            .background(DS.Color.aiBrandEnd.opacity(0.08), in: Capsule())
+                            .background(DS.Color.actionBlue.opacity(0.08), in: Capsule())
                             .accessibilityIdentifier("knowledgeAIGeneratedLabel")
                         }
                     }
@@ -185,6 +193,61 @@ struct ArticleRow: View {
             parts.append(summary)
         }
         parts.append(article.url)
+        parts.append(SavedAtFormatter.accessibilityText(article.savedAt))
         return parts.joined(separator: ", ")
+    }
+}
+
+/// spec 016: ArticleRow.savedAt 表示用 helper。
+/// 今日 / 昨日 は相対 + 時刻、7 日以内は「N 日前」、それ以上は「YYYY/MM/DD」。
+/// `now` 引数は test で時刻注入できるよう default `.now`。
+enum SavedAtFormatter {
+    private static let calendar: Calendar = .current
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    private static let absoluteFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateFormat = "yyyy/MM/dd"
+        return f
+    }()
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.unitsStyle = .short
+        return f
+    }()
+
+    private static let accessibilityFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateStyle = .long
+        f.timeStyle = .short
+        return f
+    }()
+
+    static func format(_ date: Date, now: Date = .now) -> String {
+        if calendar.isDateInToday(date) {
+            return "今日 " + timeFormatter.string(from: date)
+        }
+        if calendar.isDateInYesterday(date) {
+            return "昨日 " + timeFormatter.string(from: date)
+        }
+        let daysAgo = calendar.dateComponents([.day], from: date, to: now).day ?? 0
+        if daysAgo >= 0 && daysAgo <= 7 {
+            return relativeFormatter.localizedString(for: date, relativeTo: now)
+        }
+        return absoluteFormatter.string(from: date)
+    }
+
+    static func accessibilityText(_ date: Date) -> String {
+        accessibilityFormatter.string(from: date) + " 保存"
     }
 }

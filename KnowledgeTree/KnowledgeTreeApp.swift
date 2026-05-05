@@ -86,8 +86,16 @@ struct KnowledgeTreeApp: App {
             refreshTrigger: refreshTrigger
         )
 
+        // spec 015: AutoCategoryClassifier (Foundation Models 経由で Tag → Category 推論)
+        let categoryClassifier: AutoCategoryClassifier = FoundationModelsAutoCategoryClassifier()
+
         // spec 008: TagStore (spec 012 で knowledgeService に inject するため先に構築)
-        let tagStore = TagStore(context: context, refreshTrigger: refreshTrigger)
+        // spec 015: TagStore に classifier を inject、新規 Tag 作成時の自動 Category 分類を有効化
+        let tagStore = TagStore(
+            context: context,
+            refreshTrigger: refreshTrigger,
+            categoryClassifier: categoryClassifier
+        )
 
         // spec 004 + 009 + 010 + 012: 知識抽出 service (auto-tag 用 tagStore を inject)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
@@ -158,5 +166,13 @@ struct KnowledgeTreeApp: App {
             processingMonitor: processingMonitor
         )
         await backfillRunner.run()
+
+        // spec 015: 既存 Tag の Category 自動分類 backfill (1 度限り、永続フラグで重複防止)
+        let categoryBackfillRunner = AutoCategoryBackfillRunner(
+            context: context,
+            classifier: categoryClassifier,
+            processingMonitor: processingMonitor
+        )
+        await categoryBackfillRunner.run()
     }
 }

@@ -4,6 +4,9 @@
     "・%@" : {
 
     },
+    "(%lld)" : {
+
+    },
     "%@ ↔ %@" : {
       "localizations" : {
         "ja" : {
@@ -14,12 +17,42 @@
         }
       }
     },
+    "%@、%lld 件%@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@、%2$lld 件%3$@"
+          }
+        }
+      }
+    },
+    "%@、%lld記事" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@、%2$lld記事"
+          }
+        }
+      }
+    },
     "%@: %@" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@（%lld記事）" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@（%2$lld記事）"
           }
         }
       }
@@ -59,7 +92,13 @@
         }
       }
     },
+    "%lld記事" : {
+
+    },
     "+%lld" : {
+
+    },
+    "+%lld 件のタグ ▼" : {
 
     },
     "AI パワー: %lld 記事、%lld 知識、%lld キーファクト" : {
@@ -84,6 +123,61 @@
         }
       }
     },
+    "aibrain.categories.empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を保存するとカテゴリーが表示されます"
+          }
+        }
+      }
+    },
+    "aibrain.categories.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリがありません"
+          }
+        }
+      }
+    },
+    "aibrain.categories.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ別知識"
+          }
+        }
+      }
+    },
+    "aibrain.insight.empty.headline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari から記事を保存しましょう"
+          }
+        }
+      }
+    },
+    "aibrain.insight.empty.subtext" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Sheet で「知積」を選択"
+          }
+        }
+      }
+    },
     "aibrain.map.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -95,6 +189,39 @@
         }
       }
     },
+    "aibrain.stats.articles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事"
+          }
+        }
+      }
+    },
+    "aibrain.stats.entities" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "知識"
+          }
+        }
+      }
+    },
+    "aibrain.stats.facts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファクト"
+          }
+        }
+      }
+    },
     "aibrain.tab.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -102,6 +229,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI ブレイン"
+          }
+        }
+      }
+    },
+    "category.detail.empty.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグフィルターを変更して再表示してください"
+          }
+        }
+      }
+    },
+    "category.detail.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該当記事がありません"
+          }
+        }
+      }
+    },
+    "category.detail.tagFilter.collapse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閉じる ▲"
+          }
+        }
+      }
+    },
+    "category.detail.tagFilter.expand" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld 件のタグ ▼"
           }
         }
       }
@@ -588,6 +759,17 @@
         }
       }
     },
+    "reader.bodyDisclosureLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本文を読む"
+          }
+        }
+      }
+    },
     "reader.doneButton" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -789,6 +971,17 @@
         }
       }
     },
+    "status.phase.categoryClassifying" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリー分類中"
+          }
+        }
+      }
+    },
     "status.phase.enrichment" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -916,6 +1109,12 @@
         }
       }
     },
+    "タップして本文を展開" : {
+
+    },
+    "タップで該当記事一覧へ遷移" : {
+
+    },
     "まだありません" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -971,6 +1170,20 @@
         }
       }
     },
+    "全タグのカテゴリー分類中" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全タグのカテゴリー分類中"
+          }
+        }
+      }
+    },
+    "最も読んでいる分野" : {
+
+    },
     "最近育ったテーマ" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -995,6 +1208,16 @@
     },
     "知識" : {
 
+    },
+    "記事 %lld、知識 %lld、ファクト %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "記事 %1$lld、知識 %2$lld、ファクト %3$lld"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

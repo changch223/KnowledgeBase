@@ -14,14 +14,23 @@ import SwiftData
 final class TagStore {
     private let context: ModelContext
     private let refreshTrigger: RefreshTrigger?
+    /// spec 015: 新規 Tag 作成時の Category 自動分類用 (optional、nil なら classify せず)
+    private let categoryClassifier: AutoCategoryClassifier?
 
-    init(context: ModelContext, refreshTrigger: RefreshTrigger? = nil) {
+    init(
+        context: ModelContext,
+        refreshTrigger: RefreshTrigger? = nil,
+        categoryClassifier: AutoCategoryClassifier? = nil
+    ) {
         self.context = context
         self.refreshTrigger = refreshTrigger
+        self.categoryClassifier = categoryClassifier
     }
 
     /// raw タグ名を正規化して article に追加。
     /// 既存 Tag があれば再利用、無ければ新規 insert。同 article への重複は no-op。
+    /// 新規 Tag 作成時、categoryClassifier が設定されていれば fire-and-forget で
+    /// Category を分類して `tag.categoryRaw` に保存する (spec 015)。
     /// - Returns: 正規化後の name (成功 / 既存)、空文字列等で正規化失敗なら nil
     @discardableResult
     func addTag(rawName: String, to article: Article) throws -> String? {
@@ -37,11 +46,14 @@ final class TagStore {
         let existing = try context.fetch(descriptor).first
 
         let tag: Tag
+        let isNewTag: Bool
         if let existing {
             tag = existing
+            isNewTag = false
         } else {
             tag = Tag(name: normalized)
             context.insert(tag)
+            isNewTag = true
         }
 
         // 重複チェック
@@ -51,6 +63,22 @@ final class TagStore {
 
         try context.save()
         refreshTrigger?.bump()
+
+        // spec 015: 新規 Tag のみ Category 分類 (fire-and-forget)。
+        // Tag 作成自体は同期完了済、categorize は非同期で後追い。
+        // 失敗しても Tag は残る (graceful)。
+        if isNewTag, let classifier = categoryClassifier {
+            Task { [weak self] in
+                let categoryName = await classifier.classify(tagName: normalized)
+                await MainActor.run {
+                    guard let self else { return }
+                    tag.categoryRaw = categoryName
+                    try? self.context.save()
+                    self.refreshTrigger?.bump()
+                }
+            }
+        }
+
         return normalized
     }
 
