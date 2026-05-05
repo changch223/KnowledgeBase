@@ -33,7 +33,7 @@ struct ThumbnailView: View {
                     }
                 }
                 .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.thumb))
                 .accessibilityIdentifier("articleListThumbnail")
             } else {
                 EmptyView()
@@ -42,8 +42,8 @@ struct ThumbnailView: View {
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(Color.secondary.opacity(0.2))
+        RoundedRectangle(cornerRadius: DS.Radius.thumb)
+            .fill(DS.Color.overlayMedium)
             .accessibilityHidden(true)
     }
 }

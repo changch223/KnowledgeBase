@@ -3,13 +3,7 @@
 //  KnowledgeTree
 //
 //  spec 011 — AI ブレインタブの root view。
-//  contracts/ai-brain-view.md 準拠。
-//
-//  - NavigationStack 内の縦 ScrollView に 3 セクション (Power / Map / Recent) を配置
-//  - MVP では Section 1 (PowerGaugeCard) のみ実装済
-//  - Section 2 (KnowledgeMapView) と Section 3 (RecentActivityCards) は spec 011
-//    Phase 5 / Phase 6 で順次追加
-//  - navigationDestination は spec 008 既存の TagFilteredDestination 型を再利用
+//  Phase 3 redesign: large title, scroll indicator hidden, full-bleed gradient background.
 //
 
 import SwiftUI
@@ -26,22 +20,36 @@ struct AIBrainView: View {
         NavigationStack(path: $path) {
             ZStack(alignment: .bottom) {
                 ScrollView {
-                    VStack(spacing: 16) {
-                        PowerGaugeCard()
-                            .frame(height: 160)
-                            .padding(.horizontal)
+                    ZStack(alignment: .top) {
+                        // Full-bleed AI brand gradient at top (Apple Weather style)
+                        LinearGradient(
+                            colors: [DS.Color.aiBrandStart.opacity(0.6), Color.clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 300)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
 
-                        KnowledgeMapView(tags: allTags)
-                            .frame(minHeight: 320)
-                            .padding(.horizontal)
+                        VStack(spacing: DS.Spacing.xl) {
+                            PowerGaugeCard()
+                                .frame(height: 180)
+                                .padding(.horizontal, DS.Spacing.xxl)
 
-                        RecentActivityCards()
-                            .frame(height: 140)
+                            KnowledgeMapView(tags: allTags)
+                                .frame(minHeight: 320)
+                                .padding(.horizontal, DS.Spacing.xxl)
+
+                            RecentActivityCards()
+                                .frame(height: 160)
+                        }
+                        .padding(.vertical, DS.Spacing.xxl)
                     }
-                    .padding(.vertical, 16)
                 }
+                .scrollIndicators(.hidden)
                 .accessibilityIdentifier("aibrain.scroll")
                 .navigationTitle("aibrain.tab.title")
+                .navigationBarTitleDisplayMode(.large)
                 .navigationDestination(for: TagFilteredDestination.self) { dest in
                     TagFilteredListView(tagName: dest.tagName)
                 }
@@ -50,8 +58,8 @@ struct AIBrainView: View {
                 }
 
                 BottomStatusBar(monitor: monitor)
-                    .animation(.easeInOut(duration: 0.2), value: monitor.totalActiveCount)
-                    .animation(.easeInOut(duration: 0.2), value: monitor.current?.id)
+                    .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)
+                    .animation(DS.Animation.statusBar, value: monitor.current?.id)
             }
         }
         .accessibilityIdentifier("aibrain.root")

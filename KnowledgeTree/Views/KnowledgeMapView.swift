@@ -108,9 +108,14 @@ struct KnowledgeMapView: View {
             var path = Path()
             path.move(to: a)
             path.addLine(to: b)
+            // Gradient stroke: fades from source node outward
             context.stroke(
                 path,
-                with: .color(.secondary.opacity(0.3)),
+                with: .linearGradient(
+                    Gradient(colors: [DS.Color.aiBrandEdge, DS.Color.aiBrandEdge.opacity(0.1)]),
+                    startPoint: a,
+                    endPoint: b
+                ),
                 lineWidth: 1
             )
         }
@@ -125,13 +130,48 @@ struct KnowledgeMapView: View {
                 height: node.radius * 2
             )
             let circle = Path(ellipseIn: rect)
-            context.fill(circle, with: .color(.accentColor.opacity(0.18)))
-            context.stroke(circle, with: .color(.accentColor.opacity(0.6)), lineWidth: 1.5)
 
-            // Label centered
+            // Drop shadow (slightly offset, low opacity)
+            let shadowRect = CGRect(
+                x: rect.origin.x, y: rect.origin.y + 2,
+                width: rect.width, height: rect.height
+            )
+            context.fill(
+                Path(ellipseIn: shadowRect),
+                with: .color(DS.Color.aiBrandEnd.opacity(0.12))
+            )
+
+            // Radial gradient fill
+            context.fill(
+                circle,
+                with: .radialGradient(
+                    Gradient(colors: [DS.Color.aiBrandStart, DS.Color.aiBrandEnd.opacity(0.05)]),
+                    center: node.position,
+                    startRadius: 0,
+                    endRadius: node.radius
+                )
+            )
+            context.stroke(circle, with: .color(DS.Color.aiBrandNodeStroke), lineWidth: 1.5)
+
+            // Label background pill for readability
+            let labelSize = CGSize(
+                width: min(node.radius * 1.6, 80),
+                height: 16
+            )
+            let labelBgRect = CGRect(
+                x: node.position.x - labelSize.width / 2,
+                y: node.position.y - labelSize.height / 2,
+                width: labelSize.width,
+                height: labelSize.height
+            )
+            context.fill(
+                Path(roundedRect: labelBgRect, cornerRadius: 4),
+                with: .color(DS.Color.surfacePrimary.opacity(0.6))
+            )
+
             let label = Text(node.id)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.primary)
+                .font(DS.Typography.mapNodeLabel)
+                .foregroundStyle(Color.primary)
             context.draw(label, at: node.position, anchor: .center)
         }
     }
@@ -153,7 +193,7 @@ struct KnowledgeMapView: View {
         .accessibilityLabel(Text("タグ \(node.id)、\(node.articleCount) 記事"))
         .onAppear {
             if isNewlyVisible {
-                withAnimation(.easeIn(duration: 0.4)) {
+                withAnimation(DS.Animation.ifMotionAllowed(DS.Animation.nodeAppear)) {
                     _ = newlyVisibleIDs.remove(node.id)
                 }
             }

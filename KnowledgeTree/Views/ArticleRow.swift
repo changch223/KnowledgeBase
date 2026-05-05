@@ -69,83 +69,112 @@ struct ArticleRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top, spacing: 12) {
-                ThumbnailView(urlString: article.enrichment?.ogImageURL)
+        HStack(spacing: 0) {
+            // Leading edge accent: knowledge 完了記事のみ表示
+            if knowledgeAvailable {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(DS.Color.aiBrandEnd)
+                    .frame(width: 3)
+                    .padding(.trailing, DS.Spacing.sm)
+                    .accessibilityHidden(true)
+            }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(displayTitle)
-                        .font(.body)
-                        .lineLimit(2)
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                HStack(alignment: .top, spacing: DS.Spacing.xl) {
+                    thumbnailOrPlaceholder
 
-                    // spec 004: essence 優先、なければ enrichment summary
-                    if let essence = essenceText {
-                        Text(essence)
-                            .font(.caption)
-                            .foregroundStyle(.primary.opacity(0.85))
+                    VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                        Text(displayTitle)
+                            .font(DS.Typography.rowTitle)
                             .lineLimit(2)
-                    } else if let summary = enrichmentSummaryText {
-                        Text(summary)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
 
-                    // spec 004: entity chips (上位 3、salience 順)
-                    if !topEntities.isEmpty {
-                        HStack(spacing: 4) {
-                            ForEach(topEntities, id: \.id) { entity in
-                                EntityChip(entity: entity)
+                        if let essence = essenceText {
+                            Text(essence)
+                                .font(.caption)
+                                .foregroundStyle(DS.Color.textEmphasis)
+                                .lineLimit(2)
+                        } else if let summary = enrichmentSummaryText {
+                            Text(summary)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+
+                        if !topEntities.isEmpty {
+                            HStack(spacing: DS.Spacing.xs) {
+                                ForEach(topEntities, id: \.id) { entity in
+                                    EntityChip(entity: entity)
+                                }
                             }
                         }
-                    }
 
-                    Text(article.url)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        Text(article.url)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
 
-                    // spec 004: 「AI 生成」ラベル (knowledge 表示があるとき)
-                    if knowledgeAvailable {
-                        HStack(spacing: 4) {
-                            Image(systemName: "sparkles")
-                                .font(.caption2)
-                            Text("knowledge.aiGeneratedLabel")
-                                .font(.caption2)
+                        // spec 004: 「AI 生成」カプセルバッジ
+                        if knowledgeAvailable {
+                            HStack(spacing: DS.Spacing.xs) {
+                                Image(systemName: "sparkles")
+                                    .font(DS.Typography.aiLabel)
+                                Text("knowledge.aiGeneratedLabel")
+                                    .font(DS.Typography.aiLabel)
+                            }
+                            .foregroundStyle(DS.Color.aiBrandEnd)
+                            .padding(.horizontal, DS.Spacing.sm)
+                            .padding(.vertical, DS.Spacing.xxs)
+                            .background(DS.Color.aiBrandEnd.opacity(0.08), in: Capsule())
+                            .accessibilityIdentifier("knowledgeAIGeneratedLabel")
                         }
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("knowledgeAIGeneratedLabel")
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if let enrichment = article.enrichment {
+                        EnrichmentStatusBadge(status: enrichment.status)
                     }
                 }
 
-                Spacer(minLength: 0)
-
-                if let enrichment = article.enrichment {
-                    EnrichmentStatusBadge(status: enrichment.status)
+                // spec 008: 検索結果モード時のハイライト excerpt 行
+                if let highlight = searchHighlight {
+                    HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                        Text(highlight.fieldName)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 60, alignment: .leading)
+                        Text(highlight.excerpt)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                    }
+                    .accessibilityIdentifier("searchHighlight")
                 }
             }
-
-            // spec 008: 検索結果モード時のハイライト excerpt 行
-            if let highlight = searchHighlight {
-                HStack(alignment: .top, spacing: 6) {
-                    Text(highlight.fieldName)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(minWidth: 60, alignment: .leading)
-                    Text(highlight.excerpt)
-                        .font(.caption)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                }
-                .accessibilityIdentifier("searchHighlight")
-            }
+            .padding(.vertical, DS.Spacing.xs)
         }
-        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(combinedAccessibilityLabel)
-        // refreshTick を ID として使い、parent の refreshTick incremenet で
-        // ArticleRow の view tree を再生成 → enrichment / knowledge を読み直す。
         .id(refreshTick)
+    }
+
+    /// サムネイル URL なし時は doc.text プレースホルダーで左列アンカーを統一
+    private var thumbnailOrPlaceholder: some View {
+        Group {
+            if article.enrichment?.ogImageURL != nil {
+                ThumbnailView(urlString: article.enrichment?.ogImageURL)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: DS.Radius.thumb)
+                        .fill(DS.Color.overlaySubtle)
+                    Image(systemName: "doc.text")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(width: 72, height: 72)
+                .accessibilityHidden(true)
+            }
+        }
     }
 
     private var combinedAccessibilityLabel: String {

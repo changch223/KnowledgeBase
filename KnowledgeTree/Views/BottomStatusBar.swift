@@ -14,13 +14,13 @@ struct BottomStatusBar: View {
 
     var body: some View {
         if let current = monitor.current {
-            HStack(spacing: 10) {
+            HStack(spacing: DS.Spacing.lg) {
                 ProgressView()
                     .controlSize(.small)
                     .tint(phaseTintColor(current.phase))
 
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                    HStack(spacing: DS.Spacing.sm) {
                         Text(phaseLabel(current.phase))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
@@ -42,14 +42,14 @@ struct BottomStatusBar: View {
                 if monitor.totalActiveCount > 1 {
                     Text("+\(monitor.totalActiveCount - 1)")
                         .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, DS.Spacing.md)
+                        .padding(.vertical, DS.Spacing.xxs)
                         .background(.tertiary, in: Capsule())
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, DS.Spacing.xxl)
+            .padding(.vertical, DS.Spacing.lg)
             .background(.thinMaterial)
             .overlay(alignment: .top) {
                 Divider()
@@ -71,10 +71,10 @@ struct BottomStatusBar: View {
 
     private func phaseTintColor(_ phase: ProcessingMonitor.Phase) -> Color {
         switch phase {
-        case .enrichment:     return .secondary
-        case .body:           return .blue
-        case .knowledge:      return .purple
-        case .tagBackfilling: return .green  // spec 013: タグ整理中
+        case .enrichment:     return DS.Color.phaseEnrichment
+        case .body:           return DS.Color.phaseBody
+        case .knowledge:      return DS.Color.phaseKnowledge
+        case .tagBackfilling: return DS.Color.phaseTagging
         }
     }
 }

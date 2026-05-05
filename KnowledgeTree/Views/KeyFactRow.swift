@@ -31,7 +31,7 @@ struct KeyFactRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: DS.Spacing.md) {
             Image(systemName: iconName)
                 .font(.callout)
                 .foregroundStyle(.secondary)
