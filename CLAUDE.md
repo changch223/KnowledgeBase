@@ -7,9 +7,25 @@ Active features in flight:
 - spec 013 — 既存記事への auto-tag backfill — ✅ 実装 + commit `dc877bd` + main マージ済 (PR #2 / merge `47a9338`)。AutoTagBackfillRunner + BackfillFlagStore + ProcessingMonitor.Phase `.tagBackfilling`。Unit テスト 7/7 PASS。
 - spec 014 — 統一デザインシステム + Phase 3/4 視覚改善 — ✅ 実装 + commit `b78c2f4` + PR #3 OPEN (本ブランチ `014-design-system`)。
 - spec 015 — AI ブレイン v2 + DesignSystem migration + Category 階層 — ✅ 実装 (本ブランチ `015-ai-brain-v2-categories`、未 commit)。AIBrainView v2 (Stats Row + Insight Card + Category List) + DESIGN.md target に DesignSystem 移行 (9 token alias 残し + 5 token 追加) + Tag.categoryRaw lightweight migration + AutoCategoryClassifier + AutoCategoryBackfillRunner + ProcessingMonitor.Phase `.categoryClassifying` + BottomStatusBar phase tint actionBlue 統一。Unit テスト 12/12 PASS、既存テスト全回帰 PASS。実機検証で B1 バグ + 4 UX 要望が判明 → spec 016 へ。
-- spec 016 — Category 詳細画面 + ArticleRow 時間軸 + 本文折りたたみ — ✅ 実装 (本ブランチ `016-category-detail-view`、未 commit)。CategoryFilteredListView 新設 + CategoryFilter 純関数 enum で B1 バグ根本解決 (タップ先 = Category 全 Tag union 記事一覧、数字 = 実体一致) + タグフィルター OR (上位 5 + 「+N ▼」展開) + ArticleRow に SavedAtFormatter 時間軸表示 (今日/昨日/N 日前/絶対) + ArticleDetailView bodySection を DisclosureGroup 折りたたみ + KnowledgeCategoryRow.topTagName 削除。Unit テスト 15/15 PASS (CategoryFilteredListViewTests 9 + ArticleRowSavedAtTests 6)。既存テスト全回帰 PASS (BodyExtractorTests 2 件は spec 016 前から既存 FAIL、本 spec 起因ではない)。実機検証 (quickstart SC-001〜SC-009) のみ未実施。
+- spec 016 — Category 詳細画面 + ArticleRow 時間軸 + 本文折りたたみ — ✅ 実装 + main マージ済 (PR #4 / merge `66ab948`)。CategoryFilteredListView 新設 + CategoryFilter 純関数 enum で B1 バグ根本解決 (タップ先 = Category 全 Tag union 記事一覧、数字 = 実体一致) + タグフィルター OR (上位 5 + 「+N ▼」展開) + ArticleRow に SavedAtFormatter 時間軸表示 (今日/昨日/N 日前/絶対) + ArticleDetailView bodySection を DisclosureGroup 折りたたみ + KnowledgeCategoryRow.topTagName 削除。Unit テスト 15/15 PASS。実機検証 SC-001/002/003/006/008 ✅、SC-004/005/007 は次回検証。
+- spec 017 — Dark/Light Mode 自動切り替え対応 — ✅ 実装 (本ブランチ `018-knowledge-clip-tab` 内に内包、未 commit)。DesignSystem.swift に `Color.adaptive(light:dark:)` extension 新設 + 5 tokens を adaptive 化。Unit テスト 7/7 PASS。実機検証 SC-001〜SC-009 未実施 (まとめて後で)。
+- spec 018 — 知識 Clip タブ + Category 統合 AI ダイジェスト + Category 知識総まとめ詳細画面 — ✅ 実装 (本ブランチ `018-knowledge-clip-tab`、未 commit)。新タブ「知識 Clip」(`lightbulb.fill`、Library と AI ブレインの間) + KnowledgeDigest @Model (sourceArticles non-optional、Constitution III) + KnowledgeDigestService protocol + Foundation + Fallback + DigestOutput @Generable (cards: [Card] でマルチカード) + 3 view (KnowledgeClipView with .refreshable / KnowledgeClipCard / CategoryKnowledgeDetailView with 4 sections) + KnowledgeExtractionService への markStale hook + KnowledgeTreeApp で 3rd タブ + service inject + 起動時 regenerateAllStale。Unit テスト 10/10 PASS (KnowledgeDigestServiceTests 7 + KnowledgeDigestModelTests 3)、既存テスト全回帰 PASS、build 警告ゼロ、SharedSchema lightweight migration。実機検証 (quickstart SC-001〜SC-012) のみ未実施。
 
-Read these first for the current planning context (spec 016 = newest plan):
+Read these first for the current planning context (spec 018 = newest plan):
+
+**spec 018 (知識 Clip タブ + Category 統合 AI ダイジェスト)**:
+- plan: `specs/018-knowledge-clip-tab/plan.md` — 新規 6 + 改修 5 + 新規テスト 2 = ~13 ファイル / Constitution Check 全 PASS
+- research: `specs/018-knowledge-clip-tab/research.md` — R1〜R12 (KnowledgeDigest @Model / @Generable DigestOutput / Foundation+Fallback service / markStale hook / pull-to-refresh / KnowledgeClipCard layout / 包括サマリ / 期間フィルター / SwiftData migration / テスト戦略 / fallback トリガー / トークン上限)
+- data-model: `specs/018-knowledge-clip-tab/data-model.md` — 新 @Model KnowledgeDigest (sourceArticles non-optional、Constitution III) + Article inverse + transient 4 つ
+- contracts: `specs/018-knowledge-clip-tab/contracts/{knowledge-digest-model, knowledge-digest-service, knowledge-clip-view, knowledge-clip-card, category-knowledge-detail-view}.md`
+- quickstart: `specs/018-knowledge-clip-tab/quickstart.md` — 12 検証シナリオ (新タブ / カード / 期間 / 詳細画面遷移 / stale / refresh / fallback / Empty / マルチカード / 既存回帰)
+
+**spec 017 (Dark/Light Mode 自動切り替え対応)**:
+- plan: `specs/017-dark-mode-tokens/plan.md` — DesignSystem.swift 一元 + DESIGN.md 更新 + ColorAdaptiveTests 新規、Constitution Check 全 PASS
+- research: `specs/017-dark-mode-tokens/research.md` — R1〜R10 (Color.adaptive 実装方式 / Dark variant 値選定 / opacity auto adapt / 9 alias 経由 / テスト戦略 / DESIGN.md 更新範囲 / iOS 14+ サポート / Reduce Transparency 自動対応)
+- data-model: `specs/017-dark-mode-tokens/data-model.md` — 既存 @Model 無関係、Color extension のみ
+- contracts: `specs/017-dark-mode-tokens/contracts/color-adaptive.md` — Color.adaptive(light:dark:) 契約 + 7 unit test ケース
+- quickstart: `specs/017-dark-mode-tokens/quickstart.md` — 9 検証シナリオ (Light 保持 / Dark 切替 / Auto / 各 view Dark 視覚 / Reduce Transparency / パフォーマンス / 廃止 view)
 
 **spec 016 (Category 詳細画面 + ArticleRow 時間軸 + 本文折りたたみ)**:
 - plan: `specs/016-category-detail-view/plan.md` — 新規 1 view + 改修 5 view + Hashable destination 1 つ / Constitution Check 全 PASS

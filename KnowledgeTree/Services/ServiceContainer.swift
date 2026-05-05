@@ -20,4 +20,6 @@ final class ServiceContainer {
     var tagStore: TagStore?
     /// spec 009: BG queue (Detail UI で「待機中」表示判定 + chunked 開始時の enqueue)
     var backgroundQueue: BackgroundExtractionQueueProtocol?
+    /// spec 018: Category 統合 AI ダイジェスト生成 service
+    var digestService: KnowledgeDigestService?
 }

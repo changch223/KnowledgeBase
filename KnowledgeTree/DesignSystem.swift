@@ -14,18 +14,38 @@ enum DS {
 
     enum Color {
         // === spec 015: DESIGN.md target に従った single accent + parchment 系 ===
+        // === spec 017: 5 tokens を Color.adaptive 化 (Light/Dark Mode auto adapt) ===
 
-        /// KnowledgeTree Action Blue (#0a4d8c) — single brand-level interactive color。
+        /// KnowledgeTree Action Blue — single brand-level interactive color。
+        /// Light: #0a4d8c (deep blue) / Dark: #3a8eef (DESIGN.md primary-on-dark、Apple Mac ライク)。
         /// 全 view で interactive 要素 (link / pill CTA / focus ring / accent border) に使用。
-        static let actionBlue       = SwiftUI.Color(red: 10.0/255.0, green: 77.0/255.0, blue: 140.0/255.0)
-        /// Focus ring 用 (#1565b8)
-        static let actionBlueFocus  = SwiftUI.Color(red: 21.0/255.0, green: 101.0/255.0, blue: 184.0/255.0)
-        /// Parchment off-white (#faf8f3) — 庭の地面メタファー。AI ブレインタブ背景・カードに使用。
-        static let parchment        = SwiftUI.Color(red: 250.0/255.0, green: 248.0/255.0, blue: 243.0/255.0)
-        /// Knowledge tile (#f5f5f7) — KnowledgeMap node fill (廃止 view、alias 経由)
-        static let knowledgeTile    = SwiftUI.Color(red: 245.0/255.0, green: 245.0/255.0, blue: 247.0/255.0)
-        /// Tag chip / AI badge fill (#eaeaef)
-        static let tagFill          = SwiftUI.Color(red: 234.0/255.0, green: 234.0/255.0, blue: 239.0/255.0)
+        static let actionBlue = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red:  10.0/255.0, green:  77.0/255.0, blue: 140.0/255.0),
+            dark:  SwiftUI.Color(red:  58.0/255.0, green: 142.0/255.0, blue: 239.0/255.0)
+        )
+        /// Focus ring 用。Light: #1565b8 / Dark: #5aa3f5 (Light より明、ring 強調)
+        static let actionBlueFocus = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red:  21.0/255.0, green: 101.0/255.0, blue: 184.0/255.0),
+            dark:  SwiftUI.Color(red:  90.0/255.0, green: 163.0/255.0, blue: 245.0/255.0)
+        )
+        /// Parchment — 庭の地面メタファー。AI ブレインタブ背景・カードに使用。
+        /// Light: #faf8f3 (off-white) / Dark: #1c1c1e (iOS .secondarySystemBackground 同等)
+        static let parchment = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 250.0/255.0, green: 248.0/255.0, blue: 243.0/255.0),
+            dark:  SwiftUI.Color(red:  28.0/255.0, green:  28.0/255.0, blue:  30.0/255.0)
+        )
+        /// Knowledge tile — KnowledgeMap node fill (廃止 view、alias 経由)。
+        /// Light: #f5f5f7 / Dark: #2a2a2c
+        static let knowledgeTile = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 245.0/255.0, green: 245.0/255.0, blue: 247.0/255.0),
+            dark:  SwiftUI.Color(red:  42.0/255.0, green:  42.0/255.0, blue:  44.0/255.0)
+        )
+        /// Tag chip / AI badge fill。
+        /// Light: #eaeaef / Dark: #2c2c2e (iOS .tertiarySystemFill 相当)
+        static let tagFill = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 234.0/255.0, green: 234.0/255.0, blue: 239.0/255.0),
+            dark:  SwiftUI.Color(red:  44.0/255.0, green:  44.0/255.0, blue:  46.0/255.0)
+        )
 
         // === spec 014 既存 (維持) ===
 
@@ -144,5 +164,23 @@ extension View {
             ),
             in: RoundedRectangle(cornerRadius: radius, style: .continuous)
         )
+    }
+}
+
+// MARK: - Color Adaptive (spec 017)
+
+extension Color {
+    /// Light/Dark Mode で異なる色を返す adaptive Color を生成する (spec 017)。
+    /// SwiftUI の Color(uiColor:) と UIKit の UIColor dynamicProvider を組み合わせ、
+    /// UITraitCollection.userInterfaceStyle に応じて auto-adapt する。
+    ///
+    /// - Parameters:
+    ///   - light: Light Mode 時の色
+    ///   - dark: Dark Mode 時の色
+    /// - Returns: SwiftUI が auto-adapt する Color
+    static func adaptive(light: Color, dark: Color) -> Color {
+        Color(uiColor: UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
     }
 }

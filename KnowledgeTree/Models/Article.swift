@@ -33,6 +33,10 @@ final class Article {
     /// 孤児タグの削除は TagStore が責任を持つ。
     @Relationship var tags: [Tag] = []
 
+    /// spec 018: KnowledgeDigest への inverse (Digest 側 sourceArticles の inverse)。
+    /// Article 削除時は Digest 側 sourceArticles から null 化、Digest 自体は残る。
+    @Relationship var digests: [KnowledgeDigest] = []
+
     init(id: UUID = UUID(), url: String, title: String, savedAt: Date = Date()) {
         self.id = id
         self.url = url

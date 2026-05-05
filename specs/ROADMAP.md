@@ -216,6 +216,23 @@
 | 034 | エクスポート / iCloud バックアップ | 災害復旧 + デバイス移行、Constitution I 整合確認 | 大 |
 | 035 | Foundation Models prompt チューニング | Auto-Tag / AutoCategoryClassifier 精度向上 | 中 |
 
+### 🆕 spec 023+ 候補 — 知識 Clip タブ UI/UX ブラッシュアップ (spec 018 出荷後)
+
+**動機**: spec 018 の初版実装後、ユーザーが「カードに何を表示するか」「総まとめ詳細画面の内容」「期間フィルター挙動」「stale マーク見せ方」「マルチカード分割の自然さ」等で整理したい点が出てきた (2026-05-05 ユーザーメモ)。
+
+**スコープ (ユーザーが整理予定)**:
+- カード表示要素の見直し (今: タイトル + summary + KeyFact 3 + Entity 3 + savedAt + 小 OG)
+- 詳細画面のセクション構成 (今: 総まとめ + KeyFact 10 + Entity 5 + 元記事一覧)
+- AI 生成サマリのプロンプト品質
+- 期間フィルター UX (現在 全部/7日/30日 の 3 段階)
+- stale マーク表示 (今: 「更新あり」caption text)
+- マルチカード分割の AI 判断条件
+- 包括サマリ生成方式 (現在 Digest summary 結合、将来 AI 再要約)
+
+**着手タイミング**: spec 018 実機運用後にユーザーが要件整理 → spec 化。優先度は Sprint 2 (Chrome Shortcut / Safari Extension) より低い扱いだが、運用フィードバックで上がる可能性あり。
+
+---
+
 ### D 長期 (将来)
 
 | # | テーマ | 動機 |

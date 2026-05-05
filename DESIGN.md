@@ -4,9 +4,11 @@ name: KnowledgeTree (知積)
 description: A garden-quiet interface where a personal AI grows beside the user. Edge-to-edge light surfaces alternate with parchment to set a reading pace, framed by SF Pro Display + Hiragino headlines with negative letter-spacing and a single Action Blue (#0a4d8c) interactive color. UI chrome recedes so the user's accumulating knowledge can speak — no decorative gradients, no shadows on chrome, only a single soft drop-shadow under KnowledgeMap nodes resting on a surface.
 
 colors:
-  primary: "#0a4d8c"
-  primary-focus: "#1565b8"
-  primary-on-dark: "#3a8eef"
+  # spec 017 — Dark Mode 対応 token は light/dark 両値併記。adaptive な token は SwiftUI Color.adaptive(light:dark:) で実装。
+  # 「light のみ」または「dark のみ」記載の token は単一値で運用 (固定色や iOS 標準).
+  primary: { light: "#0a4d8c", dark: "#3a8eef" }
+  primary-focus: { light: "#1565b8", dark: "#5aa3f5" }
+  primary-on-dark: "#3a8eef"  # legacy 用 (新規参照は primary.dark)
   ink: "#1d1d1f"
   body: "#1d1d1f"
   body-on-dark: "#ffffff"
@@ -16,11 +18,11 @@ colors:
   divider-soft: "#f0f0f0"
   hairline: "#e0e0e0"
   canvas: "#ffffff"
-  canvas-parchment: "#faf8f3"
+  canvas-parchment: { light: "#faf8f3", dark: "#1c1c1e" }
   surface-pearl: "#fafafc"
-  surface-tag-fill: "#eaeaef"
+  surface-tag-fill: { light: "#eaeaef", dark: "#2c2c2e" }
   surface-chip-translucent: "#d2d2d7"
-  surface-knowledge-tile: "#f5f5f7"
+  surface-knowledge-tile: { light: "#f5f5f7", dark: "#2a2a2c" }
   surface-black: "#000000"
   on-primary: "#ffffff"
   on-dark: "#ffffff"
@@ -671,7 +673,6 @@ iPad split view, slide-over, and Stage Manager are explicitly not designed for i
 
 ## Known Gaps
 
-- **Dark mode tokens** are not surfaced. The current system relies on `Color(.systemBackground)` adaptive behavior; explicit dark-mode token pairs (e.g., `canvas-dark`, `ink-on-dark`) are deferred to a future spec.
 - **Error / validation states** were not surfaced on the analyzed views; only the neutral search input and tag input field are documented.
 - **iPad split-view / Stage Manager** layouts are not designed. The system currently relies on adaptive size class only.
 - **Animation timing functions** for spec 014's redesigned visuals are documented in `DS.Animation` (Swift), but a YAML-level mapping into this DESIGN.md is not yet authored.
@@ -730,3 +731,31 @@ Estimated scope: ~10 files modified, ~150–250 lines net change (additions + de
 ### Backward compatibility
 
 This migration is purely visual; no `@Model` / Schema / Service / data-layer changes. All 66 existing unit tests should pass without modification. UI tests using `accessibilityIdentifier` are unaffected.
+
+---
+
+### spec 017: Dark/Light Mode 一元対応 (2026-05-05)
+
+`DesignSystem.swift` の 5 new tokens に Dark variant を追加し、`Color.adaptive(light:dark:)` extension で SwiftUI が UITraitCollection 経由で auto-adapt するようにした。view 改修ゼロ。
+
+**新規追加**:
+- `Color.adaptive(light:dark:)` static helper (`Color` extension、`UIColor { trait in ... }` dynamicProvider 内蔵)
+
+**adaptive 化された 5 tokens**:
+
+| Token | Light | Dark | 根拠 |
+|---|---|---|---|
+| `actionBlue` | `#0a4d8c` | `#3a8eef` | DESIGN.md `primary-on-dark` 既定義、Apple Mac ライク、可読性高 |
+| `actionBlueFocus` | `#1565b8` | `#5aa3f5` | Light より明、focus ring 強調 |
+| `parchment` | `#faf8f3` | `#1c1c1e` | iOS `.secondarySystemBackground` 同等、Apple-quiet |
+| `knowledgeTile` | `#f5f5f7` | `#2a2a2c` | 廃止 view 用、auto adapt |
+| `tagFill` | `#eaeaef` | `#2c2c2e` | iOS `.tertiarySystemFill` 相当 |
+
+**変更なし**:
+- 9 deprecated alias (aiBrandStart / End / Edge / NodeFill / NodeStroke / phaseEnrichment / Body / Knowledge / Tagging) は actionBlue / Color.secondary 経由で auto adapt、明示的 Dark variant 不要
+- 既に adaptive な token (`overlaySubtle` / `overlayLight` / `overlayMedium` / `textEmphasis` / `surfacePrimary` / `surfaceSecondary`) は `.primary` / `.systemBackground` 由来、変更なし
+- 全 18 view ファイル (token 経由で auto adapt するため、view 改修ゼロ)
+
+**Reduce Transparency 対応**: spec 014 で gradient/shadow/blur 全廃済のため追加コードゼロで自動対応。
+
+**テスト**: `KnowledgeTreeTests/ColorAdaptiveTests.swift` の 7 ケース (UITraitCollection で Light/Dark 注入 + 5 tokens の RGB 検証) で auto adapt 挙動を保証。
