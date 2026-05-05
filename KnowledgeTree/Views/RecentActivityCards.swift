@@ -3,13 +3,7 @@
 //  KnowledgeTree
 //
 //  spec 011 Phase 6 / US3 — AI ブレインタブ Section 3。
-//  直近 7 日のアクティビティを 3 枚カード横スクロール表示。
-//
-//  - カード A: 「今週 N 件 新たに吸収」(savedAt > 7 日前 の Article 件数)
-//  - カード B: 「最近育ったテーマ」(直近 7 日でタグ別件数 desc Top3)
-//  - カード C: 「新しい繋がり」(直近 7 日で初出現の KnowledgeEntity ペア)
-//
-//  contracts/recent-activity-cards.md 準拠。
+//  Phase 3 redesign: Apple Health式アイコン背景、シャドウ、ヘアラインボーダー、固定サイズカード。
 //
 
 import SwiftUI
@@ -21,7 +15,6 @@ struct RecentActivityCards: View {
 
     private let sevenDaysAgo: Date
 
-    /// テスト時に時刻注入できるよう init に `now` を受ける。
     init(now: Date = Date()) {
         self.sevenDaysAgo = now.addingTimeInterval(-7 * 86400)
     }
@@ -36,12 +29,12 @@ struct RecentActivityCards: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(spacing: DS.Spacing.xl) {
                 cardThisWeek(count: snapshot.articlesThisWeek)
                 cardGrowingTags(snapshot.growingTags)
                 cardNewConnections(snapshot.newConnections)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, DS.Spacing.xxl)
         }
         .accessibilityIdentifier("aibrain.recent_activity")
     }
@@ -51,10 +44,8 @@ struct RecentActivityCards: View {
     @ViewBuilder
     private func cardThisWeek(count: Int) -> some View {
         cardContainer {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: "tray.and.arrow.down.fill")
-                    .font(.title3)
-                    .foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                iconBadge(systemName: "tray.and.arrow.down.fill", color: .accentColor)
                 if count > 0 {
                     Text("今週 \(count) 件 新たに吸収")
                         .font(.subheadline.weight(.medium))
@@ -74,10 +65,8 @@ struct RecentActivityCards: View {
     @ViewBuilder
     private func cardGrowingTags(_ tags: [RecentActivitySnapshot.GrowingTag]) -> some View {
         cardContainer {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: "leaf.fill")
-                    .font(.title3)
-                    .foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                iconBadge(systemName: "leaf.fill", color: .green)
                 Text("最近育ったテーマ")
                     .font(.subheadline.weight(.medium))
                 if tags.isEmpty {
@@ -85,7 +74,7 @@ struct RecentActivityCards: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         ForEach(tags, id: \.name) { tag in
                             Text("・\(tag.name)")
                                 .font(.caption)
@@ -104,10 +93,8 @@ struct RecentActivityCards: View {
     @ViewBuilder
     private func cardNewConnections(_ pairs: [RecentActivitySnapshot.Connection]) -> some View {
         cardContainer {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: "point.3.connected.trianglepath.dotted")
-                    .font(.title3)
-                    .foregroundStyle(.purple)
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                iconBadge(systemName: "point.3.connected.trianglepath.dotted", color: .purple)
                 Text("新しい繋がり")
                     .font(.subheadline.weight(.medium))
                 if pairs.isEmpty {
@@ -115,7 +102,7 @@ struct RecentActivityCards: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         ForEach(pairs, id: \.self) { pair in
                             Text("\(pair.first) ↔ \(pair.second)")
                                 .font(.caption)
@@ -129,16 +116,32 @@ struct RecentActivityCards: View {
         .accessibilityIdentifier("aibrain.recent.card.connections")
     }
 
-    // MARK: - Card container (共通カードシェル)
+    // MARK: - Shared icon badge (Apple Health style)
+
+    @ViewBuilder
+    private func iconBadge(systemName: String, color: Color) -> some View {
+        ZStack {
+            Circle()
+                .fill(color.opacity(0.12))
+                .frame(width: 36, height: 36)
+            Image(systemName: systemName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+
+    // MARK: - Card container
 
     @ViewBuilder
     private func cardContainer<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         content()
-            .frame(width: 200, alignment: .topLeading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+            .frame(width: 180, height: 140, alignment: .topLeading)
+            .padding(DS.Spacing.xl)
+            .dsCardBackground(radius: DS.Radius.card)
+            .shadow(color: Color.primary.opacity(0.06), radius: 8, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
             )
     }
 }

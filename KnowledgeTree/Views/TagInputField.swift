@@ -13,7 +13,7 @@ struct TagInputField: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DS.Spacing.md) {
             TextField(
                 "tag.input.placeholder",
                 text: $text

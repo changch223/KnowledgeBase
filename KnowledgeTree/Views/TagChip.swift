@@ -15,25 +15,25 @@ struct TagChip: View {
     let isSuggested: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DS.Spacing.xs) {
             if isSuggested {
                 Image(systemName: "plus")
-                    .font(.caption2)
+                    .font(DS.Typography.chipIcon)
             }
             Text(name)
-                .font(.caption)
+                .font(DS.Typography.chipLabel)
                 .lineLimit(1)
             if let onRemove {
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
-                        .font(.caption2)
+                        .font(DS.Typography.chipIcon)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("tagChipDeleteButton-\(name)")
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, DS.Spacing.lg)
+        .padding(.vertical, DS.Spacing.xs)
         .background(isSuggested ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.tertiary), in: Capsule())
         .accessibilityIdentifier(isSuggested ? "tagChipSuggested-\(name)" : "tagChip-\(name)")
     }

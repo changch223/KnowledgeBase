@@ -29,7 +29,7 @@ struct ReaderView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
+                LazyVStack(alignment: .leading, spacing: DS.Spacing.xxl) {
                     // spec 004: knowledge セクション (本文の上)
                     if knowledgeAvailable, let knowledge = article.extractedKnowledge {
                         KnowledgeSummaryView(knowledge: knowledge)
@@ -38,21 +38,21 @@ struct ReaderView: View {
                     // spec 004: 「本文」見出し (knowledge があるときのみ表示、本文の前)
                     if knowledgeAvailable && !paragraphs.isEmpty {
                         Text("knowledge.bodyHeading")
-                            .font(.title3.bold())
-                            .padding(.top, 4)
+                            .font(DS.Typography.sectionTitle)
+                            .padding(.top, DS.Spacing.xs)
                     }
 
                     // spec 003: 本文段落
                     ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
                         Text(paragraph)
                             .font(.body)
-                            .lineSpacing(8)
+                            .lineSpacing(DS.Typography.bodyLineSpacing)
                             .frame(maxWidth: 680, alignment: .leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
+                .padding(.horizontal, DS.Spacing.section)
+                .padding(.vertical, DS.Spacing.xxl)
             }
             .navigationTitle("reader.navigationTitle")
             .navigationBarTitleDisplayMode(.inline)

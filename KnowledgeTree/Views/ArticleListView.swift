@@ -50,8 +50,8 @@ struct ArticleListView: View {
                 }
 
                 BottomStatusBar(monitor: monitor)
-                    .animation(.easeInOut(duration: 0.2), value: monitor.totalActiveCount)
-                    .animation(.easeInOut(duration: 0.2), value: monitor.current?.id)
+                    .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)
+                    .animation(DS.Animation.statusBar, value: monitor.current?.id)
             }
             .searchable(
                 text: $searchQuery,
@@ -154,6 +154,11 @@ private struct ArticleListContent: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("articleListRow")
+                        .listRowSeparator(
+                            article.extractedKnowledge?.status == .succeeded ||
+                            article.extractedKnowledge?.status == .partiallySucceeded
+                                ? .hidden : .visible
+                        )
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 delete(article)
@@ -164,6 +169,7 @@ private struct ArticleListContent: View {
                         }
                     }
                 }
+                .listStyle(.plain)
                 .safeAreaInset(edge: .bottom) {
                     if !monitorIsIdle {
                         Color.clear.frame(height: 60)

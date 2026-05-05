@@ -31,7 +31,7 @@ struct EnrichmentStatusBadge: View {
 
     private func badge(systemName: String, label: LocalizedStringKey, identifier: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 14))
+            .font(.callout)
             .foregroundStyle(.secondary)
             .accessibilityLabel(label)
             .accessibilityIdentifier(identifier)

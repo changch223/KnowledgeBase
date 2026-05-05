@@ -28,20 +28,20 @@ struct KnowledgeSummaryView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DS.Spacing.xxl) {
             // 「AI 生成」ラベル
-            HStack(spacing: 6) {
+            HStack(spacing: DS.Spacing.sm) {
                 Image(systemName: "sparkles")
-                    .font(.caption2)
+                    .font(DS.Typography.aiLabel)
                 Text("knowledge.aiGeneratedLabel")
-                    .font(.caption2)
+                    .font(DS.Typography.aiLabel)
             }
             .foregroundStyle(.secondary)
             .accessibilityIdentifier("knowledgeAIGeneratedLabel")
 
             // Section 見出し
             Text("knowledge.section.title")
-                .font(.title3.bold())
+                .font(DS.Typography.sectionTitle)
 
             // essence (1 行、太字)
             if let essence = knowledge.essence, !essence.isEmpty {
@@ -52,7 +52,7 @@ struct KnowledgeSummaryView: View {
 
             // summary (段落)
             if let summary = knowledge.summary, !summary.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                     Text("knowledge.summary.heading")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -64,7 +64,7 @@ struct KnowledgeSummaryView: View {
 
             // 重要な事実
             if !sortedFacts.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: DS.Spacing.md) {
                     Text("knowledge.facts.heading")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -76,7 +76,7 @@ struct KnowledgeSummaryView: View {
 
             // 登場するもの
             if !sortedEntities.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: DS.Spacing.md) {
                     Text("knowledge.entities.heading")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -85,7 +85,7 @@ struct KnowledgeSummaryView: View {
             }
 
             Divider()
-                .padding(.top, 8)
+                .padding(.top, DS.Spacing.md)
         }
         .accessibilityIdentifier("knowledgeSummarySection")
     }

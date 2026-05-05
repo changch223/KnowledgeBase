@@ -72,7 +72,7 @@ struct ArticleDetailView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
+                LazyVStack(alignment: .leading, spacing: DS.Spacing.xxxl) {
                     // headerSection (サムネ AsyncImage) は refreshTick rebuild から外す。
                     // Timer による毎秒 rebuild で AsyncImage が再 download → loading に戻り
                     // 「写真が表示/消える」を繰り返す問題を回避。
@@ -100,8 +100,8 @@ struct ArticleDetailView: View {
 
                     openOriginalButton
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.horizontal, DS.Spacing.xxxl)
+                .padding(.vertical, DS.Spacing.xxl)
             }
             .navigationTitle("reader.navigationTitle")
             .navigationBarTitleDisplayMode(.inline)
@@ -157,7 +157,7 @@ struct ArticleDetailView: View {
     /// spec 008: タグセクション (既存タグ chips + 自動提案 chips + 入力欄)
     @ViewBuilder
     private var tagsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
             Text("detail.tags.heading")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
@@ -218,21 +218,22 @@ struct ArticleDetailView: View {
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DS.Spacing.xl) {
             if let urlString = article.enrichment?.ogImageURL,
                let url = URL(string: urlString) {
                 AsyncImage(url: url) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
-                    Color.secondary.opacity(0.1)
+                    DS.Color.overlaySubtle
                 }
-                .frame(height: 180)
+                .frame(height: 200)
                 .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
             }
 
             Text(displayTitle)
                 .font(.title2.bold())
+                .lineSpacing(2)
                 .accessibilityIdentifier("articleDetailTitle")
 
             Text(article.url)
@@ -261,7 +262,7 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var knowledgeSection: some View {
         if hasKnowledge, let knowledge = article.extractedKnowledge {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 KnowledgeSummaryView(knowledge: knowledge)
                 // spec 006: 10000 文字超で要約対象外となった末尾がある場合の注記
                 if knowledge.skippedTailChars > 0 {
@@ -280,25 +281,27 @@ struct ArticleDetailView: View {
 
     @ViewBuilder
     private func knowledgePlaceholder(status: ExtractionStatus?) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles").font(.caption2)
-                Text("knowledge.aiGeneratedLabel").font(.caption2)
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            HStack(spacing: DS.Spacing.xs) {
+                Image(systemName: "sparkles").font(DS.Typography.aiLabel)
+                Text("knowledge.aiGeneratedLabel").font(DS.Typography.aiLabel)
             }
             .foregroundStyle(.secondary)
 
             Text("detail.section.knowledge")
-                .font(.title3.bold())
+                .font(DS.Typography.sectionTitle)
 
-            HStack(spacing: 8) {
+            HStack(spacing: DS.Spacing.md) {
                 if status == .extracting || status == .pending || status == nil || isRetryingKnowledge {
-                    ProgressView().controlSize(.small)
+                    ProgressView().controlSize(.small).tint(DS.Color.phaseKnowledge)
                 }
                 Text(messageKey(for: status))
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 8)
+            .padding(DS.Spacing.md)
+            .background(DS.Color.aiBrandEnd.opacity(0.06),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.thumb))
 
             if status == .failed,
                let reason = article.extractedKnowledge?.failureReason,
@@ -306,12 +309,10 @@ struct ArticleDetailView: View {
                 Text(reason)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
-                    .padding(.bottom, 4)
+                    .padding(.bottom, DS.Spacing.xs)
                     .accessibilityIdentifier("knowledgeFailureReason")
             }
 
-            // .failed または .extracting で stale (active task 無し) なら再試行ボタンを表示
-            // .extracting + active task 在り は本当に処理中なので非表示
             if shouldShowRetryButton(status: status) {
                 Button {
                     retryKnowledge()
@@ -321,14 +322,14 @@ struct ArticleDetailView: View {
                         Text("detail.knowledge.retry")
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, DS.Spacing.md)
                 }
                 .buttonStyle(.bordered)
                 .disabled(isRetryingKnowledge)
                 .accessibilityIdentifier("knowledgeRetryButton")
             }
 
-            Divider().padding(.top, 4)
+            Divider().padding(.top, DS.Spacing.xs)
         }
     }
 
@@ -363,13 +364,13 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var bodySection: some View {
         if !paragraphs.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xl) {
                 Text("detail.section.body")
-                    .font(.title3.bold())
+                    .font(DS.Typography.sectionTitle)
                 ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
                     Text(p)
                         .font(.body)
-                        .lineSpacing(8)
+                        .lineSpacing(DS.Typography.bodyLineSpacing)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -377,15 +378,15 @@ struct ArticleDetailView: View {
             Text("detail.body.failed")
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .padding(.vertical, 8)
+                .padding(.vertical, DS.Spacing.md)
         } else {
-            HStack(spacing: 8) {
+            HStack(spacing: DS.Spacing.md) {
                 ProgressView().controlSize(.small)
                 Text("detail.body.pending")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, DS.Spacing.md)
         }
     }
 
@@ -396,14 +397,14 @@ struct ArticleDetailView: View {
                 presentedSafariURL = ArticleDetailSafariWrapper(url: url)
             }
         } label: {
-            HStack {
-                Image(systemName: "safari")
-                Text("detail.openOriginal")
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            Label("detail.openOriginal", systemImage: "safari")
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DS.Spacing.xl)
+                .background(.tint.opacity(0.1),
+                             in: RoundedRectangle(cornerRadius: DS.Radius.thumb, style: .continuous))
+                .foregroundStyle(.tint)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.plain)
         .accessibilityIdentifier("articleDetailOpenOriginal")
     }
 

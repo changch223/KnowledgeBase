@@ -21,9 +21,9 @@ struct RelatedArticlesSection: View {
 
     var body: some View {
         if !related.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xl) {
                 Text("detail.related.heading")
-                    .font(.title3.bold())
+                    .font(DS.Typography.sectionTitle)
 
                 ForEach(related) { item in
                     Button {
@@ -35,7 +35,7 @@ struct RelatedArticlesSection: View {
                     .accessibilityIdentifier("relatedArticleRow")
                 }
 
-                Divider().padding(.top, 4)
+                Divider().padding(.top, DS.Spacing.xs)
             }
             .accessibilityIdentifier("relatedArticlesSection")
         }
@@ -46,20 +46,20 @@ private struct RelatedArticleRow: View {
     let item: RelatedArticle
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: DS.Spacing.md) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                 Text(item.article.title)
                     .font(.body)
                     .lineLimit(2)
                     .foregroundStyle(.primary)
 
                 if !item.commonEntities.isEmpty {
-                    HStack(spacing: 4) {
+                    HStack(spacing: DS.Spacing.xs) {
                         ForEach(item.commonEntities, id: \.self) { name in
                             Text(name)
                                 .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, DS.Spacing.sm)
+                                .padding(.vertical, DS.Spacing.xxs)
                                 .background(.tertiary, in: Capsule())
                                 .foregroundStyle(.secondary)
                         }
@@ -71,6 +71,6 @@ private struct RelatedArticleRow: View {
                 .font(.caption.monospacedDigit().weight(.semibold))
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DS.Spacing.xs)
     }
 }

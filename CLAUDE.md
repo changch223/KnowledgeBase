@@ -4,7 +4,8 @@ Active features in flight:
 - spec 009-010 — ✅ 実装 + commit `adc2221` (BGTaskScheduler incremental save + 階層的 chunked summarization).
 - spec 011 — UI リブランディング + AI ブレインタブ追加 — ✅ 実装 + commit `8b8671e` (本ブランチ `011-ai-brain-tab`、未マージ)。Tab 化 / PowerGauge / KnowledgeMap (Canvas + force-directed) / RecentActivity / 知積リブランディング 全部完成。Unit テスト 18/18 PASS。実機検証 (quickstart.md SC-001〜SC-008) と Instruments 60fps 計測のみ未実施。
 - spec 012 — タグ自動付与 (AI Auto-Tag) — ✅ 実装 + commit `0e6e299` (本ブランチ `012-auto-tag`、未マージ)。AutoTagApplier 純粋関数 + KnowledgeExtractionService の hook 2 箇所 + bootstrap で TagStore inject。新 schema ゼロ。Unit テスト 7/7 PASS、既存テスト全回帰 PASS。
-- spec 013 — 既存記事への auto-tag backfill — ✅ 実装 (本ブランチ `013-auto-tag-backfill`、未 commit)。AutoTagBackfillRunner + BackfillFlagStore (UserDefaults / InMemory) + ProcessingMonitor.Phase `.tagBackfilling` 追加 + bootstrap 末尾呼び出し。新 schema ゼロ。Unit テスト 7/7 PASS。実機検証 (quickstart SC-001〜SC-007) のみ未実施。
+- spec 013 — 既存記事への auto-tag backfill — ✅ 実装 + commit `dc877bd` + main マージ済 (PR #2 / merge `47a9338`)。AutoTagBackfillRunner + BackfillFlagStore + ProcessingMonitor.Phase `.tagBackfilling`。Unit テスト 7/7 PASS。
+- spec 014 — 統一デザインシステム + Phase 3/4 視覚改善 — ✅ 実装 (遡及 spec、本ブランチ `014-design-system`、未 commit)。`DesignSystem.swift` 新規 + 18 view DS.* 適用 + AI ブレイン系再設計 (PowerGauge/KnowledgeMap/RecentActivity) + ArticleRow / Detail / EmptyStateView polish + Reduce Motion 対応。19 file changed +413/-248 行、新 schema ゼロ。実機検証 (quickstart SC-001〜SC-007) のみ未実施。
 
 Read these first for the current planning context (spec 013 = newest plan):
 

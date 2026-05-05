@@ -33,19 +33,19 @@ struct EntityChip: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DS.Spacing.xs) {
             Image(systemName: iconName)
-                .font(.caption2)
+                .font(DS.Typography.chipIcon)
                 .foregroundStyle(.secondary)
             Text(entity.name)
-                .font(.caption)
+                .font(DS.Typography.chipLabel)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, DS.Spacing.md)
+        .padding(.vertical, DS.Spacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.secondary.opacity(0.15))
+            RoundedRectangle(cornerRadius: DS.Radius.chip)
+                .fill(DS.Color.overlayLight)
         )
         .accessibilityIdentifier("knowledgeEntityChip")
         .accessibilityElement(children: .combine)
