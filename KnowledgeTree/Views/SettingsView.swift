@@ -14,6 +14,9 @@ struct SettingsView: View {
     @AppStorage("settings.shortcutSetupCompleted") private var chromeSetupCompleted: Bool = false
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
 
+    @Environment(ServiceContainer.self) private var serviceContainer
+    @State private var showDeleteChatConfirm: Bool = false
+
     var body: some View {
         Form {
             Section("settings.section.externalIntegration") {
@@ -51,6 +54,20 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.safariSetup.entry")
             }
+
+            // spec 021: AI チャット履歴削除
+            Section {
+                Button(role: .destructive) {
+                    showDeleteChatConfirm = true
+                } label: {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "trash")
+                            .frame(width: 24)
+                        Text("chat.settings.deleteAllHistory")
+                    }
+                }
+                .accessibilityIdentifier("settings.chat.deleteHistory")
+            }
         }
         .navigationTitle("settings.title")
         .navigationBarTitleDisplayMode(.inline)
@@ -59,6 +76,17 @@ struct SettingsView: View {
         }
         .navigationDestination(for: SafariSetupDestination.self) { _ in
             SafariSetupView()
+        }
+        .alert(
+            "chat.settings.deleteAllHistory.confirmTitle",
+            isPresented: $showDeleteChatConfirm
+        ) {
+            Button("chat.settings.deleteAllHistory.confirmAction", role: .destructive) {
+                try? serviceContainer.chatService?.deleteAllSessions()
+            }
+            Button("settings.safariSetup.confirmAutoSave.cancel", role: .cancel) { }
+        } message: {
+            Text("chat.settings.deleteAllHistory.confirmMessage")
         }
         .accessibilityIdentifier("settings.root")
     }

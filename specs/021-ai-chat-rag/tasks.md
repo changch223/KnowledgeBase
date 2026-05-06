@@ -18,37 +18,37 @@
 
 ## Phase 3: US1 — 質問 → 回答 (P1)
 
-- [ ] T009 [US1] ChatAnswerOutput @Generable 構造体 — `KnowledgeTree/Services/ChatService.swift` 同ファイル先頭
-- [ ] T010 [US1] ChatService protocol + 実装 (retrieval + Foundation Models + post-process) — `KnowledgeTree/Services/ChatService.swift`
-- [ ] T011 [US1] ChatServiceTests 8 ケース — `KnowledgeTreeTests/ChatServiceTests.swift`
-- [ ] T012 [US1] KnowledgeExtractionService に embedding 生成 hook 追加 — `KnowledgeTree/Services/KnowledgeExtractionService.swift`
+- [x] T009 [US1] ChatAnswerOutput @Generable 構造体 — `LanguageModelSessionProtocol.swift` (既存集約ファイル)
+- [x] T010 [US1] ChatService protocol + 実装 (retrieval + Foundation Models + post-process) — `KnowledgeTree/Services/ChatService.swift`
+- [x] T011 [US1] ChatServiceTests 8 ケース PASS — `KnowledgeTreeTests/ChatServiceTests.swift`
+- [x] T012 [US1] KnowledgeExtractionService に embedding 生成 hook 追加 (単一 + chunked パス) — `KnowledgeTree/Services/KnowledgeExtractionService.swift`
 
 ## Phase 4: US1 + US2 — Chat UI + 履歴永続化 (P1)
 
-- [ ] T013 [US1] ChatMessageRow 新規 — `KnowledgeTree/Views/ChatMessageRow.swift`
-- [ ] T014 [US1] ChatInputField 新規 — `KnowledgeTree/Views/ChatInputField.swift`
-- [ ] T015 [US1] [US2] ChatTabView 新規 (.task で session 復元 + LazyVStack messages + 入力欄) — `KnowledgeTree/Views/ChatTabView.swift`
-- [ ] T016 [US2] ChatService EnvironmentKey + ChatService inject — `KnowledgeTree/KnowledgeTreeApp.swift`
+- [x] T013 [US1] ChatMessageRow 新規 — `KnowledgeTree/Views/ChatMessageRow.swift`
+- [x] T014 [US1] ChatInputField 新規 — `KnowledgeTree/Views/ChatInputField.swift`
+- [x] T015 [US1] [US2] ChatTabView 新規 (.task で session 復元 + LazyVStack messages + 入力欄) — `KnowledgeTree/Views/ChatTabView.swift`
+- [x] T016 [US2] ServiceContainer に chatService 追加 + KnowledgeTreeApp で inject — `KnowledgeTree/KnowledgeTreeApp.swift` / `Services/ServiceContainer.swift`
 
 ## Phase 5: US3 — 引用記事タップ (P1)
 
-- [ ] T017 [US3] ChatMessageRow CitedArticlesSection に NavigationLink → ArticleDetailView (既存 spec 005) — `KnowledgeTree/Views/ChatMessageRow.swift`
+- [x] T017 [US3] ChatMessageRow CitedArticlesSection に NavigationLink → ArticleDetailView (既存 spec 005) — `KnowledgeTree/Views/ChatMessageRow.swift`
 
 ## Phase 6: US4 — Fallback (P2)
 
-- [ ] T018 [US4] ChatService 内 availability 分岐 (Embedding 不可 → keyword、FM 不可 → KeyFact 並べ) — `KnowledgeTree/Services/ChatService.swift` (T010 で部分実装済の場合は完成)
-- [ ] T019 [US4] FallbackChatServiceTests 2 ケース — `KnowledgeTreeTests/ChatServiceTests.swift` 末尾追記
+- [x] T018 [US4] ChatService 内 availability 分岐 (Embedding 不可 → keyword、FM 不可 → KeyFact 並べ) — `KnowledgeTree/Services/ChatService.swift`
+- [x] T019 [US4] Fallback テストケース (testSendUsesFallbackWhenFoundationModelsUnavailable + testSendFallsBackOnFoundationModelsError 2 ケース) — `KnowledgeTreeTests/ChatServiceTests.swift`
 
 ## Phase 7: US5 — 履歴削除 + セッション切替 (P2)
 
-- [ ] T020 [US5] SettingsView に「チャット履歴を全削除」エントリ + 確認 alert — `KnowledgeTree/Views/SettingsView.swift`
-- [ ] T021 [US5] ChatService.deleteAllSessions 実装 — `KnowledgeTree/Services/ChatService.swift`
+- [x] T020 [US5] SettingsView に「チャット履歴を全削除」エントリ + 確認 alert — `KnowledgeTree/Views/SettingsView.swift`
+- [x] T021 [US5] ChatService.deleteAllSessions 実装 + テスト — `KnowledgeTree/Services/ChatService.swift`
 
 ## Phase 8: KnowledgeTreeApp + Polish
 
-- [ ] T022 [P] 4 タブ目「AI チャット」追加 — `KnowledgeTree/KnowledgeTreeApp.swift`
-- [ ] T023 build 警告ゼロ確認 (xcodebuild)
-- [ ] T024 既存テスト全回帰 PASS
+- [x] T022 [P] 4 タブ目「AI チャット」追加 — `KnowledgeTree/KnowledgeTreeApp.swift`
+- [x] T023 build 警告ゼロ確認 (xcodebuild) — Build SUCCEEDED
+- [x] T024 既存テスト全回帰 PASS (シリアル実行で All tests passed、並列実行は既存 BodyExtractor flaky、本 spec と無関係)
 - [ ] T025 CLAUDE.md / ROADMAP.md 更新 + 実機検証 (ユーザー、quickstart 12 シナリオ)
 
 ## 依存関係

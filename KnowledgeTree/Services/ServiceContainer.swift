@@ -22,4 +22,8 @@ final class ServiceContainer {
     var backgroundQueue: BackgroundExtractionQueueProtocol?
     /// spec 018: Category 統合 AI ダイジェスト生成 service
     var digestService: KnowledgeDigestService?
+    /// spec 021: NLEmbedding ベース文章 embedding service
+    var embeddingService: EmbeddingService?
+    /// spec 021: AI Chat (RAG) service
+    var chatService: ChatServiceProtocol?
 }
