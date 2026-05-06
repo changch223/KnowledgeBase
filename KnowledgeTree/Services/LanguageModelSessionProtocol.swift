@@ -92,6 +92,17 @@ struct DigestCardOutput: Codable {
     let sourceArticleIDs: [String]
 }
 
+// MARK: - spec 021: AI Chat (RAG) 用 Generable Output
+
+@Generable
+struct ChatAnswerOutput: Codable {
+    @Guide(description: "ユーザーの質問への回答。日本語で 3 段落以内。参考記事に答えがない場合は『分かりません。保存された記事の中に該当する情報が見つかりませんでした。』と回答する。")
+    let answer: String
+
+    @Guide(description: "回答に使った記事の ID 配列 (Article.id の UUID 文字列)。参考記事に答えがない場合は空配列を返す。一般知識から推測した内容には ID を載せてはいけない。")
+    let citedArticleIDs: [String]
+}
+
 // MARK: - Generable → Stored 変換ヘルパ
 
 extension FactType {
@@ -110,6 +121,9 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 018: Category 統合ダイジェスト生成
     func generateDigest(prompt: String) async throws -> DigestOutput
+
+    /// spec 021: AI Chat (RAG) 回答生成
+    func generateChatAnswer(prompt: String) async throws -> ChatAnswerOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -131,6 +145,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: DigestOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 021: AI Chat (RAG) 回答生成
+    func generateChatAnswer(prompt: String) async throws -> ChatAnswerOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ChatAnswerOutput.self
         ) {
             prompt
         }

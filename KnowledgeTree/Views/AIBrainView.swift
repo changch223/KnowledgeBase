@@ -110,6 +110,18 @@ struct AIBrainView: View {
                 .navigationDestination(for: CategoryFilteredDestination.self) { dest in
                     CategoryFilteredListView(category: dest.category)
                 }
+                .navigationDestination(for: SettingsDestination.self) { _ in
+                    SettingsView()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink(value: SettingsDestination()) {
+                            Image(systemName: "gearshape")
+                                .foregroundStyle(DS.Color.actionBlue)
+                        }
+                        .accessibilityIdentifier("settings.button")
+                    }
+                }
 
                 BottomStatusBar(monitor: monitor)
                     .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)

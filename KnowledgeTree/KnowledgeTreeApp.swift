@@ -69,6 +69,13 @@ struct KnowledgeTreeApp: App {
                         Label("aibrain.tab.title", systemImage: "brain")
                     }
                     .accessibilityIdentifier("tab.aibrain")
+
+                // spec 021: AI チャット (4th タブ)
+                ChatTabView()
+                    .tabItem {
+                        Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    .accessibilityIdentifier("tab.chat")
             }
             .environment(processingMonitor)
             .environment(refreshTrigger)
@@ -116,7 +123,11 @@ struct KnowledgeTreeApp: App {
             fallback: fallbackDigestService
         )
 
-        // spec 004 + 009 + 010 + 012 + 018: 知識抽出 service (auto-tag 用 tagStore + digest stale 化 hook)
+        // spec 021: NLEmbedding ベースの文章 embedding service (起動時に 1 度ロード)
+        let embeddingService = EmbeddingService()
+
+        // spec 004 + 009 + 010 + 012 + 018 + 021: 知識抽出 service
+        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -128,7 +139,8 @@ struct KnowledgeTreeApp: App {
             processingMonitor: processingMonitor,
             chunkProgressStore: chunkProgressStore,
             tagStore: tagStore,
-            digestService: digestService
+            digestService: digestService,
+            embeddingService: embeddingService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -165,6 +177,14 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.queueProvider = { [weak bgQueue] in bgQueue }
         BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
 
+        // spec 021: ChatService 構築 (embedding + Foundation Models + availability で 3 経路分岐)
+        let chatService: ChatServiceProtocol = ChatService(
+            context: context,
+            embeddingService: embeddingService,
+            session: session,
+            availability: availability
+        )
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -172,6 +192,8 @@ struct KnowledgeTreeApp: App {
         serviceContainer.tagStore = tagStore
         serviceContainer.backgroundQueue = bgQueue
         serviceContainer.digestService = digestService  // spec 018
+        serviceContainer.embeddingService = embeddingService  // spec 021
+        serviceContainer.chatService = chatService            // spec 021
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
@@ -198,5 +220,8 @@ struct KnowledgeTreeApp: App {
 
         // spec 018: 起動時の stale Digest 全再集約 (新記事追加分が反映される)
         try? await digestService.regenerateAllStale()
+
+        // spec 021: 既存記事への essence embedding backfill (Apple Intelligence 端末のみ動作)
+        await chatService.backfillEmbeddings()
     }
 }

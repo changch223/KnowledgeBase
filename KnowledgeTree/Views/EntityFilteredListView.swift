@@ -21,6 +21,7 @@ private struct EntityFilteredListContent: View {
     let entityName: String
     @Query private var articles: [Article]
     @State private var selectedArticle: Article?
+    @Environment(\.modelContext) private var modelContext
 
     init(entityName: String) {
         self.entityName = entityName
@@ -59,11 +60,24 @@ private struct EntityFilteredListContent: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("articleListRow")
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            delete(article)
+                        } label: {
+                            Label("list.deleteAction", systemImage: "trash")
+                        }
+                        .accessibilityIdentifier("articleDeleteAction")
+                    }
                 }
             }
         }
         .sheet(item: $selectedArticle) { article in
             ArticleDetailView(article: article)
         }
+    }
+
+    private func delete(_ article: Article) {
+        modelContext.delete(article)
+        try? modelContext.save()
     }
 }

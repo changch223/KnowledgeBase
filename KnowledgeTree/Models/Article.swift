@@ -37,10 +37,36 @@ final class Article {
     /// Article 削除時は Digest 側 sourceArticles から null 化、Digest 自体は残る。
     @Relationship var digests: [KnowledgeDigest] = []
 
+    /// spec 021: 文章 embedding (NLEmbedding.sentenceEmbedding(for: .japanese) 経由、
+    /// L2 正規化済み Float Array の byte 表現)。AI Chat retrieval で cosine similarity 計算に使う。
+    /// - Data 型 + .externalStorage で SQLite から外出し (1000 articles × 512 floats ≈ 2 MB)
+    /// - nil = 未生成 (Apple Intelligence 不可端末 / 旧データ)
+    @Attribute(.externalStorage) var essenceEmbedding: Data?
+
     init(id: UUID = UUID(), url: String, title: String, savedAt: Date = Date()) {
         self.id = id
         self.url = url
         self.title = title
         self.savedAt = savedAt
+    }
+}
+
+// MARK: - spec 021: [Float] ↔ Data zero-copy 変換
+
+extension Array where Element == Float {
+    /// L2 正規化済み Float Array → SwiftData 永続化用 Data。
+    var asEmbeddingData: Data {
+        withUnsafeBufferPointer { buffer in
+            Data(buffer: buffer)
+        }
+    }
+}
+
+extension Data {
+    /// SwiftData から取り出した Data → Float Array。
+    var asFloatArray: [Float] {
+        withUnsafeBytes { rawBuffer in
+            Array(rawBuffer.bindMemory(to: Float.self))
+        }
     }
 }

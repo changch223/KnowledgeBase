@@ -234,11 +234,18 @@ enum SavedAtFormatter {
     }()
 
     static func format(_ date: Date, now: Date = .now) -> String {
-        if calendar.isDateInToday(date) {
+        // spec 019 fix: Calendar.isDateInToday/isDateInYesterday はシステム時刻固定で
+        // now 引数を尊重しない。test 決定論性のため自前で「同日 / 前日」判定する。
+        let nowDay = calendar.dateComponents([.year, .month, .day], from: now)
+        let dateDay = calendar.dateComponents([.year, .month, .day], from: date)
+        if nowDay.year == dateDay.year, nowDay.month == dateDay.month, nowDay.day == dateDay.day {
             return "今日 " + timeFormatter.string(from: date)
         }
-        if calendar.isDateInYesterday(date) {
-            return "昨日 " + timeFormatter.string(from: date)
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now) {
+            let yDay = calendar.dateComponents([.year, .month, .day], from: yesterday)
+            if yDay.year == dateDay.year, yDay.month == dateDay.month, yDay.day == dateDay.day {
+                return "昨日 " + timeFormatter.string(from: date)
+            }
         }
         let daysAgo = calendar.dateComponents([.day], from: date, to: now).day ?? 0
         if daysAgo >= 0 && daysAgo <= 7 {

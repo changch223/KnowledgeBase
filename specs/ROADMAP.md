@@ -1,8 +1,8 @@
 # KnowledgeTree (知積) — Spec Roadmap
 
-**Last updated**: 2026-05-05
-**Current branch**: `016-category-detail-view`
-**Main HEAD**: `47a9338` (spec 013 merged)
+**Last updated**: 2026-05-06
+**Current branch**: `019-chrome-app-intent` (spec 019 + 020 work tree)
+**Main HEAD**: `9c41d60` (PR #5 = spec 017 + 018 merged)
 
 このドキュメントは spec 001 〜 spec 040+ の全体計画を保存し、`/speckit-specify` 起動時の優先順位判断に使う。
 更新は spec を新たに着手する / 完了させる毎に行う。
@@ -109,9 +109,17 @@
 
 ## 🥈 Sprint 2 — 中優先 (取り込み経路の拡張)
 
-ユーザー提供の Chrome Shortcut → Safari Extension の流れ。
+ユーザー提供の Chrome Shortcut → Safari Extension の流れ。**spec 番号変更**: spec 019 (Chrome) / spec 020 (Safari Extension)。
 
-### spec 020 — Chrome 連携 (URLSession 経路 + iOS Shortcut 自動化)
+### spec 019 — Chrome 連携 (App Intents + iOS Shortcut) ✅ specify+plan+implement (T001-T008)
+
+実装中、Build SUCCEEDED。`specs/019-chrome-app-intent/` 参照。
+
+### spec 020 — Safari Web Extension ✅ specify+plan 完了
+
+`specs/020-safari-extension/` 参照。新 target 必要、~700 行、~15 タスク予定。
+
+### (旧) spec 020 — Chrome 連携 (URLSession 経路 + iOS Shortcut 自動化)
 
 **動機**:
 - Constitution Principle IV で Shortcuts は「将来 / オプション」、本 spec で MVP 入り
@@ -162,7 +170,11 @@
 
 ## 🥉 Sprint 3 — AI Chat (RAG)
 
-### spec 022 — AI Chat (RAG) 処理フロー
+### spec 021 — AI Chat (RAG) ✅ specify+plan 完了
+
+`specs/021-ai-chat-rag/` 参照。新 @Model 2 + 新 service 3 + 4 タブ目、~1500 行、~25 タスク予定。
+
+### (旧) spec 022 — AI Chat (RAG) 処理フロー
 
 **動機**:
 - Constitution Principle II で MVP 範囲外と明示されていたが、本 spec で Apple Intelligence + 保存記事を knowledge base にした会話型 UI を実装
@@ -192,7 +204,8 @@
 
 | # | テーマ | 動機 | 規模 |
 |---|---|---|---|
-| 023 | ArticleRow 左 swipe (削除 / アーカイブ) | 削除手段がないと運用上限界 | 小 (~1 日) |
+| **022** ✅ specify+plan | **ArticleRow 左 swipe (削除のみ MVP)** | **削除手段がないと運用上限界** | **小 (~80 行) — `specs/022-article-row-swipe/` 参照** |
+| 023 | ArticleRow 左 swipe (お気に入り/アーカイブ追加) | spec 022 拡張、お気に入り / アーカイブ / undo | 小〜中 |
 | 024 | Tag 編集 / 統合 / 削除 UI | AI Auto-Tag のみで誤りを直せない | 中 (~3 日) |
 | 025 | Apple Intelligence 利用不可時の fallback | Simulator / 非対応端末で「何も生成されない」状態を解消 (Constitution I との両立要 spec.md 明記) | 中〜大 |
 
@@ -216,7 +229,28 @@
 | 034 | エクスポート / iCloud バックアップ | 災害復旧 + デバイス移行、Constitution I 整合確認 | 大 |
 | 035 | Foundation Models prompt チューニング | Auto-Tag / AutoCategoryClassifier 精度向上 | 中 |
 
-### 🆕 spec 023+ 候補 — 知識 Clip タブ UI/UX ブラッシュアップ (spec 018 出荷後)
+### 🆕 spec 020 出荷後の future spec 候補 (2026-05-06 追加)
+
+spec 020 (Safari Web Extension + 自動保存モード) MVP 出荷後、以下を将来 spec 候補として記録:
+
+- **spec 024+ 候補: macOS Safari 対応** — Constitution IV 準拠、現状 iOS のみ
+- **spec 025+ 候補: ホワイトリスト自動保存** — 「特定ドメインのみ自動」の中間モード (zenn.dev / qiita.com 等を SettingsView で管理)
+- **spec 026+ 候補: ページ本文の Safari 経由取得** — 現在は title + url + og:image、Safari Extension の content_script で本文も抽出して渡す改良 (spec 002/003 backfill 不要化)
+- **spec 027+ 候補: Safari Extension popup UI** — action click で popup 表示、保存対象を選択可能に (現在は即保存)
+- **spec 028+ 候補: Extension icon 本格 design** — KnowledgeTree ロゴ (actionBlue + 知 char) を SVG → PNG 6 サイズで作成、Dark Mode 対応
+- **spec 029+ 候補: 自動保存のスケジュール最適化** — 「同 URL は 24 時間以内なら再保存しない」「夜間バッチ処理」等
+- **spec 019 撤回 (2026-05-06 完了)**: Chrome 自動化 (App Intents + iOS Shortcut Setup Guide) は **Chrome iOS の x-callback-url が「現在のタブ URL」を返さない技術制約により実用化不可** と判明。SettingsView から Chrome エントリ + ChromeShortcutSetupView を撤去。Chrome は Share Extension (spec 001) のみで運用方針に決定 (ユーザー判断)。AppIntent / AppShortcutsProvider / ArticleSavingActor の実装は Safari Web Extension が依存するため残置 (副作用で Shortcuts.app に「知積に保存」アクションは登録されるが、ユーザー使用しなければ無害)
+
+却下 (constitution V 違反):
+- 自動保存の通知 / バッジ (不安喚起 UI 禁止)
+
+### 🆕 spec 022 出荷後の future spec 候補 (2026-05-06 追加)
+
+spec 022 (ArticleRow swipe 削除) は **List 系 3 view (ArticleListView / TagFilteredListView / EntityFilteredListView) で完了**。LazyVStack 系 2 view は SwiftUI 仕様 (`.swipeActions` は List/Form 専用) で別アプローチが必要:
+
+- **spec 030+ 候補: LazyVStack 系 view の削除手段** — `CategoryFilteredListView` / `CategoryKnowledgeDetailView` に削除手段を追加。選択肢 3 つ: (a) List 化リファクタ (spec 016 design 判断を覆す可能性) / (b) `.contextMenu` (長押し → menu) で全 5 view 統一 / (c) カスタム DragGesture で swipe 自作。実機運用で「Category 詳細から削除したい」要望が出たら着手。
+
+
 
 **動機**: spec 018 の初版実装後、ユーザーが「カードに何を表示するか」「総まとめ詳細画面の内容」「期間フィルター挙動」「stale マーク見せ方」「マルチカード分割の自然さ」等で整理したい点が出てきた (2026-05-05 ユーザーメモ)。
 
@@ -230,6 +264,21 @@
 - 包括サマリ生成方式 (現在 Digest summary 結合、将来 AI 再要約)
 
 **着手タイミング**: spec 018 実機運用後にユーザーが要件整理 → spec 化。優先度は Sprint 2 (Chrome Shortcut / Safari Extension) より低い扱いだが、運用フィードバックで上がる可能性あり。
+
+### 🆕 2026-05-06 セッション後の future spec 候補
+
+- **spec 030: LazyVStack 系 view の削除手段** — 📝 specify+plan 完了 (`specs/030-category-row-deletion/`、本セッション 2026-05-06)。contextMenu (長押し → メニュー) 採用、~30 行極小 spec。実装はユーザー判断後
+- **spec 031+ 候補: BodyExtractorTests test order dependency 解消** — `extractsFromArticleTag` 実行後に `extractsFromMainTag` / `extractsByDensityScoringWhenNoSemanticTag` が fail する shared global state (NSRegularExpression cache?) 問題。単独実行では PASS、suite 内連続実行で fail。Foundation の `String.replacingOccurrences(options: [.regularExpression])` 内部 state を疑う。回避策候補: 明示 NSRegularExpression インスタンス + stringByReplacingMatches、または fixture から `<header>`/`<footer>` 除去で trigger 削減
+- **spec 032+ 候補: pbxproj duplicate build file 警告クリーンアップ** — main app / Tests target の Sources Build Phase に明示登録 + filesystem-synchronized auto-sync の重複登録で warnings ~30 件。Sources Build Phase を空にすると BodyExtractorTests の挙動に影響する不可解な依存があり、根本調査が必要
+- **spec 033+ 候補: AI チャット モダン UI 刷新 (Gemini / Claude / ChatGPT 風)** — spec 021 実機検証で出た UX 要望 (2026-05-06 ユーザー):
+  - 左側に **会話履歴サイドバー**、ハンバーガーで開閉 (画面狭い時は overlay)
+  - **multi-turn context** (現状 single-turn): 直前の 1〜数 message を context に含めて深掘り対応 (「詳しく教えて」「もっと具体的に」「先ほどの記事について」等)
+  - 履歴 row タップで session 切替 (既存 50 件 FIFO + UI で表示)
+  - session 個別削除 (現状は全削除のみ)
+  - assistant 回答の **token by token streaming 表示** (体感の高速化)
+  - 引用記事の inline link 化 (現状は DisclosureGroup のみ → 本文中で「(参考記事 →)」のような chip / リンクを inline に挿入する案も検討)
+  - 規模: 大 (~600 行、新規 view 3 + ChatService.send にマルチターン context 拡張、`@Generable` の定義拡張、UI 構造刷新)
+  - 着手タイミング: spec 021 MVP 安定後 (本セッションで auto refresh + UUID 除去 fix 済)、ユーザー判断後
 
 ---
 

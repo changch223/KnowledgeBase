@@ -38,6 +38,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let tagStore: TagStore?
     /// spec 018: knowledge 抽出 succeeded 後の Category Digest 再集約用 (default nil で後方互換)
     private let digestService: KnowledgeDigestService?
+    /// spec 021: knowledge 抽出 succeeded 後の essence embedding 生成用 (default nil で後方互換)
+    private let embeddingService: EmbeddingService?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -52,7 +54,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         maxChunks: Int = 30,
         chunkProgressStore: ChunkProgressStoreProtocol? = nil,
         tagStore: TagStore? = nil,
-        digestService: KnowledgeDigestService? = nil
+        digestService: KnowledgeDigestService? = nil,
+        embeddingService: EmbeddingService? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -66,6 +69,23 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.chunkProgressStore = chunkProgressStore ?? NoopChunkProgressStore()
         self.tagStore = tagStore
         self.digestService = digestService
+        self.embeddingService = embeddingService
+    }
+
+    /// spec 021: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる embedding 生成 hook。
+    /// embeddingService が nil または不可端末の場合は no-op (後方互換)。essence が空でも title で fallback。
+    private func generateEmbeddingIfPossible(article: Article) {
+        guard let embeddingService, embeddingService.isAvailable else { return }
+        let text: String
+        if let essence = article.extractedKnowledge?.essence, !essence.isEmpty {
+            text = essence
+        } else {
+            let title = article.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { return }
+            text = title
+        }
+        guard let vector = embeddingService.embed(text) else { return }
+        article.essenceEmbedding = vector.asEmbeddingData
     }
 
     /// spec 012: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる auto-tag hook。
@@ -178,6 +198,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                     applyAutoTagsIfPossible(article: article)
                     // spec 018: Category Digest stale 化 hook
                     markDigestStaleIfPossible(article: article)
+                    // spec 021: essence embedding 生成 hook
+                    generateEmbeddingIfPossible(article: article)
                 }
             case .failure(let error):
                 let reason = String(describing: error)
@@ -342,6 +364,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             applyAutoTagsIfPossible(article: article)
             // spec 018: Category Digest stale 化 hook (chunked パス)
             markDigestStaleIfPossible(article: article)
+            // spec 021: essence embedding 生成 hook (chunked パス)
+            generateEmbeddingIfPossible(article: article)
         case .pending, .extracting, .skipped:
             break
         }
