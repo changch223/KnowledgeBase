@@ -31,6 +31,8 @@ enum SharedSchema {
             KnowledgeChunkProgress.self,           // spec 009
             BackgroundExtractionQueueEntry.self,   // spec 009
             KnowledgeDigest.self,                  // spec 018
+            ChatSession.self,                      // spec 021
+            ChatMessage.self,                      // spec 021
         ])
     }
 

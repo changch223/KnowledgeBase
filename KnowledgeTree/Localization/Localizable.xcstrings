@@ -286,6 +286,171 @@
         }
       }
     },
+    "chat.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "質問を入力して、保存した記事から回答を得てみましょう"
+          }
+        }
+      }
+    },
+    "chat.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだチャット履歴がありません"
+          }
+        }
+      }
+    },
+    "chat.input.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "質問を入力"
+          }
+        }
+      }
+    },
+    "chat.input.send" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信"
+          }
+        }
+      }
+    },
+    "chat.message.assistant.thinking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "考え中…"
+          }
+        }
+      }
+    },
+    "chat.message.assistant.unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分かりません。保存された記事の中に該当する情報が見つかりませんでした。"
+          }
+        }
+      }
+    },
+    "chat.message.cited.count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の記事を参考にしました"
+          }
+        }
+      }
+    },
+    "chat.message.cited.section" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参考にした記事"
+          }
+        }
+      }
+    },
+    "chat.message.error" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答の生成に失敗しました。もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "chat.session.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいチャット"
+          }
+        }
+      }
+    },
+    "chat.settings.deleteAllHistory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チャット履歴を全削除"
+          }
+        }
+      }
+    },
+    "chat.settings.deleteAllHistory.confirmAction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除する"
+          }
+        }
+      }
+    },
+    "chat.settings.deleteAllHistory.confirmMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全てのチャット履歴が削除されます。この操作は取り消せません。"
+          }
+        }
+      }
+    },
+    "chat.settings.deleteAllHistory.confirmTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チャット履歴を削除しますか?"
+          }
+        }
+      }
+    },
+    "chat.tab.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI チャット"
+          }
+        }
+      }
+    },
     "clip.card.staleLabel" : {
       "extractionState" : "manual",
       "localizations" : {
