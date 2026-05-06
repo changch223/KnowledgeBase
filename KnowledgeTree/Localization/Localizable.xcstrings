@@ -1107,7 +1107,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "以下の手順で Chrome を開いた時に自動保存できます。"
+            "value" : "以下の手順で Chrome 用の自動化を作成できます。Safari をお使いの方は、上の「Safari ツールバーで保存」のセットアップをおすすめします (より簡単で安定動作)。"
           }
         }
       }
@@ -1140,7 +1140,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "もう一度見る"
+            "value" : "ガイドを見直す"
           }
         }
       }

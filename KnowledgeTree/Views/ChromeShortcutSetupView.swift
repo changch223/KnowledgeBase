@@ -4,7 +4,7 @@
 //
 //  spec 019 — Chrome 自動保存セットアップガイド。
 //  3 ステップの Step Card + 「Shortcuts アプリを開く」deeplink ボタン
-//  + 「セットアップ完了」/「もう一度見る」切替。
+//  + 「セットアップ完了」/「ガイドを見直す」切替。
 //
 //  Apple-quiet 路線 (gradient なし、shadow なし、actionBlue 1 色)。
 //
