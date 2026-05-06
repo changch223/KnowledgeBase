@@ -363,6 +363,9 @@
         }
       }
     },
+    "chat.message.cited.count %lld" : {
+
+    },
     "chat.message.cited.section" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1109,6 +1112,9 @@
         }
       }
     },
+    "OK" : {
+
+    },
     "reader.bodyDisclosureLabel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1453,6 +1459,17 @@
         }
       }
     },
+    "settings.safariSetup.delay.5sec" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 秒"
+          }
+        }
+      }
+    },
     "settings.safariSetup.delay.10sec" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1471,17 +1488,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 秒"
-          }
-        }
-      }
-    },
-    "settings.safariSetup.delay.5sec" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5 秒"
           }
         }
       }

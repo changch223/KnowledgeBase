@@ -269,7 +269,31 @@ struct ChatServiceTests {
         #expect(messagesAfter.isEmpty)
     }
 
-    // MARK: - 8. send で空質問 → throws
+    // MARK: - 8. stripUUIDsFromBody — UUID 文字列除去
+
+    @Test func testStripUUIDsRemovesPlainUUID() {
+        let input = "Swift 6 のリリースについて 12345678-1234-5678-1234-567812345678 で説明されています"
+        let output = ChatService.stripUUIDsFromBody(input)
+        #expect(!output.contains("12345678"))
+        #expect(output.contains("Swift 6"))
+        #expect(output.contains("説明されています"))
+    }
+
+    @Test func testStripUUIDsRemovesBracketedID() {
+        let input = "[ID: abcdef12-3456-7890-abcd-ef1234567890] によれば、Swift 6 は重要です。"
+        let output = ChatService.stripUUIDsFromBody(input)
+        #expect(!output.contains("abcdef12"))
+        #expect(!output.contains("ID:"))
+        #expect(output.contains("Swift 6"))
+    }
+
+    @Test func testStripUUIDsLeavesNormalTextUntouched() {
+        let input = "Swift 6 は新機能を含むメジャーリリースです。"
+        let output = ChatService.stripUUIDsFromBody(input)
+        #expect(output == input)
+    }
+
+    // MARK: - 9. send で空質問 → throws
 
     @Test func testSendThrowsOnEmptyQuestion() async throws {
         let container = try makeContainer()

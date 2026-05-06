@@ -21,7 +21,9 @@ Active features in flight:
   - **Phase 8 (T022-T024)**: 4 タブ目「AI チャット」(`bubble.left.and.bubble.right.fill`) + Build SUCCEEDED + シリアル実行で全テスト PASS
   - **既知 (2026-05-06 詳細判明)**: BodyExtractorTests/extractsFromMainTag + extractsByDensityScoringWhenNoSemanticTag が **suite 内連続実行で deterministic fail** (順序依存)。前提となる `extractsFromArticleTag` 後の global state mutation で `extractTagContent("main")` が nil 返却。**単独実行では PASS、HEAD revert しても再現** = 既存 bug、spec 021 とは無関係。spec 031+ 候補で本格調査
   - **scheme test action 復元 (2026-05-06 完了)**: `KnowledgeTree.xcscheme` を xcshareddata に復元、`xcodebuild test -scheme KnowledgeTree` で動作確認済 (ShareExtension scheme 経由は引き続き動作)。次セッションから両 scheme 利用可能
+  - **2026-05-06 実機検証で判明 → fix 済**: (1) ChatTabView が @State currentSession.messages を読んでいて SwiftData @Relationship 追加を reactive 検知できず画面更新されない問題 → @Query + sessionID filter に変更、(2) prompt 通り answer 本文に UUID を書く LM の挙動 → prompt に「本文に ID を書くな」明示 + ChatService.stripUUIDsFromBody post-process 追加 (テスト 3 件追加で計 ChatServiceTests 11/11 PASS)
   - **残**: T025 実機検証 (quickstart 12 シナリオ) ユーザー実施
+  - **次世代要望 (spec 033+ 候補)**: モダン Chat UI (Gemini/Claude/ChatGPT 風) — 履歴サイドバー + multi-turn context + token streaming + 引用 inline link 化、大規模 ~600 行、別 spec で実施
 - spec 022 — ArticleRow swipe 削除 — ✅ 部分実装完了 (本ブランチ `019-chrome-app-intent` 継続、main 未マージ、2026-05-06)。List 系 3 view 完了: `ArticleListView` (spec 001 から既実装) + `TagFilteredListView` + `EntityFilteredListView`。swipe 方向は `.trailing` (iOS 標準)。LazyVStack 系 2 view は spec 030 で対応予定。Build SUCCEEDED。
 - spec 030 — LazyVStack 系 view の削除手段 (Category 詳細 / 知識 Clip 詳細) — 📝 specify+plan 完了 (本ブランチ、未 commit、2026-05-06)。contextMenu (長押し → メニュー) 採用、~30 行極小、新規ファイルゼロ、Phase 1 必須 + Phase 2 (List 系 UX 統合) optional。実装はユーザー判断後に着手。
 - spec 019 修正 — ✅ 一部完了 (同上、未 commit、2026-05-06)。`Localizable.xcstrings`「もう一度見る」→「ガイドを見直す」 + description に Safari 推奨追記。残: Setup Guide Step 1-3 内容刷新は将来 spec。

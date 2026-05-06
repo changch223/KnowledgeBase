@@ -270,6 +270,15 @@ spec 022 (ArticleRow swipe 削除) は **List 系 3 view (ArticleListView / TagF
 - **spec 030: LazyVStack 系 view の削除手段** — 📝 specify+plan 完了 (`specs/030-category-row-deletion/`、本セッション 2026-05-06)。contextMenu (長押し → メニュー) 採用、~30 行極小 spec。実装はユーザー判断後
 - **spec 031+ 候補: BodyExtractorTests test order dependency 解消** — `extractsFromArticleTag` 実行後に `extractsFromMainTag` / `extractsByDensityScoringWhenNoSemanticTag` が fail する shared global state (NSRegularExpression cache?) 問題。単独実行では PASS、suite 内連続実行で fail。Foundation の `String.replacingOccurrences(options: [.regularExpression])` 内部 state を疑う。回避策候補: 明示 NSRegularExpression インスタンス + stringByReplacingMatches、または fixture から `<header>`/`<footer>` 除去で trigger 削減
 - **spec 032+ 候補: pbxproj duplicate build file 警告クリーンアップ** — main app / Tests target の Sources Build Phase に明示登録 + filesystem-synchronized auto-sync の重複登録で warnings ~30 件。Sources Build Phase を空にすると BodyExtractorTests の挙動に影響する不可解な依存があり、根本調査が必要
+- **spec 033+ 候補: AI チャット モダン UI 刷新 (Gemini / Claude / ChatGPT 風)** — spec 021 実機検証で出た UX 要望 (2026-05-06 ユーザー):
+  - 左側に **会話履歴サイドバー**、ハンバーガーで開閉 (画面狭い時は overlay)
+  - **multi-turn context** (現状 single-turn): 直前の 1〜数 message を context に含めて深掘り対応 (「詳しく教えて」「もっと具体的に」「先ほどの記事について」等)
+  - 履歴 row タップで session 切替 (既存 50 件 FIFO + UI で表示)
+  - session 個別削除 (現状は全削除のみ)
+  - assistant 回答の **token by token streaming 表示** (体感の高速化)
+  - 引用記事の inline link 化 (現状は DisclosureGroup のみ → 本文中で「(参考記事 →)」のような chip / リンクを inline に挿入する案も検討)
+  - 規模: 大 (~600 行、新規 view 3 + ChatService.send にマルチターン context 拡張、`@Generable` の定義拡張、UI 構造刷新)
+  - 着手タイミング: spec 021 MVP 安定後 (本セッションで auto refresh + UUID 除去 fix 済)、ユーザー判断後
 
 ---
 

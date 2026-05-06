@@ -22,14 +22,24 @@ struct ChatTabView: View {
     @State private var isThinking: Bool = false
     @State private var errorMessage: String?
 
+    /// spec 021 fix: SwiftData @Relationship の追加は @State Object では SwiftUI が
+    /// reactive 検知できないため、@Query で全 ChatMessage を取得してセッション ID で filter。
+    /// 質問送信 → assistant message 追加で auto re-render される。
+    @Query(sort: \ChatMessage.timestamp) private var allMessages: [ChatMessage]
+
+    private var currentSessionMessages: [ChatMessage] {
+        guard let sessionID = currentSession?.id else { return [] }
+        return allMessages.filter { $0.session?.id == sessionID }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if let session = currentSession {
-                    if session.messages.isEmpty && !isThinking {
+                if currentSession != nil {
+                    if currentSessionMessages.isEmpty && !isThinking {
                         emptyStateView
                     } else {
-                        messageList(for: session)
+                        messageList
                     }
                 } else {
                     emptyStateView
@@ -79,12 +89,11 @@ struct ChatTabView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func messageList(for session: ChatSession) -> some View {
+    private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                    let sortedMessages = session.messages.sorted { $0.timestamp < $1.timestamp }
-                    ForEach(sortedMessages) { msg in
+                    ForEach(currentSessionMessages) { msg in
                         ChatMessageRow(message: msg)
                             .id(msg.id)
                     }
@@ -101,8 +110,8 @@ struct ChatTabView: View {
                 }
                 .padding(DS.Spacing.lg)
             }
-            .onChange(of: session.messages.count) { _, _ in
-                scrollToBottom(proxy: proxy, session: session)
+            .onChange(of: currentSessionMessages.count) { _, _ in
+                scrollToBottom(proxy: proxy)
             }
             .onChange(of: isThinking) { _, newValue in
                 if newValue {
@@ -110,16 +119,19 @@ struct ChatTabView: View {
                 }
             }
             .onAppear {
-                scrollToBottom(proxy: proxy, session: session)
+                scrollToBottom(proxy: proxy)
             }
         }
     }
 
-    private func scrollToBottom(proxy: ScrollViewProxy, session: ChatSession) {
-        let sortedMessages = session.messages.sorted { $0.timestamp < $1.timestamp }
-        if let last = sortedMessages.last {
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        if let last = currentSessionMessages.last {
             withAnimation {
                 proxy.scrollTo(last.id, anchor: .bottom)
+            }
+        } else if isThinking {
+            withAnimation {
+                proxy.scrollTo("thinking", anchor: .bottom)
             }
         }
     }

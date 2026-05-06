@@ -121,11 +121,14 @@ final class ChatService: ChatServiceProtocol {
             return try persistAssistantUnknown(in: session)
         }
 
+        // 答え本文中の UUID 文字列を除去 (LM が prompt に反して本文にも ID を書くケースへの保険)
+        let cleanedAnswer = Self.stripUUIDsFromBody(answer.answer)
+
         // 6. assistant message 永続化
         let assistantMessage = ChatMessage(
             session: session,
             role: ChatMessageRole.assistant.rawValue,
-            text: answer.answer,
+            text: cleanedAnswer,
             citedArticleIDs: filteredCited
         )
         context.insert(assistantMessage)
@@ -229,9 +232,10 @@ final class ChatService: ChatServiceProtocol {
 
         ## ルール
         1. 必ず以下の【参考記事】の内容のみに基づいて回答してください。一般知識から推測してはいけません。
-        2. 回答に使った記事の ID を citedArticleIDs に含めてください (Article.id の UUID 文字列)。
-        3. 参考記事に答えがない場合は「分かりません。保存された記事の中に該当する情報が見つかりませんでした。」と回答し、citedArticleIDs を空配列にしてください。
-        4. 簡潔に、3 段落以内で日本語で回答してください。
+        2. 回答に使った記事の ID は citedArticleIDs フィールドにのみ含めてください (Article.id の UUID 文字列)。
+        3. **回答本文 (answer フィールド) には ID や UUID を絶対に書かないでください**。「[1] によれば」のような番号も避け、自然な日本語で要点を伝えてください。
+        4. 参考記事に答えがない場合は「分かりません。保存された記事の中に該当する情報が見つかりませんでした。」と回答し、citedArticleIDs を空配列にしてください。
+        5. 簡潔に、3 段落以内で日本語で回答してください。
 
         ## 参考記事
         """
@@ -254,6 +258,19 @@ final class ChatService: ChatServiceProtocol {
         \(question)
         """
         return prompt
+    }
+
+    /// 答え本文から UUID 文字列を除去 (LM が prompt に反して書いた場合の保険)。
+    /// 標準的な UUID 8-4-4-4-12 形式に加え、それを囲む角括弧 / カッコ / 「ID:」プレフィックスも一緒に除去。
+    static func stripUUIDsFromBody(_ text: String) -> String {
+        // UUID v4 形式: 8-4-4-4-12 桁の hex
+        // 周囲の `[ID: ...]` `(ID: ...)` `「ID: ...」` も同時にマッチ
+        let uuidPattern = #"[\[\(「【]*\s*(?:ID\s*[::]\s*)?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\s*[\]\)」】]*"#
+        var result = text.replacingOccurrences(of: uuidPattern, with: "", options: .regularExpression)
+        // 連続する空白 / カンマ / 句読点の前後の空白を整理
+        result = result.replacingOccurrences(of: #"\s+([、。,.])"#, with: "$1", options: .regularExpression)
+        result = result.replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Foundation Models 不可時の fallback。top-k 記事の essence + KeyFact を整形。
