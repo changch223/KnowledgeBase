@@ -185,7 +185,8 @@ actor MultiPageCrawler {
     private func fetch(url: URL) async throws -> String {
         var request = URLRequest(url: url, timeoutInterval: 30)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
+        // spec 034: PDF も受け入れるよう Accept 拡張
+        request.setValue("text/html,application/xhtml+xml,application/pdf", forHTTPHeaderField: "Accept")
 
         let (data, response): (Data, URLResponse)
         do {
@@ -204,6 +205,16 @@ actor MultiPageCrawler {
             throw CrawlError.tooLarge
         }
         let contentType = http.value(forHTTPHeaderField: "Content-Type")
+
+        // spec 034: PDF 判定 → PDFKit で metadata + 本文抽出して擬似 HTML 化
+        // 既存 MetadataParser / BodyExtractor / KnowledgeExtractor のフローに乗せる
+        if PDFFetcher.isPDF(contentType: contentType, url: url) {
+            guard let parsed = PDFFetcher.parse(data: data, sourceURL: url) else {
+                throw CrawlError.decodingFailed
+            }
+            return parsed.pseudoHTML
+        }
+
         guard let html = MetadataParser.decodeHTML(data: data, contentType: contentType) else {
             throw CrawlError.decodingFailed
         }
