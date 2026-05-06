@@ -4,8 +4,12 @@
 //
 //  spec 021 — AI チャット (4 タブ目) の root view。
 //  最新 ChatSession の messages 時系列表示 + 入力欄。
-//  - .task で起動時に session 復元 (なければ create)
-//  - 質問送信 → ChatService.send → message 追加 → auto scroll
+//
+//  spec 021 fix (2026-05-06):
+//  - currentSession を @State Object 保持しない。@Query で全 ChatSession を取得し、
+//    `pinnedSessionID` (ユーザー選択用) と `allSessions.first` (最新) を組み合わせて
+//    動的に算出。これで全削除後の dead reference 問題 / 履歴復活ハングを根本解決。
+//  - 質問送信時に session 無ければ create (lazy)
 //  - 引用記事タップ → ArticleDetailView (NavigationLink)
 //
 
@@ -17,15 +21,31 @@ struct ChatTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ServiceContainer.self) private var serviceContainer
 
-    @State private var currentSession: ChatSession?
+    /// 全 ChatSession を最新順で取得 (空なら全削除直後)
+    @Query(sort: \ChatSession.lastMessageAt, order: .reverse)
+    private var allSessions: [ChatSession]
+
+    /// 全 ChatMessage を取得し、currentSession.id でフィルタする (Relationship reactive 対応)
+    @Query(sort: \ChatMessage.timestamp)
+    private var allMessages: [ChatMessage]
+
+    /// ユーザーが特定 session を選択した時にピン留め (将来 spec 033 のサイドバー用)。
+    /// nil の時は allSessions.first (最新) を使用。
+    @State private var pinnedSessionID: UUID?
+
     @State private var inputText: String = ""
     @State private var isThinking: Bool = false
     @State private var errorMessage: String?
 
-    /// spec 021 fix: SwiftData @Relationship の追加は @State Object では SwiftUI が
-    /// reactive 検知できないため、@Query で全 ChatMessage を取得してセッション ID で filter。
-    /// 質問送信 → assistant message 追加で auto re-render される。
-    @Query(sort: \ChatMessage.timestamp) private var allMessages: [ChatMessage]
+    /// 動的算出: pinned があればそれ、なければ最新。allSessions が空 (全削除後) なら nil。
+    /// 削除済みの ChatSession は @Query から消えているので dead reference にならない。
+    private var currentSession: ChatSession? {
+        if let id = pinnedSessionID,
+           let pinned = allSessions.first(where: { $0.id == id }) {
+            return pinned
+        }
+        return allSessions.first
+    }
 
     private var currentSessionMessages: [ChatMessage] {
         guard let sessionID = currentSession?.id else { return [] }
@@ -55,9 +75,6 @@ struct ChatTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Article.self) { article in
                 ArticleDetailView(article: article)
-            }
-            .task {
-                await ensureSession()
             }
             .alert(
                 Text("chat.message.error"),
@@ -140,28 +157,25 @@ struct ChatTabView: View {
 
     // MARK: - Actions
 
-    private func ensureSession() async {
-        guard currentSession == nil else { return }
-        // 最新 session を fetch、なければ create
-        let descriptor = FetchDescriptor<ChatSession>(
-            sortBy: [SortDescriptor(\.lastMessageAt, order: .reverse)]
-        )
-        if let latest = try? modelContext.fetch(descriptor).first {
-            currentSession = latest
-        } else {
-            currentSession = try? serviceContainer.chatService?.createSession()
-        }
-    }
-
     private func sendQuestion() async {
         guard let chatService = serviceContainer.chatService else { return }
-        guard let session = currentSession ?? (try? chatService.createSession()) else { return }
-        if currentSession == nil {
-            currentSession = session
-        }
 
         let question = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
+
+        // session 解決: pinned / 最新 / なければ新規 create
+        let session: ChatSession
+        if let existing = currentSession {
+            session = existing
+        } else {
+            do {
+                session = try chatService.createSession()
+                pinnedSessionID = session.id
+            } catch {
+                errorMessage = String(describing: error)
+                return
+            }
+        }
 
         inputText = ""
         isThinking = true

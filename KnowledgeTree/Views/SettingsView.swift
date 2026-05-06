@@ -3,15 +3,17 @@
 //  KnowledgeTree
 //
 //  spec 019 — 設定画面 root。AI ブレインタブ右上の歯車から push 遷移。
-//  「外部連携」セクション下に「Chrome から自動保存」エントリ。
 //
-//  iOS 標準 Form 形式、setupCompleted 時は entry に checkmark。
+//  spec 019 撤回 (2026-05-06): Chrome 連携 (App Intents + iOS Shortcut Setup Guide) は
+//  Chrome iOS の x-callback-url が「現在のタブ URL」を返さない技術制約により実用化不可。
+//  Chrome は Share Extension (spec 001) のみで運用、Setup Guide は SettingsView から撤去。
+//  AppIntent / AppShortcutsProvider 実装は Safari Web Extension が ArticleSavingActor に
+//  依存するため残置 (副作用で Shortcuts.app に「知積に保存」アクションは登録される)。
 //
 
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("settings.shortcutSetupCompleted") private var chromeSetupCompleted: Bool = false
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
 
     @Environment(ServiceContainer.self) private var serviceContainer
@@ -20,23 +22,6 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("settings.section.externalIntegration") {
-                // Chrome (spec 019)
-                NavigationLink(value: ChromeSetupDestination()) {
-                    HStack(spacing: DS.Spacing.lg) {
-                        Image(systemName: "globe")
-                            .foregroundStyle(DS.Color.actionBlue)
-                            .frame(width: 24)
-                        Text("settings.chromeSetup.entry")
-                        Spacer()
-                        if chromeSetupCompleted {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(DS.Color.actionBlue)
-                                .accessibilityIdentifier("settings.chromeSetup.completedMark")
-                        }
-                    }
-                }
-                .accessibilityIdentifier("settings.chromeSetup.entry")
-
                 // Safari (spec 020)
                 NavigationLink(value: SafariSetupDestination()) {
                     HStack(spacing: DS.Spacing.lg) {
@@ -71,9 +56,6 @@ struct SettingsView: View {
         }
         .navigationTitle("settings.title")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: ChromeSetupDestination.self) { _ in
-            ChromeShortcutSetupView()
-        }
         .navigationDestination(for: SafariSetupDestination.self) { _ in
             SafariSetupView()
         }
@@ -94,6 +76,3 @@ struct SettingsView: View {
 
 /// AIBrainView 右上の歯車から SettingsView に push 遷移する Hashable destination。
 struct SettingsDestination: Hashable {}
-
-/// SettingsView から ChromeShortcutSetupView に push 遷移する Hashable destination。
-struct ChromeSetupDestination: Hashable {}
