@@ -267,7 +267,7 @@ spec 022 (ArticleRow swipe 削除) は **List 系 3 view (ArticleListView / TagF
 
 ### 🆕 2026-05-06 セッション後の future spec 候補
 
-- **spec 030+ 候補: LazyVStack 系 view の削除手段** — `CategoryFilteredListView` / `CategoryKnowledgeDetailView` に削除手段を追加 (spec 022 で SwiftUI 制約により範囲外、別 spec で contextMenu / DragGesture / List 化のいずれかで対応)
+- **spec 030: LazyVStack 系 view の削除手段** — 📝 specify+plan 完了 (`specs/030-category-row-deletion/`、本セッション 2026-05-06)。contextMenu (長押し → メニュー) 採用、~30 行極小 spec。実装はユーザー判断後
 - **spec 031+ 候補: BodyExtractorTests test order dependency 解消** — `extractsFromArticleTag` 実行後に `extractsFromMainTag` / `extractsByDensityScoringWhenNoSemanticTag` が fail する shared global state (NSRegularExpression cache?) 問題。単独実行では PASS、suite 内連続実行で fail。Foundation の `String.replacingOccurrences(options: [.regularExpression])` 内部 state を疑う。回避策候補: 明示 NSRegularExpression インスタンス + stringByReplacingMatches、または fixture から `<header>`/`<footer>` 除去で trigger 削減
 - **spec 032+ 候補: pbxproj duplicate build file 警告クリーンアップ** — main app / Tests target の Sources Build Phase に明示登録 + filesystem-synchronized auto-sync の重複登録で warnings ~30 件。Sources Build Phase を空にすると BodyExtractorTests の挙動に影響する不可解な依存があり、根本調査が必要
 
