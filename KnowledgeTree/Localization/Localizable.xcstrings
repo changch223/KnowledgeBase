@@ -374,6 +374,39 @@
         }
       }
     },
+    "clip.filter.all" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部"
+          }
+        }
+      }
+    },
+    "clip.filter.days7" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 日"
+          }
+        }
+      }
+    },
+    "clip.filter.days30" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 日"
+          }
+        }
+      }
+    },
     "clip.filteredEmpty.description" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -414,39 +447,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI がまとめを生成中です..."
-          }
-        }
-      }
-    },
-    "clip.filter.all" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全部"
-          }
-        }
-      }
-    },
-    "clip.filter.days7" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 日"
-          }
-        }
-      }
-    },
-    "clip.filter.days30" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 日"
           }
         }
       }
@@ -1090,6 +1090,391 @@
         }
       }
     },
+    "settings.chromeSetup.completeButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セットアップ完了"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以下の手順で Chrome を開いた時に自動保存できます。"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.entry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chrome から自動保存"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.openShortcutsButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts アプリを開く"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.resetLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度見る"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.step1.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下のボタンをタップして Shortcuts アプリへ移動します。"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.step1.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts アプリを開く"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.step2.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「自動化」→「個人用オートメーション」→「アプリ」→ Chrome を選択 →「開く」を選択。作成後「実行前に通知」を OFF にしてください。"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.step2.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動化を作成"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.step3.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「アクション追加」→ 検索で「知積」→「知積に保存」を選択。URL を「Chrome の現在の URL」に設定します。"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.step3.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクションを追加"
+          }
+        }
+      }
+    },
+    "settings.chromeSetup.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chrome 連携"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.autoSaveExplain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari で開いた全ページを自動で知積に保存します。下の遅延設定で「ページを開いてから何秒後に保存するか」を選択。すでに保存済みのページは重複保存されません。"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.autoSaveToggle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動保存を有効にする"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.confirmAutoSave.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.confirmAutoSave.enable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有効にする"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.confirmAutoSave.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari で開いたすべてのページが知積に自動保存されます。プライバシー保護のため、Cookie 同意画面 / 検索結果 / ログイン画面などは除外されます。後でいつでも OFF にできます。"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.confirmAutoSave.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動保存を有効にしますか?"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.delay.10sec" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 秒"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.delay.30sec" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 秒"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.delay.5sec" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 秒"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.delay.immediate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すぐ"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.delayPicker.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存までの遅延"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari でページを開いた時に自動で知積に保存できます"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.entry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari ツールバーで保存"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.openSettingsButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 設定を開く"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.step1.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下のボタンから iOS 設定アプリ → Safari → 拡張機能 へ移動します"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.step1.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 設定を開く"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.step2.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「知積」拡張機能を ON にし、すべての Web サイトに対して許可してください"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.step2.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "知積拡張機能を ON にする"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.step3.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下のトグルで自動保存を ON にすると、Safari で開いたページが自動で保存されます。OFF の場合はツールバーの知積アイコンタップで保存します。"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.step3.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存方法を選ぶ"
+          }
+        }
+      }
+    },
+    "settings.safariSetup.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari 拡張機能"
+          }
+        }
+      }
+    },
+    "settings.section.externalIntegration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部連携"
+          }
+        }
+      }
+    },
+    "settings.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        }
+      }
+    },
     "share.duplicateMessage" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1269,6 +1654,12 @@
         }
       }
     },
+    "URL" : {
+
+    },
+    "URL を 知積に保存します" : {
+
+    },
     "Your AI is growing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1281,6 +1672,12 @@
       }
     },
     "キーファクト" : {
+
+    },
+    "コンテンツ" : {
+
+    },
+    "タイトル" : {
 
     },
     "タグ %@、%lld 記事" : {
@@ -1355,6 +1752,9 @@
         }
       }
     },
+    "保存" : {
+
+    },
     "全タグのカテゴリー分類中" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1390,6 +1790,9 @@
           }
         }
       }
+    },
+    "知積に保存" : {
+
     },
     "知識" : {
 

@@ -31,6 +31,7 @@
 		50431436D9C80107D6A727E7 /* SwiftDataArticleBodyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B000B33C3242BBD6F87F234 /* SwiftDataArticleBodyStoreTests.swift */; };
 		5221A1DC1608D16C34EE9657 /* LanguageModelSessionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A346FF311A9009A6E2625E /* LanguageModelSessionProtocol.swift */; };
 		543C735136533D3DA05EF09B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C7DAD938E42AD2348CBDCB25 /* Localizable.xcstrings */; };
+		57EC37E62FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5D7819A59A205721B458C074 /* EnrichmentStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB42EA8727F0B7A33E4346F9 /* EnrichmentStatusBadge.swift */; };
 		62930BEAB8C65E831132C3A0 /* ArticleEnrichmentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FFD46C1B8D9C6D97E83F1F /* ArticleEnrichmentService.swift */; };
 		6BD1C875EE9DC1EBD1B78EDD /* EntityChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E458F44B8183F000D16663 /* EntityChip.swift */; };
@@ -46,7 +47,18 @@
 		8F5A781C2DB7D7DEA3BE1E96 /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
 		92CEF627EB985466BBF079A7 /* ArticleEnrichmentServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE6AAF2C30FCA03BC98A826 /* ArticleEnrichmentServiceTests.swift */; };
 		9B4C4D21D5C9F77E3D29181C /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7AFE8343846264A1B3D2BDF /* ShareViewController.swift */; };
+		A1F8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */; };
+		A2F8B2C3D4E5F6A7B8C9D0E2 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C84CEF7C93B35D5971931C /* AppGroup.swift */; };
+		A3F8B2C3D4E5F6A7B8C9D0E3 /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
+		A4F8B2C3D4E5F6A7B8C9D0E4 /* ArticleBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2474495F5EEA27DC6A1A2C9C /* ArticleBody.swift */; };
+		A5F8B2C3D4E5F6A7B8C9D0E5 /* ArticleEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A18EB5D17B474FF54B8342 /* ArticleEnrichment.swift */; };
+		A6F8B2C3D4E5F6A7B8C9D0E6 /* ExtractedKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B240E6C515F28CB5E2BCD18 /* ExtractedKnowledge.swift */; };
+		A7F8B2C3D4E5F6A7B8C9D0E7 /* KnowledgeTree/SharedSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C3A7D470F33EE1E89933CB /* KnowledgeTree/SharedSchema.swift */; };
 		A82984FB6D8D5E4DAAC3847A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C7DAD938E42AD2348CBDCB25 /* Localizable.xcstrings */; };
+		A8F8B2C3D4E5F6A7B8C9D0E8 /* KnowledgeTree/Models/Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */; };
+		A9F8B2C3D4E5F6A7B8C9D0E9 /* KnowledgeTree/Models/KnowledgeChunkProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC8D5B56BB26E900B5688CCB /* KnowledgeTree/Models/KnowledgeChunkProgress.swift */; };
+		AAF8B2C3D4E5F6A7B8C9D0EA /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A14A3DC4A8F82B5A6E1D6C /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift */; };
+		ABF8B2C3D4E5F6A7B8C9D0EB /* KnowledgeTree/Models/KnowledgeDigest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C381 /* KnowledgeTree/Models/KnowledgeDigest.swift */; };
 		B691D7E1B0C6CEADA639BD7E /* KnowledgeExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED10A656104BD0A5554A675B /* KnowledgeExtractionService.swift */; };
 		B9ABDD2A94692428CB24885A /* KnowledgeTree/Models/Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */; };
 		BDA5AB60F9DB8361D24CEE5F /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
@@ -83,6 +95,13 @@
 			remoteGlobalIDString = 577ED5A42FA8118400EB3FE6;
 			remoteInfo = KnowledgeTree;
 		};
+		57EC37E42FAAE47500B958B7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 577ED59D2FA8118400EB3FE6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 57EC37CD2FAAE47500B958B7;
+			remoteInfo = KnowledgeTreeSafariExtension;
+		};
 		D9379093E0F35183C41E1CA9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 577ED59D2FA8118400EB3FE6 /* Project object */;
@@ -100,6 +119,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				2EC3441CEFBEF8DF1FB70526 /* KnowledgeTreeShareExtension.appex in Embed App Extensions */,
+				57EC37E62FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -108,6 +128,7 @@
 
 /* Begin PBXFileReference section */
 		074BC458C1ED73199EC60A4D /* KnowledgeTreeShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = KnowledgeTreeShareExtension.entitlements; sourceTree = "<group>"; };
+		B1C2D3E4F506A7B8C9D0E1F2 /* KnowledgeTreeSafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements; sourceTree = SOURCE_ROOT; };
 		0BF8E88173EA9ED0974D4491 /* SafariView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		11FFD46C1B8D9C6D97E83F1F /* ArticleEnrichmentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArticleEnrichmentService.swift; sourceTree = "<group>"; };
 		154D7901FFE29E46E525ADBA /* KeyFactRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeyFactRow.swift; sourceTree = "<group>"; };
@@ -128,6 +149,7 @@
 		577ED5A52FA8118400EB3FE6 /* KnowledgeTree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KnowledgeTree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5B42FA8118500EB3FE6 /* KnowledgeTreeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KnowledgeTreeSafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A76D763DA21F392E28BC29E /* ThumbnailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailView.swift; sourceTree = "<group>"; };
 		65C204DC081527C3310E6D86 /* MetadataParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataParserTests.swift; sourceTree = "<group>"; };
 		65FB1B29BE5A72166EBF5A01 /* SaveArticleUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SaveArticleUITests.swift; sourceTree = "<group>"; };
@@ -162,9 +184,20 @@
 		ED10A656104BD0A5554A675B /* KnowledgeExtractionService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeExtractionService.swift; sourceTree = "<group>"; };
 		EF678812164B2C69F167D5D4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		F01189E9AC116AC5458E3AB9 /* ShareReceivedItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareReceivedItem.swift; sourceTree = "<group>"; };
+		F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/AppIntents/ArticleSavingActor.swift; sourceTree = SOURCE_ROOT; };
 		F5C84CEF7C93B35D5971931C /* AppGroup.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		F7AFE8343846264A1B3D2BDF /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		57EC37E72FAAE47500B958B7 /* Exceptions for "KnowledgeTreeSafariExtension" folder in "KnowledgeTreeSafariExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		577ED5A72FA8118400EB3FE6 /* KnowledgeTree */ = {
@@ -180,6 +213,18 @@
 		577ED5C12FA8118500EB3FE6 /* KnowledgeTreeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KnowledgeTreeUITests;
+			sourceTree = "<group>";
+		};
+		57EC37CF2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				57EC37E72FAAE47500B958B7 /* Exceptions for "KnowledgeTreeSafariExtension" folder in "KnowledgeTreeSafariExtension" target */,
+			);
+			explicitFolders = (
+				Resources/_locales,
+				Resources/images,
+			);
+			path = KnowledgeTreeSafariExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -200,6 +245,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		577ED5BB2FA8118500EB3FE6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		57EC37CB2FAAE47500B958B7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -236,6 +288,8 @@
 				CC8D5B56BB26E900B5688CCB /* KnowledgeTree/Models/KnowledgeChunkProgress.swift */,
 				C0A14A3DC4A8F82B5A6E1D6C /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift */,
 				4F9A7B23E61C8DA9F5A9C381 /* KnowledgeTree/Models/KnowledgeDigest.swift */,
+				F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */,
+				B1C2D3E4F506A7B8C9D0E1F2 /* KnowledgeTreeSafariExtension.entitlements */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -246,6 +300,7 @@
 				577ED5A72FA8118400EB3FE6 /* KnowledgeTree */,
 				577ED5B72FA8118500EB3FE6 /* KnowledgeTreeTests */,
 				577ED5C12FA8118500EB3FE6 /* KnowledgeTreeUITests */,
+				57EC37CF2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */,
 				577ED5A62FA8118400EB3FE6 /* Products */,
 				8301B79A5576D1153C20CBE9 /* KnowledgeTree */,
 				605FC29A7AD8538933D53A06 /* KnowledgeTreeTests */,
@@ -263,6 +318,7 @@
 				577ED5B42FA8118500EB3FE6 /* KnowledgeTreeTests.xctest */,
 				577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */,
 				96EEDA0FCDD359F239CB79BC /* KnowledgeTreeShareExtension.appex */,
+				57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -395,6 +451,7 @@
 			);
 			dependencies = (
 				2F545A534210EA5C81EEA1E9 /* PBXTargetDependency */,
+				57EC37E52FAAE47500B958B7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				577ED5A72FA8118400EB3FE6 /* KnowledgeTree */,
@@ -446,6 +503,28 @@
 			productReference = 577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 57EC37E82FAAE47500B958B7 /* Build configuration list for PBXNativeTarget "KnowledgeTreeSafariExtension" */;
+			buildPhases = (
+				57EC37CA2FAAE47500B958B7 /* Sources */,
+				57EC37CB2FAAE47500B958B7 /* Frameworks */,
+				57EC37CC2FAAE47500B958B7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				57EC37CF2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */,
+			);
+			name = KnowledgeTreeSafariExtension;
+			packageProductDependencies = (
+			);
+			productName = KnowledgeTreeSafariExtension;
+			productReference = 57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		E824C4CEBD52695DCFE6EA5B /* KnowledgeTreeShareExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D65254CBE5F8E5695FCA0EF6 /* Build configuration list for PBXNativeTarget "KnowledgeTreeShareExtension" */;
@@ -484,6 +563,9 @@
 						CreatedOnToolsVersion = 26.4.1;
 						TestTargetID = 577ED5A42FA8118400EB3FE6;
 					};
+					57EC37CD2FAAE47500B958B7 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
 				};
 			};
 			buildConfigurationList = 577ED5A02FA8118400EB3FE6 /* Build configuration list for PBXProject "KnowledgeTree" */;
@@ -504,6 +586,7 @@
 				577ED5B32FA8118500EB3FE6 /* KnowledgeTreeTests */,
 				577ED5BD2FA8118500EB3FE6 /* KnowledgeTreeUITests */,
 				E824C4CEBD52695DCFE6EA5B /* KnowledgeTreeShareExtension */,
+				57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -533,6 +616,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		577ED5BC2FA8118500EB3FE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		57EC37CC2FAAE47500B958B7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -604,6 +694,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		57EC37CA2FAAE47500B958B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1F8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift in Sources */,
+				A2F8B2C3D4E5F6A7B8C9D0E2 /* AppGroup.swift in Sources */,
+				A3F8B2C3D4E5F6A7B8C9D0E3 /* Article.swift in Sources */,
+				A4F8B2C3D4E5F6A7B8C9D0E4 /* ArticleBody.swift in Sources */,
+				A5F8B2C3D4E5F6A7B8C9D0E5 /* ArticleEnrichment.swift in Sources */,
+				A6F8B2C3D4E5F6A7B8C9D0E6 /* ExtractedKnowledge.swift in Sources */,
+				A7F8B2C3D4E5F6A7B8C9D0E7 /* KnowledgeTree/SharedSchema.swift in Sources */,
+				A8F8B2C3D4E5F6A7B8C9D0E8 /* KnowledgeTree/Models/Tag.swift in Sources */,
+				A9F8B2C3D4E5F6A7B8C9D0E9 /* KnowledgeTree/Models/KnowledgeChunkProgress.swift in Sources */,
+				AAF8B2C3D4E5F6A7B8C9D0EA /* KnowledgeTree/Models/BackgroundExtractionQueueEntry.swift in Sources */,
+				ABF8B2C3D4E5F6A7B8C9D0EB /* KnowledgeTree/Models/KnowledgeDigest.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9CA3257A677C7A574C522065 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -643,6 +751,11 @@
 			isa = PBXTargetDependency;
 			target = 577ED5A42FA8118400EB3FE6 /* KnowledgeTree */;
 			targetProxy = 577ED5BF2FA8118500EB3FE6 /* PBXContainerItemProxy */;
+		};
+		57EC37E52FAAE47500B958B7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */;
+			targetProxy = 57EC37E42FAAE47500B958B7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -951,6 +1064,77 @@
 			};
 			name = Release;
 		};
+		57EC37E92FAAE47500B958B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MY8WU4892D;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KnowledgeTreeSafariExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KnowledgeTreeSafariExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = CHIA.KnowledgeTree.KnowledgeTreeSafariExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		57EC37EA2FAAE47500B958B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MY8WU4892D;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KnowledgeTreeSafariExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KnowledgeTreeSafariExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = CHIA.KnowledgeTree.KnowledgeTreeSafariExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		86CF6B99F679B51EE68F4582 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1045,6 +1229,15 @@
 			buildConfigurations = (
 				577ED5CF2FA8118500EB3FE6 /* Debug */,
 				577ED5D02FA8118500EB3FE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		57EC37E82FAAE47500B958B7 /* Build configuration list for PBXNativeTarget "KnowledgeTreeSafariExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				57EC37E92FAAE47500B958B7 /* Debug */,
+				57EC37EA2FAAE47500B958B7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
