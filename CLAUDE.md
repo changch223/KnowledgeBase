@@ -19,8 +19,8 @@ Active features in flight:
   - **Phase 6 (T018-T019)**: Fallback 経路 (Embedding 不可 → keyword マッチ retrieval / FM 不可 → essence + KeyFact 並べ整形)
   - **Phase 7 (T020-T021)**: SettingsView に「チャット履歴を全削除」エントリ + 確認 alert + ChatService.deleteAllSessions
   - **Phase 8 (T022-T024)**: 4 タブ目「AI チャット」(`bubble.left.and.bubble.right.fill`) + Build SUCCEEDED + シリアル実行で全テスト PASS
-  - **既知**: 並列実行で BodyExtractorTests 2 件 flaky (本 spec 改修と無関係、シリアルでは PASS、別 spec で調査)
-  - **scheme test action 復元**: `KnowledgeTree.xcscheme` が xcshareddata から消失中 (spec 020 Safari 追加時に破損)、test は `KnowledgeTreeShareExtension` scheme 経由で動作、別 spec で復元予定
+  - **既知 (2026-05-06 詳細判明)**: BodyExtractorTests/extractsFromMainTag + extractsByDensityScoringWhenNoSemanticTag が **suite 内連続実行で deterministic fail** (順序依存)。前提となる `extractsFromArticleTag` 後の global state mutation で `extractTagContent("main")` が nil 返却。**単独実行では PASS、HEAD revert しても再現** = 既存 bug、spec 021 とは無関係。spec 031+ 候補で本格調査
+  - **scheme test action 復元 (2026-05-06 完了)**: `KnowledgeTree.xcscheme` を xcshareddata に復元、`xcodebuild test -scheme KnowledgeTree` で動作確認済 (ShareExtension scheme 経由は引き続き動作)。次セッションから両 scheme 利用可能
   - **残**: T025 実機検証 (quickstart 12 シナリオ) ユーザー実施
 - spec 022 — ArticleRow swipe 削除 — ✅ 部分実装完了 (本ブランチ `019-chrome-app-intent` 継続、未 commit、2026-05-06)。List 系 3 view 完了: `ArticleListView` (spec 001 から既実装) + `TagFilteredListView` + `EntityFilteredListView`。swipe 方向は `.trailing` (iOS 標準)。LazyVStack 系 2 view (`CategoryFilteredListView` / `CategoryKnowledgeDetailView`) は SwiftUI 制約 (`.swipeActions` は List/Form 専用) により別 spec 候補 (ROADMAP spec 030+)。Build SUCCEEDED。
 - spec 019 修正 — ✅ 一部完了 (同上、未 commit、2026-05-06)。`Localizable.xcstrings`「もう一度見る」→「ガイドを見直す」 + description に Safari 推奨追記。残: Setup Guide Step 1-3 内容刷新は将来 spec。
