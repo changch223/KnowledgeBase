@@ -1,11 +1,85 @@
 # KnowledgeTree (知積) — Spec Roadmap
 
-**Last updated**: 2026-05-06
-**Current branch**: `019-chrome-app-intent` (spec 019 + 020 work tree)
-**Main HEAD**: `9c41d60` (PR #5 = spec 017 + 018 merged)
+**Last updated**: 2026-05-06 (PM session)
+**Current branch**: `034-pdf-support` (PR #7 OPEN)
+**Main HEAD**: `325f62a` (PR #6 マージ済 = spec 020/021/022 + spec 019 撤回 + UX hot-fixes)
 
 このドキュメントは spec 001 〜 spec 040+ の全体計画を保存し、`/speckit-specify` 起動時の優先順位判断に使う。
 更新は spec を新たに着手する / 完了させる毎に行う。
+
+---
+
+## 📋 残 spec 状態別サマリ (2026-05-06 PM)
+
+本日の整理 — 完了済 (PR マージ or OPEN) を除いた残 spec を状態・優先度別に整理。
+
+### A. 即実装可能 (specify+plan 完了済)
+
+| # | テーマ | 規模 | 推奨度 |
+|---|---|---|---|
+| 030 | LazyVStack 削除手段 (Category 詳細 / 知識 Clip 詳細) | 極小 ~30 行 | ⭐⭐⭐ |
+
+### B. 高優先度 (運用上必要、specify 必要)
+
+| # | テーマ | 動機 | 規模 |
+|---|---|---|---|
+| 023 | ArticleRow お気に入り / アーカイブ / undo | spec 022 拡張 | 小〜中 |
+| 024 | Tag 編集 / 統合 / 削除 UI | AI Auto-Tag の誤りを直せない | 中 (~3 日) |
+| 025 | Apple Intelligence fallback 強化 | Simulator / 非対応端末対応 | 中〜大 |
+
+### C. UX 質向上 (中優先度)
+
+| # | テーマ | 規模 |
+|---|---|---|
+| 026 | タグフィルター AND / NOT | 小〜中 |
+| 027 | 検索 relevance スコアリング (BM25 風) | 中 |
+| 028 | ソート切替 (人気順 / AI スコア順 / Tag 数順) | 中 |
+| 029 | AI 生成物の手動編集 (essence / summary 直接編集) | 中 |
+| (旧 030) | 検索履歴 + suggestions | 小 |
+
+### D. 設計穴埋め / クリーンアップ
+
+| # | テーマ | 規模 |
+|---|---|---|
+| (旧 031) | 廃止 view 削除 (PowerGauge / KnowledgeMap / RecentActivity) | 小 |
+| (旧 032) | Stats Row 数字タップで一覧 jump | 小 |
+| (旧 033) | iPad Split View (NavigationSplitView 化) | 大 |
+| (旧 034) | エクスポート / iCloud バックアップ | 大 |
+| (旧 035) | Foundation Models prompt チューニング | 中 |
+
+### E. 本セッションで生まれた候補 (specify 必要)
+
+| # | テーマ | 規模 | 推奨度 |
+|---|---|---|---|
+| 033+ | AI Chat モダン UI (履歴サイドバー / multi-turn / streaming) | 大 ~600 行 | ⭐⭐⭐ ユーザー強い要望 |
+| 031+ | BodyExtractorTests test order dependency 解消 | 中 (調査) | ⭐⭐ |
+| 032+ | pbxproj duplicate warnings cleanup | 小 (リスク有) | ⭐ |
+
+### F. Safari Extension future (spec 020 出荷後)
+
+- macOS Safari 対応
+- ホワイトリスト自動保存 (zenn.dev / qiita.com 等のみ自動)
+- ページ本文の Safari 経由取得 (spec 002/003 backfill 不要化)
+- Extension popup UI (即保存ではなく選択画面)
+- Extension icon 本格 design
+- 自動保存の 24 時間 dedup / 夜間バッチ
+
+### G. PDF future (spec 034 出荷後)
+
+- PDF page 1 サムネイル化 (og:image 相当)
+- スキャン PDF (画像のみ) の OCR (Vision framework)
+- パスワード付き PDF
+- 5 MB 超の巨大 PDF 対応
+
+### H. 長期 / MVP 範囲外
+
+- Category カスタム化 (10 個固定 → ユーザー追加可)
+- グラフ可視化 (entity ネットワーク復活)
+- macOS 対応
+- 多言語 UI (en_US 等)
+- レコメンド「関連する記事 AI 提案」
+
+**注**: 旧 ROADMAP 番号 (030〜035) と新番号 (030 LazyVStack 削除 / 031+ test bug / 032+ pbxproj / 033+ Chat UI / 034 PDF) で衝突あり。番号整理は次回別 spec で実施。
 
 ---
 
