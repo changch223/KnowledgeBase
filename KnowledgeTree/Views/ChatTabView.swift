@@ -110,6 +110,8 @@ struct ChatTabView: View {
                 }
                 .padding(DS.Spacing.lg)
             }
+            // 上スクロールで keyboard が指に追従して下がる (iMessage 風)
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: currentSessionMessages.count) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
