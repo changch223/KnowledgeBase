@@ -92,6 +92,14 @@ struct DigestCardOutput: Codable {
     let sourceArticleIDs: [String]
 }
 
+// MARK: - spec 035: 「最近のあなた」差分ダイジェスト用 Generable Output
+
+@Generable
+struct RecentDigestOutput: Codable {
+    @Guide(description: "最近の記事を統合した自然な日本語の 3 段落要約。各段落 80-150 字。読み手は『最近の自分が学んだこと』を一目で把握できるように。")
+    let paragraphs: [String]
+}
+
 // MARK: - spec 021: AI Chat (RAG) 用 Generable Output
 
 @Generable
@@ -124,6 +132,9 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 021: AI Chat (RAG) 回答生成
     func generateChatAnswer(prompt: String) async throws -> ChatAnswerOutput
+
+    /// spec 035: 「最近のあなた」差分 3 段落要約生成
+    func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -156,6 +167,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: ChatAnswerOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 035: 「最近のあなた」差分 3 段落要約生成
+    func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: RecentDigestOutput.self
         ) {
             prompt
         }

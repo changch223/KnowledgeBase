@@ -18,11 +18,21 @@
 import SwiftUI
 import SwiftData
 
+/// spec 035: TabView selection 識別子。
+enum AppTab: Hashable {
+    case library
+    case knowledgeClip
+    case aibrain
+    case chat
+}
+
 @main
 struct KnowledgeTreeApp: App {
     @State private var processingMonitor = ProcessingMonitor()
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
+    /// spec 035: 起動時 default は知識 Clip タブ (「最近のあなた」を最初に見せる)
+    @State private var selectedTab: AppTab = .knowledgeClip
 
     @MainActor
     init() {
@@ -50,24 +60,28 @@ struct KnowledgeTreeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TabView {
+            TabView(selection: $selectedTab) {
                 ArticleListView()
                     .tabItem {
                         Label("library.tab.title", systemImage: "books.vertical")
                     }
+                    .tag(AppTab.library)
                     .accessibilityIdentifier("tab.library")
 
                 // spec 018: 知識 Clip タブ (3rd タブ、Library と AI ブレインの間)
+                // spec 035: 起動時 default selection
                 KnowledgeClipView()
                     .tabItem {
                         Label("clip.tab.title", systemImage: "lightbulb.fill")
                     }
+                    .tag(AppTab.knowledgeClip)
                     .accessibilityIdentifier("tab.knowledgeClip")
 
                 AIBrainView()
                     .tabItem {
                         Label("aibrain.tab.title", systemImage: "brain")
                     }
+                    .tag(AppTab.aibrain)
                     .accessibilityIdentifier("tab.aibrain")
 
                 // spec 021: AI チャット (4th タブ)
@@ -75,6 +89,7 @@ struct KnowledgeTreeApp: App {
                     .tabItem {
                         Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
                     }
+                    .tag(AppTab.chat)
                     .accessibilityIdentifier("tab.chat")
             }
             .environment(processingMonitor)
@@ -185,6 +200,13 @@ struct KnowledgeTreeApp: App {
             availability: availability
         )
 
+        // spec 035: RecentDigestService + LastOpenedStore 構築
+        let recentDigestService: RecentDigestServiceProtocol = RecentDigestService(
+            session: session,
+            availability: availability
+        )
+        let lastOpenedStore = LastOpenedStore()
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -194,6 +216,8 @@ struct KnowledgeTreeApp: App {
         serviceContainer.digestService = digestService  // spec 018
         serviceContainer.embeddingService = embeddingService  // spec 021
         serviceContainer.chatService = chatService            // spec 021
+        serviceContainer.recentDigestService = recentDigestService  // spec 035
+        serviceContainer.lastOpenedStore = lastOpenedStore          // spec 035
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

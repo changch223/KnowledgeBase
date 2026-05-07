@@ -454,6 +454,39 @@
         }
       }
     },
+    "clip.recent.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近のあなた"
+          }
+        }
+      }
+    },
+    "clip.recent.meta %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の記事から"
+          }
+        }
+      }
+    },
+    "clip.recent.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回からの新しい記事はまだありません"
+          }
+        }
+      }
+    },
     "clip.card.staleLabel" : {
       "extractionState" : "manual",
       "localizations" : {

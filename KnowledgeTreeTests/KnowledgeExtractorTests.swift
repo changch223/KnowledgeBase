@@ -107,6 +107,11 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var chatAnswerCallCount = 0
     var lastChatAnswerPrompt: String?
 
+    /// spec 035: RecentDigest 用 mock 出力 (デフォルトは空 paragraphs)
+    var nextRecentDigestResult: Result<RecentDigestOutput, Error> = .success(RecentDigestOutput(paragraphs: []))
+    var recentDigestCallCount = 0
+    var lastRecentDigestPrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -129,6 +134,15 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         chatAnswerCallCount += 1
         lastChatAnswerPrompt = prompt
         switch nextChatAnswerResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput {
+        recentDigestCallCount += 1
+        lastRecentDigestPrompt = prompt
+        switch nextRecentDigestResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

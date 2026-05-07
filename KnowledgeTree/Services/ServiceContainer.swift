@@ -26,4 +26,8 @@ final class ServiceContainer {
     var embeddingService: EmbeddingService?
     /// spec 021: AI Chat (RAG) service
     var chatService: ChatServiceProtocol?
+    /// spec 035: 「最近のあなた」差分ダイジェスト service
+    var recentDigestService: RecentDigestServiceProtocol?
+    /// spec 035: 知識 Clip タブの最後に開いた時刻 store
+    var lastOpenedStore: LastOpenedStore?
 }
