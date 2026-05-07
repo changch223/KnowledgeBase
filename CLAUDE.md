@@ -26,7 +26,12 @@ Active features in flight:
   - **次世代要望 (spec 033+ 候補)**: モダン Chat UI (Gemini/Claude/ChatGPT 風) — 履歴サイドバー + multi-turn context + token streaming + 引用 inline link 化、大規模 ~600 行、別 spec で実施
 - spec 022 — ArticleRow swipe 削除 — ✅ 部分実装完了 (本ブランチ `019-chrome-app-intent` 継続、main 未マージ、2026-05-06)。List 系 3 view 完了: `ArticleListView` (spec 001 から既実装) + `TagFilteredListView` + `EntityFilteredListView`。swipe 方向は `.trailing` (iOS 標準)。LazyVStack 系 2 view は spec 030 で対応予定。Build SUCCEEDED。
 - spec 030 — LazyVStack 系 view の削除手段 (Category 詳細 / 知識 Clip 詳細) — 📝 specify+plan 完了 (本ブランチ、未 commit、2026-05-06)。contextMenu (長押し → メニュー) 採用、~30 行極小、新規ファイルゼロ、Phase 1 必須 + Phase 2 (List 系 UX 統合) optional。実装はユーザー判断後に着手。
-- spec 034 — PDF サポート (内部 metadata + 本文抽出) — ✅ 実装完了 (本ブランチ、未 commit、2026-05-06)。実機検証で PDF サイトのメタデータ取得不可と判明 → PDFKit (`PDFDocument` + `documentAttributes`) で title / subject / author / 全 page text を抽出、擬似 HTML 化して既存 MultiPageCrawler / MetadataParser / BodyExtractor / KnowledgeExtractor フローに乗せる。`PDFFetcher.swift` 新規 + `MultiPageCrawler.fetch` で Content-Type / URL extension 判定 + 分岐。**PDFFetcherTests 10/10 PASS**。実機検証はユーザー実施。
+- spec 034 — PDF サポート (内部 metadata + 本文抽出) — ✅ main マージ済 (PR #7、commit `06cc2a9`、2026-05-06)。PDFKit で title / subject / author / 全 page text を抽出、擬似 HTML 化して既存フローに乗せる。PDFFetcherTests 10/10 PASS。
+- **VISION.md 確定版** (本ブランチ `vision-spec-035-038`、未 commit、2026-05-08) — プロダクト戦略を 17 質問のユーザー対話で固める。「読んだ知識を AI が自動で体系化・更新し、必要な時だけ開けば最新の自分が見える、優しい第二の脳」を一文ビジョン、6 設計原則、4 タブ構成、4 機能 (X/Y/Z/W) を確定。
+- spec 035 — 「最近のあなた」差分ダイジェスト (機能 X) — 📝 specify+plan 完了 (本ブランチ、未 commit、2026-05-08)。知識 Clip タブ最上部に「前回開いた時 〜 now」の AI 統合 3 段落要約。LastOpenedStore + RecentDigestService 新規、~340 行。
+- spec 036 — 動的トピック自動発見 (機能 Y) — 📝 specify+plan 完了 (本ブランチ、未 commit、2026-05-08)。spec 021 essence embedding を K-means clustering、AI 命名 + ユーザー採用/却下、UserTopic @Model 新規、~810 行。
+- spec 037 — 時系列事実上書き提案 (機能 Z) — 📝 specify+plan 完了 (本ブランチ、未 commit、2026-05-08)。新記事保存時に同 entity の過去記事と AI で矛盾検出、ConflictProposal @Model + ユーザー上書き/両方残す/却下、Article.isObsolete 追加、~590 行。
+- spec 038 — 用語のやさしさ整理 (機能 W) — 📝 specify+plan 完了 (本ブランチ、未 commit、2026-05-08)。KeyFact → 事実、entity → 人物・場所・モノ、Category → 分野、Auto-Tag → AI タグ等、xcstrings value 修正 + DESIGN.md Vocabulary 追加、コード型名は維持、~200-300 行。
 - spec 019 撤回 — ✅ 撤回完了 (2026-05-06)。Chrome 自動化 (Setup Guide / Personal Automation 連携) は Chrome iOS の x-callback-url が「現在のタブ URL」を返さない技術制約で実用化不可と判明。SettingsView から Chrome エントリ削除 + `ChromeShortcutSetupView.swift` 削除。Chrome は Share Extension (spec 001) のみで運用、ユーザー判断による方針確定。AppIntent / AppShortcutsProvider / ArticleSavingActor 実装は Safari Web Extension が依存するため残置。
 
 Read these first for the current planning context (spec 019 = newest plan):

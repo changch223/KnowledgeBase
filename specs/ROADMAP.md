@@ -1,8 +1,22 @@
 # KnowledgeTree (知積) — Spec Roadmap
 
-**Last updated**: 2026-05-06 (PM session)
-**Current branch**: `034-pdf-support` (PR #7 OPEN)
-**Main HEAD**: `325f62a` (PR #6 マージ済 = spec 020/021/022 + spec 019 撤回 + UX hot-fixes)
+**Last updated**: 2026-05-08 (PM session)
+**Current branch**: `vision-spec-035-038` (PR #9 予定)
+**Main HEAD**: `06cc2a9` (PR #7 = spec 034 PDF support マージ済)
+**Vision**: [VISION.md](./VISION.md) — プロダクトビジョン確定版
+
+## 🎯 次の 3 ヶ月の柱 (本セッション 2026-05-08 で確定)
+
+VISION.md コア価値「**読んだ知識を AI が自動で体系化・更新し、必要な時だけ開けば最新の自分が見える、優しい第二の脳**」を具現化する 4 spec:
+
+| spec | 機能 | 規模 | 優先度 |
+|---|---|---|---|
+| **035** | 「最近のあなた」差分ダイジェスト (機能 X) | ~340 行 | ⭐⭐⭐⭐⭐ |
+| **036** | 動的トピック自動発見 (機能 Y) | ~810 行 | ⭐⭐⭐⭐⭐ |
+| **037** | 時系列事実上書き提案 (機能 Z) | ~590 行 | ⭐⭐⭐⭐ |
+| **038** | 用語のやさしさ整理 (機能 W) | ~200-300 行 | ⭐⭐⭐⭐ |
+
+詳細: `specs/035-recent-digest/`, `specs/036-dynamic-topics/`, `specs/037-fact-overwrite/`, `specs/038-friendly-terms/`
 
 このドキュメントは spec 001 〜 spec 040+ の全体計画を保存し、`/speckit-specify` 起動時の優先順位判断に使う。
 更新は spec を新たに着手する / 完了させる毎に行う。
