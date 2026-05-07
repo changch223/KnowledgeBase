@@ -34,6 +34,8 @@ struct KnowledgeClipView: View {
                     }
                     // spec 037: 事実更新の提案
                     FactConflictsSection()
+                    // spec 036: 動的トピック (候補 + 採用済)
+                    DynamicTopicsSection()
                     timeFilterChips
                     digestsContent
                 }
@@ -44,6 +46,12 @@ struct KnowledgeClipView: View {
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: CategoryDigestDetailDestination.self) { dest in
                 CategoryKnowledgeDetailView(category: dest.category)
+            }
+            .navigationDestination(for: UserTopicDestination.self) { dest in
+                UserTopicDetailView(topicID: dest.topicID)
+            }
+            .navigationDestination(for: Article.self) { article in
+                ArticleDetailView(article: article)
             }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()

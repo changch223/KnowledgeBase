@@ -32,4 +32,6 @@ final class ServiceContainer {
     var lastOpenedStore: LastOpenedStore?
     /// spec 037: 時系列事実上書き検出 service
     var conflictDetectionService: ConflictDetectionServiceProtocol?
+    /// spec 036: 動的トピック clustering service
+    var topicClusteringService: TopicClusteringServiceProtocol?
 }

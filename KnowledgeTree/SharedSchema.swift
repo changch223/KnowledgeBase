@@ -34,6 +34,7 @@ enum SharedSchema {
             ChatSession.self,                      // spec 021
             ChatMessage.self,                      // spec 021
             ConflictProposal.self,                 // spec 037
+            UserTopic.self,                        // spec 036
         ])
     }
 

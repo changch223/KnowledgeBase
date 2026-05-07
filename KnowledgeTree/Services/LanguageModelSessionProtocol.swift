@@ -100,6 +100,14 @@ struct RecentDigestOutput: Codable {
     let paragraphs: [String]
 }
 
+// MARK: - spec 036: 動的トピック命名用 Generable Output
+
+@Generable
+struct TopicNameOutput: Codable {
+    @Guide(description: "クラスタの記事群の共通テーマを 5-20 字の自然な日本語で命名。技術用語を避け、ユーザーが直感的に理解できる名前。例: 『AI と Product Management』『SwiftUI 状態管理』『日本企業 DX 動向』。")
+    let name: String
+}
+
 // MARK: - spec 037: 時系列事実上書き用 Generable Output
 
 @Generable
@@ -155,6 +163,9 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 037: 2 記事間の事実矛盾検出
     func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput
+
+    /// spec 036: 動的トピック命名
+    func generateTopicName(prompt: String) async throws -> TopicNameOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -209,6 +220,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: ConflictDetectionOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 036: 動的トピック命名
+    func generateTopicName(prompt: String) async throws -> TopicNameOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: TopicNameOutput.self
         ) {
             prompt
         }

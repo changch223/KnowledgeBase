@@ -148,6 +148,13 @@ struct KnowledgeTreeApp: App {
             availability: availability
         )
 
+        // spec 036: TopicClusteringService (起動時 + 7 日 batch)
+        let topicClusteringService: TopicClusteringServiceProtocol = TopicClusteringService(
+            context: context,
+            session: session,
+            availability: availability
+        )
+
         // spec 004 + 009 + 010 + 012 + 018 + 021 + 037: 知識抽出 service
         // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook + conflict 検出 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
@@ -227,6 +234,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.recentDigestService = recentDigestService  // spec 035
         serviceContainer.lastOpenedStore = lastOpenedStore          // spec 035
         serviceContainer.conflictDetectionService = conflictDetectionService // spec 037
+        serviceContainer.topicClusteringService = topicClusteringService     // spec 036
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
@@ -256,5 +264,8 @@ struct KnowledgeTreeApp: App {
 
         // spec 021: 既存記事への essence embedding backfill (Apple Intelligence 端末のみ動作)
         await chatService.backfillEmbeddings()
+
+        // spec 036: 動的トピック batch (前回から 7 日経過していれば実行)
+        await topicClusteringService.runIfDue(force: false)
     }
 }

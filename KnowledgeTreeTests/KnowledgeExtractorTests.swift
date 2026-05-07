@@ -119,6 +119,11 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var conflictDetectionCallCount = 0
     var lastConflictDetectionPrompt: String?
 
+    /// spec 036: TopicName 用 mock 出力 (デフォルトは "新トピック")
+    var nextTopicNameResult: Result<TopicNameOutput, Error> = .success(TopicNameOutput(name: "新トピック"))
+    var topicNameCallCount = 0
+    var lastTopicNamePrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -159,6 +164,15 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         conflictDetectionCallCount += 1
         lastConflictDetectionPrompt = prompt
         switch nextConflictDetectionResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateTopicName(prompt: String) async throws -> TopicNameOutput {
+        topicNameCallCount += 1
+        lastTopicNamePrompt = prompt
+        switch nextTopicNameResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }
