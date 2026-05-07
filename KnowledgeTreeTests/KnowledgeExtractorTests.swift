@@ -112,6 +112,13 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var recentDigestCallCount = 0
     var lastRecentDigestPrompt: String?
 
+    /// spec 037: ConflictDetection 用 mock 出力 (デフォルトは矛盾なし)
+    var nextConflictDetectionResult: Result<ConflictDetectionOutput, Error> = .success(
+        ConflictDetectionOutput(hasConflict: false, conflictDescription: "", newFact: "", oldFact: "")
+    )
+    var conflictDetectionCallCount = 0
+    var lastConflictDetectionPrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -143,6 +150,15 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         recentDigestCallCount += 1
         lastRecentDigestPrompt = prompt
         switch nextRecentDigestResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput {
+        conflictDetectionCallCount += 1
+        lastConflictDetectionPrompt = prompt
+        switch nextConflictDetectionResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

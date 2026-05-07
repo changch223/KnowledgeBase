@@ -30,4 +30,6 @@ final class ServiceContainer {
     var recentDigestService: RecentDigestServiceProtocol?
     /// spec 035: 知識 Clip タブの最後に開いた時刻 store
     var lastOpenedStore: LastOpenedStore?
+    /// spec 037: 時系列事実上書き検出 service
+    var conflictDetectionService: ConflictDetectionServiceProtocol?
 }

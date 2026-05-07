@@ -32,6 +32,8 @@ struct KnowledgeClipView: View {
                     if let since = sinceForRecent {
                         RecentDigestSection(since: since)
                     }
+                    // spec 037: 事実更新の提案
+                    FactConflictsSection()
                     timeFilterChips
                     digestsContent
                 }

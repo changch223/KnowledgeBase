@@ -454,6 +454,83 @@
         }
       }
     },
+    "clip.conflicts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "事実更新の提案"
+          }
+        }
+      }
+    },
+    "clip.conflicts.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が見つけた、内容が更新されたかもしれない記事"
+          }
+        }
+      }
+    },
+    "clip.conflicts.action.overwrite" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上書き"
+          }
+        }
+      }
+    },
+    "clip.conflicts.action.keepBoth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "両方残す"
+          }
+        }
+      }
+    },
+    "clip.conflicts.action.dismiss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "却下"
+          }
+        }
+      }
+    },
+    "clip.conflicts.label.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新"
+          }
+        }
+      }
+    },
+    "clip.conflicts.label.old" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旧"
+          }
+        }
+      }
+    },
     "clip.recent.title" : {
       "extractionState" : "manual",
       "localizations" : {

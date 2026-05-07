@@ -141,8 +141,15 @@ struct KnowledgeTreeApp: App {
         // spec 021: NLEmbedding ベースの文章 embedding service (起動時に 1 度ロード)
         let embeddingService = EmbeddingService()
 
-        // spec 004 + 009 + 010 + 012 + 018 + 021: 知識抽出 service
-        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook)
+        // spec 037: ConflictDetectionService (knowledge service の hook 用に先構築)
+        let conflictDetectionService: ConflictDetectionServiceProtocol = ConflictDetectionService(
+            context: context,
+            session: session,
+            availability: availability
+        )
+
+        // spec 004 + 009 + 010 + 012 + 018 + 021 + 037: 知識抽出 service
+        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook + conflict 検出 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -155,7 +162,8 @@ struct KnowledgeTreeApp: App {
             chunkProgressStore: chunkProgressStore,
             tagStore: tagStore,
             digestService: digestService,
-            embeddingService: embeddingService
+            embeddingService: embeddingService,
+            conflictDetectionService: conflictDetectionService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -218,6 +226,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.chatService = chatService            // spec 021
         serviceContainer.recentDigestService = recentDigestService  // spec 035
         serviceContainer.lastOpenedStore = lastOpenedStore          // spec 035
+        serviceContainer.conflictDetectionService = conflictDetectionService // spec 037
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

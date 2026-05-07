@@ -100,6 +100,23 @@ struct RecentDigestOutput: Codable {
     let paragraphs: [String]
 }
 
+// MARK: - spec 037: 時系列事実上書き用 Generable Output
+
+@Generable
+struct ConflictDetectionOutput: Codable {
+    @Guide(description: "2 つの記事の間で同じ entity (人物・場所・モノ等) について書かれた事実が矛盾しているか。例: 『開店』vs『閉店』、『就任』vs『退任』、『リリース』vs『廃止』など、明らかに片方が古い情報になっている場合のみ true。"  )
+    let hasConflict: Bool
+
+    @Guide(description: "矛盾の内容説明。20-50 字の自然な日本語。例: 『前回は開店、今回は閉店』。hasConflict=false なら空文字。")
+    let conflictDescription: String
+
+    @Guide(description: "新しい記事側の事実 (1 文、50 字以内)。hasConflict=false なら空文字。")
+    let newFact: String
+
+    @Guide(description: "古い記事側の事実 (1 文、50 字以内)。hasConflict=false なら空文字。")
+    let oldFact: String
+}
+
 // MARK: - spec 021: AI Chat (RAG) 用 Generable Output
 
 @Generable
@@ -135,6 +152,9 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 035: 「最近のあなた」差分 3 段落要約生成
     func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput
+
+    /// spec 037: 2 記事間の事実矛盾検出
+    func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -178,6 +198,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: RecentDigestOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 037: 2 記事間の事実矛盾検出
+    func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ConflictDetectionOutput.self
         ) {
             prompt
         }
