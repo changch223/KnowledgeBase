@@ -104,6 +104,9 @@
     "%lld記事" : {
 
     },
+    "• %@" : {
+
+    },
     "+%lld" : {
 
     },
@@ -454,101 +457,24 @@
         }
       }
     },
-    "clip.topics.candidates.title" : {
+    "clip.card.staleLabel" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しいトピック候補"
+            "value" : "更新あり"
           }
         }
       }
     },
-    "clip.topics.candidates.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI が見つけた、あなたの興味分野"
-          }
-        }
-      }
-    },
-    "clip.topics.accepted.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あなたのトピック"
-          }
-        }
-      }
-    },
-    "clip.topics.action.accept" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "採用"
-          }
-        }
-      }
-    },
-    "clip.topics.action.dismiss" : {
+    "clip.conflicts.action.dismiss" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "却下"
-          }
-        }
-      }
-    },
-    "clip.topics.meta.articleCount %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 件の記事"
-          }
-        }
-      }
-    },
-    "clip.conflicts.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "事実更新の提案"
-          }
-        }
-      }
-    },
-    "clip.conflicts.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI が見つけた、内容が更新されたかもしれない記事"
-          }
-        }
-      }
-    },
-    "clip.conflicts.action.overwrite" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上書き"
           }
         }
       }
@@ -564,13 +490,13 @@
         }
       }
     },
-    "clip.conflicts.action.dismiss" : {
+    "clip.conflicts.action.overwrite" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "却下"
+            "value" : "上書き"
           }
         }
       }
@@ -597,46 +523,24 @@
         }
       }
     },
-    "clip.recent.title" : {
+    "clip.conflicts.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最近のあなた"
+            "value" : "AI が見つけた、内容が更新されたかもしれない記事"
           }
         }
       }
     },
-    "clip.recent.meta %lld" : {
+    "clip.conflicts.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld 件の記事から"
-          }
-        }
-      }
-    },
-    "clip.recent.empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "前回からの新しい記事はまだありません"
-          }
-        }
-      }
-    },
-    "clip.card.staleLabel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新あり"
+            "value" : "事実更新の提案"
           }
         }
       }
@@ -795,6 +699,39 @@
         }
       }
     },
+    "clip.recent.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回からの新しい記事はまだありません"
+          }
+        }
+      }
+    },
+    "clip.recent.meta %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の記事から"
+          }
+        }
+      }
+    },
+    "clip.recent.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近のあなた"
+          }
+        }
+      }
+    },
     "clip.tab.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -802,6 +739,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "知識 Clip"
+          }
+        }
+      }
+    },
+    "clip.topics.accepted.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのトピック"
+          }
+        }
+      }
+    },
+    "clip.topics.action.accept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "採用"
+          }
+        }
+      }
+    },
+    "clip.topics.action.dismiss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "却下"
+          }
+        }
+      }
+    },
+    "clip.topics.candidates.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が見つけた、あなたの興味分野"
+          }
+        }
+      }
+    },
+    "clip.topics.candidates.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいトピック候補"
+          }
+        }
+      }
+    },
+    "clip.topics.meta.articleCount %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の記事"
           }
         }
       }
