@@ -20,21 +20,54 @@ struct DynamicTopicsSection: View {
     })
     private var accepted: [UserTopic]
 
+    /// spec 036 fix (2026-05-09): 動的トピック準備中も可視化
+    @Query private var allArticles: [Article]
+    private var articlesWithEmbedding: Int {
+        allArticles.filter { $0.essenceEmbedding != nil }.count
+    }
+    private let minArticlesForClustering = 10
+
     var body: some View {
-        if candidates.isEmpty && accepted.isEmpty {
-            EmptyView()
-        } else {
-            VStack(alignment: .leading, spacing: DS.Spacing.lg) {
-                if !candidates.isEmpty {
-                    candidatesSection
-                }
-                if !accepted.isEmpty {
-                    acceptedSection
-                }
+        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+            if !candidates.isEmpty {
+                candidatesSection
             }
-            .padding(.horizontal, DS.Spacing.lg)
-            .accessibilityIdentifier("clip.topics.section")
+            if !accepted.isEmpty {
+                acceptedSection
+            }
+            if candidates.isEmpty && accepted.isEmpty {
+                emptyHintCard
+            }
         }
+        .padding(.horizontal, DS.Spacing.lg)
+        .accessibilityIdentifier("clip.topics.section")
+    }
+
+    private var emptyHintCard: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            HStack(spacing: DS.Spacing.sm) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(DS.Color.actionBlue)
+                Text("clip.topics.empty.title")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.primary)
+            }
+            if articlesWithEmbedding < minArticlesForClustering {
+                let remaining = minArticlesForClustering - articlesWithEmbedding
+                Text("clip.topics.empty.gathering \(remaining)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("clip.topics.empty.ready")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(DS.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsCardBackground()
     }
 
     private var candidatesSection: some View {

@@ -39,6 +39,11 @@ struct ChatTabView: View {
     @State private var streamingMessageID: UUID?
     @State private var streamingDisplayedText: String = ""
 
+    /// spec 033 fix (2026-05-09): NavigationSplitView の sidebar 表示制御。
+    /// iPhone でデフォルトで sidebar が見えない問題と、新しいチャット作成後に
+    /// detail に自動遷移しない問題を解消。
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+
     /// 動的算出: pinned があればそれ、なければ最新。allSessions が空 (全削除後) なら nil。
     private var currentSession: ChatSession? {
         if let id = pinnedSessionID,
@@ -60,11 +65,15 @@ struct ChatTabView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             ChatHistorySidebar(
                 pinnedSessionID: $pinnedSessionID,
                 onCreate: { createNewSession() },
-                onSelect: { id in pinnedSessionID = id }
+                onSelect: { id in
+                    pinnedSessionID = id
+                    // iPhone: sidebar を閉じて detail を表示
+                    columnVisibility = .detailOnly
+                }
             )
             .navigationSplitViewColumnWidth(min: 240, ideal: 280)
         } detail: {
@@ -88,6 +97,18 @@ struct ChatTabView: View {
                 }
                 .navigationTitle("chat.tab.title")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    // spec 033 fix: iPhone で sidebar を明示的に開く button
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            columnVisibility = (columnVisibility == .all) ? .detailOnly : .all
+                        } label: {
+                            Image(systemName: "sidebar.left")
+                        }
+                        .accessibilityIdentifier("chat.toolbar.sidebar")
+                        .accessibilityLabel(Text("chat.sidebar.title"))
+                    }
+                }
                 .navigationDestination(for: Article.self) { article in
                     ArticleDetailView(article: article)
                 }
@@ -185,6 +206,8 @@ struct ChatTabView: View {
         do {
             let s = try chatService.createSession()
             pinnedSessionID = s.id
+            // spec 033 fix: iPhone で sidebar を閉じて新 session の detail に遷移
+            columnVisibility = .detailOnly
         } catch {
             errorMessage = String(describing: error)
         }

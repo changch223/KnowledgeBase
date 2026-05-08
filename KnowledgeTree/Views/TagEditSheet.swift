@@ -87,7 +87,7 @@ struct TagEditSheet: View {
     // MARK: - Sections
 
     private var renameSection: some View {
-        Section("tag.edit.section.rename") {
+        Section {
             TextField("tag.edit.section.rename", text: $editedName)
                 .textInputAutocapitalization(.never)
                 .accessibilityIdentifier("tag.edit.field.name")
@@ -99,11 +99,15 @@ struct TagEditSheet: View {
             }
             .disabled(!canRename)
             .accessibilityIdentifier("tag.edit.button.save")
+        } header: {
+            Text("tag.edit.section.rename")
+        } footer: {
+            Text("tag.edit.section.rename.help")
         }
     }
 
     private var mergeSection: some View {
-        Section("tag.edit.section.merge") {
+        Section {
             Picker(selection: $selectedMergeTarget) {
                 Text("tag.edit.merge.placeholder").tag(nil as Tag?)
                 ForEach(otherTags) { other in
@@ -121,6 +125,10 @@ struct TagEditSheet: View {
             }
             .disabled(selectedMergeTarget == nil)
             .accessibilityIdentifier("tag.edit.button.merge")
+        } header: {
+            Text("tag.edit.section.merge")
+        } footer: {
+            Text("tag.edit.section.merge.help")
         }
     }
 
@@ -136,8 +144,13 @@ struct TagEditSheet: View {
                 .frame(maxWidth: .infinity, alignment: .center)
             }
             .accessibilityIdentifier("tag.edit.button.delete")
+        } header: {
+            Text("tag.edit.section.delete")
         } footer: {
-            Text("tag.management.row.articleCount \(tag.articles.count)")
+            VStack(alignment: .leading, spacing: 4) {
+                Text("tag.edit.section.delete.help")
+                Text("tag.management.row.articleCount \(tag.articles.count)")
+            }
         }
     }
 

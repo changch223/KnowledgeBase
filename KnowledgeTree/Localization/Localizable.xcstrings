@@ -124,6 +124,16 @@
         }
       }
     },
+    "AI パワー: %lld 記事、%lld 知識、%lld 事実" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "AI パワー: %1$lld 記事、%2$lld 知識、%3$lld 事実"
+          }
+        }
+      }
+    },
     "AI ブレイン" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -289,314 +299,6 @@
         }
       }
     },
-    "tag.management.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグ管理"
-          }
-        }
-      }
-    },
-    "tag.management.empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "まだタグがありません"
-          }
-        }
-      }
-    },
-    "tag.management.searchPlaceholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグを検索"
-          }
-        }
-      }
-    },
-    "tag.management.row.articleCount %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 件の記事"
-          }
-        }
-      }
-    },
-    "tag.edit.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグを編集"
-          }
-        }
-      }
-    },
-    "tag.edit.section.rename" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグ名"
-          }
-        }
-      }
-    },
-    "tag.edit.section.merge" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "他のタグに統合"
-          }
-        }
-      }
-    },
-    "tag.edit.section.delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "削除"
-          }
-        }
-      }
-    },
-    "tag.edit.action.save" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存"
-          }
-        }
-      }
-    },
-    "tag.edit.action.merge" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "統合する"
-          }
-        }
-      }
-    },
-    "tag.edit.action.delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "削除する"
-          }
-        }
-      }
-    },
-    "tag.edit.action.cancel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャンセル"
-          }
-        }
-      }
-    },
-    "tag.edit.merge.placeholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "統合先のタグを選択"
-          }
-        }
-      }
-    },
-    "tag.edit.confirmDelete.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグを削除しますか?"
-          }
-        }
-      }
-    },
-    "tag.edit.confirmDelete.message %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 件の記事からタグが外れます。この操作は取り消せません。"
-          }
-        }
-      }
-    },
-    "tag.edit.confirmMerge.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグを統合しますか?"
-          }
-        }
-      }
-    },
-    "tag.edit.confirmMerge.message %@ %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$lld 件の記事が「%1$@」タグに移動します。"
-          }
-        }
-      }
-    },
-    "settings.tag.entry" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグ管理"
-          }
-        }
-      }
-    },
-    "chat.sidebar.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "履歴"
-          }
-        }
-      }
-    },
-    "chat.sidebar.newSession" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいチャット"
-          }
-        }
-      }
-    },
-    "chat.sidebar.empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "まだ履歴がありません"
-          }
-        }
-      }
-    },
-    "chat.sidebar.deleteAction" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "削除"
-          }
-        }
-      }
-    },
-    "chat.sidebar.untitled" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいチャット"
-          }
-        }
-      }
-    },
-    "chat.relativeTime.now" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "たった今"
-          }
-        }
-      }
-    },
-    "chat.relativeTime.minutes %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 分前"
-          }
-        }
-      }
-    },
-    "chat.relativeTime.hours %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 時間前"
-          }
-        }
-      }
-    },
-    "chat.relativeTime.yesterday" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "昨日"
-          }
-        }
-      }
-    },
-    "chat.relativeTime.daysAgo %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 日前"
-          }
-        }
-      }
-    },
     "chat.empty.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -699,6 +401,61 @@
         }
       }
     },
+    "chat.relativeTime.daysAgo %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 日前"
+          }
+        }
+      }
+    },
+    "chat.relativeTime.hours %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 時間前"
+          }
+        }
+      }
+    },
+    "chat.relativeTime.minutes %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 分前"
+          }
+        }
+      }
+    },
+    "chat.relativeTime.now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "たった今"
+          }
+        }
+      }
+    },
+    "chat.relativeTime.yesterday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨日"
+          }
+        }
+      }
+    },
     "chat.session.new" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -750,6 +507,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "チャット履歴を削除しますか?"
+          }
+        }
+      }
+    },
+    "chat.sidebar.deleteAction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
+        }
+      }
+    },
+    "chat.sidebar.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ履歴がありません"
+          }
+        }
+      }
+    },
+    "chat.sidebar.newSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいチャット"
+          }
+        }
+      }
+    },
+    "chat.sidebar.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴"
+          }
+        }
+      }
+    },
+    "chat.sidebar.untitled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいチャット"
           }
         }
       }
@@ -1091,6 +903,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI が見つけた、あなたの興味分野"
+          }
+        }
+      }
+    },
+    "clip.topics.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が興味分野を発見中"
+          }
+        }
+      }
+    },
+    "clip.topics.empty.gathering %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あと %lld 件の記事で、AI があなた固有の興味トピックを自動発見します"
+          }
+        }
+      }
+    },
+    "clip.topics.empty.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次回起動時に AI があなたの興味トピックを発見します"
+          }
+        }
+      }
+    },
+    "clip.message.assistant.thinking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が要約中…"
           }
         }
       }
@@ -2122,6 +1978,17 @@
         }
       }
     },
+    "settings.tag.entry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ管理"
+          }
+        }
+      }
+    },
     "settings.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2243,6 +2110,149 @@
         }
       }
     },
+    "tag.edit.action.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "tag.edit.action.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除する"
+          }
+        }
+      }
+    },
+    "tag.edit.action.merge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合する"
+          }
+        }
+      }
+    },
+    "tag.edit.action.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        }
+      }
+    },
+    "tag.edit.confirmDelete.message %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の記事からタグが外れます。この操作は取り消せません。"
+          }
+        }
+      }
+    },
+    "tag.edit.confirmDelete.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグを削除しますか?"
+          }
+        }
+      }
+    },
+    "tag.edit.confirmMerge.message %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld 件の記事が「%1$@」タグに移動します。"
+          }
+        }
+      }
+    },
+    "tag.edit.confirmMerge.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグを統合しますか?"
+          }
+        }
+      }
+    },
+    "tag.edit.merge.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合先のタグを選択"
+          }
+        }
+      }
+    },
+    "tag.edit.section.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
+        }
+      }
+    },
+    "tag.edit.section.merge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他のタグに統合"
+          }
+        }
+      }
+    },
+    "tag.edit.section.rename" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ名"
+          }
+        }
+      }
+    },
+    "tag.edit.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグを編集"
+          }
+        }
+      }
+    },
     "tag.filtered.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2312,6 +2322,94 @@
         }
       }
     },
+    "tag.management.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだタグがありません"
+          }
+        }
+      }
+    },
+    "tag.management.row.articleCount %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の記事"
+          }
+        }
+      }
+    },
+    "tag.management.searchPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグを検索"
+          }
+        }
+      }
+    },
+    "tag.management.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグをタップして、名前変更・統合・削除ができます"
+          }
+        }
+      }
+    },
+    "tag.edit.section.rename.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグの名前を変更します。同じ名前の既存タグがあれば自動で統合されます。"
+          }
+        }
+      }
+    },
+    "tag.edit.section.merge.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このタグの記事をすべて別のタグに移動します。元のタグは削除されます。"
+          }
+        }
+      }
+    },
+    "tag.edit.section.delete.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このタグを完全に削除します。記事は残ります。"
+          }
+        }
+      }
+    },
+    "tag.management.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ管理"
+          }
+        }
+      }
+    },
     "URL" : {
 
     },
@@ -2329,7 +2427,7 @@
         }
       }
     },
-    "キーファクト" : {
+    "エラー" : {
 
     },
     "コンテンツ" : {
@@ -2376,6 +2474,9 @@
           }
         }
       }
+    },
+    "事実" : {
+
     },
     "今週 %lld 件 新たに吸収" : {
       "extractionState" : "manual",
@@ -2455,7 +2556,7 @@
     "知識" : {
 
     },
-    "記事 %lld、知識 %lld、ファクト %lld" : {
+    "記事 %lld、知識 %lld、事実 %lld" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {

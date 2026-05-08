@@ -38,14 +38,23 @@ struct TagManagementView: View {
                     systemImage: "tag.slash"
                 )
             } else {
-                List(filteredTags) { tag in
-                    Button {
-                        selectedTag = tag
-                    } label: {
-                        TagRow(tag: tag)
+                List {
+                    Section {
+                        ForEach(filteredTags) { tag in
+                            Button {
+                                selectedTag = tag
+                            } label: {
+                                TagRow(tag: tag)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("tag.management.row")
+                        }
+                    } header: {
+                        Text("tag.management.hint")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(nil)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("tag.management.row")
                 }
                 .searchable(text: $searchQuery, prompt: Text("tag.management.searchPlaceholder"))
             }
