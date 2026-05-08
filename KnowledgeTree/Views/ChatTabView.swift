@@ -39,10 +39,10 @@ struct ChatTabView: View {
     @State private var streamingMessageID: UUID?
     @State private var streamingDisplayedText: String = ""
 
-    /// spec 033 fix (2026-05-09): NavigationSplitView の sidebar 表示制御。
-    /// iPhone でデフォルトで sidebar が見えない問題と、新しいチャット作成後に
-    /// detail に自動遷移しない問題を解消。
-    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    /// spec 033 fix (2026-05-09): NavigationSplitView は iPhone で columnVisibility が
+    /// 確実に動かない問題があったため、シンプルな sheet ベースに変更。
+    /// iPhone / iPad 両方で確実に動く UX を優先。
+    @State private var showSidebar: Bool = false
 
     /// 動的算出: pinned があればそれ、なければ最新。allSessions が空 (全削除後) なら nil。
     private var currentSession: ChatSession? {
@@ -65,67 +65,75 @@ struct ChatTabView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            ChatHistorySidebar(
-                pinnedSessionID: $pinnedSessionID,
-                onCreate: { createNewSession() },
-                onSelect: { id in
-                    pinnedSessionID = id
-                    // iPhone: sidebar を閉じて detail を表示
-                    columnVisibility = .detailOnly
-                }
-            )
-            .navigationSplitViewColumnWidth(min: 240, ideal: 280)
-        } detail: {
-            NavigationStack {
-                VStack(spacing: 0) {
-                    if currentSession != nil {
-                        if currentSessionMessages.isEmpty && !isThinking {
-                            emptyStateView
-                        } else {
-                            messageList
-                        }
-                    } else {
+        NavigationStack {
+            VStack(spacing: 0) {
+                if currentSession != nil {
+                    if currentSessionMessages.isEmpty && !isThinking {
                         emptyStateView
+                    } else {
+                        messageList
                     }
+                } else {
+                    emptyStateView
+                }
 
-                    ChatInputField(
-                        text: $inputText,
-                        isThinking: $isThinking,
-                        onSend: { Task { await sendQuestion() } }
-                    )
-                }
-                .navigationTitle("chat.tab.title")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    // spec 033 fix: iPhone で sidebar を明示的に開く button
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            columnVisibility = (columnVisibility == .all) ? .detailOnly : .all
-                        } label: {
-                            Image(systemName: "sidebar.left")
-                        }
-                        .accessibilityIdentifier("chat.toolbar.sidebar")
-                        .accessibilityLabel(Text("chat.sidebar.title"))
+                ChatInputField(
+                    text: $inputText,
+                    isThinking: $isThinking,
+                    onSend: { Task { await sendQuestion() } }
+                )
+            }
+            .navigationTitle("chat.tab.title")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // 履歴 sidebar (sheet) を開く button
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showSidebar = true
+                    } label: {
+                        Image(systemName: "sidebar.left")
                     }
-                }
-                .navigationDestination(for: Article.self) { article in
-                    ArticleDetailView(article: article)
-                }
-                .alert(
-                    Text("chat.message.error"),
-                    isPresented: Binding(
-                        get: { errorMessage != nil },
-                        set: { if !$0 { errorMessage = nil } }
-                    )
-                ) {
-                    Button("OK", role: .cancel) { errorMessage = nil }
-                } message: {
-                    Text(errorMessage ?? "")
+                    .accessibilityIdentifier("chat.toolbar.sidebar")
+                    .accessibilityLabel(Text("chat.sidebar.title"))
                 }
             }
+            .navigationDestination(for: Article.self) { article in
+                ArticleDetailView(article: article)
+            }
+            .alert(
+                Text("chat.message.error"),
+                isPresented: Binding(
+                    get: { errorMessage != nil },
+                    set: { if !$0 { errorMessage = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
-        .navigationSplitViewStyle(.balanced)
+        .sheet(isPresented: $showSidebar) {
+            NavigationStack {
+                ChatHistorySidebar(
+                    pinnedSessionID: $pinnedSessionID,
+                    onCreate: {
+                        createNewSession()
+                        showSidebar = false
+                    },
+                    onSelect: { id in
+                        pinnedSessionID = id
+                        showSidebar = false
+                    }
+                )
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("OK") { showSidebar = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .accessibilityIdentifier("chat.tab.root")
     }
 
@@ -206,8 +214,6 @@ struct ChatTabView: View {
         do {
             let s = try chatService.createSession()
             pinnedSessionID = s.id
-            // spec 033 fix: iPhone で sidebar を閉じて新 session の detail に遷移
-            columnVisibility = .detailOnly
         } catch {
             errorMessage = String(describing: error)
         }
