@@ -3,14 +3,12 @@
 //  KnowledgeTree
 //
 //  spec 021 — AI チャット (4 タブ目) の root view。
-//  最新 ChatSession の messages 時系列表示 + 入力欄。
-//
-//  spec 021 fix (2026-05-06):
-//  - currentSession を @State Object 保持しない。@Query で全 ChatSession を取得し、
-//    `pinnedSessionID` (ユーザー選択用) と `allSessions.first` (最新) を組み合わせて
-//    動的に算出。これで全削除後の dead reference 問題 / 履歴復活ハングを根本解決。
-//  - 質問送信時に session 無ければ create (lazy)
-//  - 引用記事タップ → ArticleDetailView (NavigationLink)
+//  spec 033 (2026-05-08) — モダン UI 刷新:
+//  - NavigationSplitView で履歴サイドバー (iPad: 常時 / iPhone: overlay)
+//  - multi-turn context (直前 4 message を ChatService に渡す)
+//  - 擬似 token streaming (assistant 回答完了後、1 文字ずつ追加表示)
+//  - inline 引用 link は ChatMessageRow 側で AttributedString 描画
+//  - session 個別削除 (sidebar 経由) + 新規 session 作成
 //
 
 import SwiftUI
@@ -29,7 +27,7 @@ struct ChatTabView: View {
     @Query(sort: \ChatMessage.timestamp)
     private var allMessages: [ChatMessage]
 
-    /// ユーザーが特定 session を選択した時にピン留め (将来 spec 033 のサイドバー用)。
+    /// ユーザーが特定 session を選択した時にピン留め。
     /// nil の時は allSessions.first (最新) を使用。
     @State private var pinnedSessionID: UUID?
 
@@ -37,8 +35,11 @@ struct ChatTabView: View {
     @State private var isThinking: Bool = false
     @State private var errorMessage: String?
 
+    /// spec 033: 擬似 streaming 中の assistant message ID と表示中の text
+    @State private var streamingMessageID: UUID?
+    @State private var streamingDisplayedText: String = ""
+
     /// 動的算出: pinned があればそれ、なければ最新。allSessions が空 (全削除後) なら nil。
-    /// 削除済みの ChatSession は @Query から消えているので dead reference にならない。
     private var currentSession: ChatSession? {
         if let id = pinnedSessionID,
            let pinned = allSessions.first(where: { $0.id == id }) {
@@ -52,42 +53,58 @@ struct ChatTabView: View {
         return allMessages.filter { $0.session?.id == sessionID }
     }
 
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if currentSession != nil {
-                    if currentSessionMessages.isEmpty && !isThinking {
-                        emptyStateView
-                    } else {
-                        messageList
-                    }
-                } else {
-                    emptyStateView
-                }
+    /// spec 033: multi-turn context = 直前 4 message (= 2 ペア)
+    private var contextMessages: [ChatMessage] {
+        let sorted = currentSessionMessages.sorted { $0.timestamp < $1.timestamp }
+        return Array(sorted.suffix(4))
+    }
 
-                ChatInputField(
-                    text: $inputText,
-                    isThinking: $isThinking,
-                    onSend: { Task { await sendQuestion() } }
-                )
-            }
-            .navigationTitle("chat.tab.title")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: Article.self) { article in
-                ArticleDetailView(article: article)
-            }
-            .alert(
-                Text("chat.message.error"),
-                isPresented: Binding(
-                    get: { errorMessage != nil },
-                    set: { if !$0 { errorMessage = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) { errorMessage = nil }
-            } message: {
-                Text(errorMessage ?? "")
+    var body: some View {
+        NavigationSplitView {
+            ChatHistorySidebar(
+                pinnedSessionID: $pinnedSessionID,
+                onCreate: { createNewSession() },
+                onSelect: { id in pinnedSessionID = id }
+            )
+            .navigationSplitViewColumnWidth(min: 240, ideal: 280)
+        } detail: {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    if currentSession != nil {
+                        if currentSessionMessages.isEmpty && !isThinking {
+                            emptyStateView
+                        } else {
+                            messageList
+                        }
+                    } else {
+                        emptyStateView
+                    }
+
+                    ChatInputField(
+                        text: $inputText,
+                        isThinking: $isThinking,
+                        onSend: { Task { await sendQuestion() } }
+                    )
+                }
+                .navigationTitle("chat.tab.title")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationDestination(for: Article.self) { article in
+                    ArticleDetailView(article: article)
+                }
+                .alert(
+                    Text("chat.message.error"),
+                    isPresented: Binding(
+                        get: { errorMessage != nil },
+                        set: { if !$0 { errorMessage = nil } }
+                    )
+                ) {
+                    Button("OK", role: .cancel) { errorMessage = nil }
+                } message: {
+                    Text(errorMessage ?? "")
+                }
             }
         }
+        .navigationSplitViewStyle(.balanced)
         .accessibilityIdentifier("chat.tab.root")
     }
 
@@ -111,8 +128,11 @@ struct ChatTabView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: DS.Spacing.lg) {
                     ForEach(currentSessionMessages) { msg in
-                        ChatMessageRow(message: msg)
-                            .id(msg.id)
+                        ChatMessageRow(
+                            message: msg,
+                            streamingTextOverride: streamingMessageID == msg.id ? streamingDisplayedText : nil
+                        )
+                        .id(msg.id)
                     }
                     if isThinking {
                         HStack(spacing: DS.Spacing.sm) {
@@ -130,6 +150,9 @@ struct ChatTabView: View {
             // 上スクロールで keyboard が指に追従して下がる (iMessage 風)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: currentSessionMessages.count) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: streamingDisplayedText) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
             .onChange(of: isThinking) { _, newValue in
@@ -157,6 +180,16 @@ struct ChatTabView: View {
 
     // MARK: - Actions
 
+    private func createNewSession() {
+        guard let chatService = serviceContainer.chatService else { return }
+        do {
+            let s = try chatService.createSession()
+            pinnedSessionID = s.id
+        } catch {
+            errorMessage = String(describing: error)
+        }
+    }
+
     private func sendQuestion() async {
         guard let chatService = serviceContainer.chatService else { return }
 
@@ -177,14 +210,44 @@ struct ChatTabView: View {
             }
         }
 
+        // multi-turn context: 直前 4 message (この時点では新 user message はまだ追加されていない)
+        let context = contextMessages
+
         inputText = ""
         isThinking = true
-        defer { isThinking = false }
 
         do {
-            _ = try await chatService.send(question: question, in: session)
+            // ChatService が user/assistant message を永続化する
+            let assistantMsg = try await chatService.send(
+                question: question,
+                in: session,
+                contextMessages: context
+            )
+            isThinking = false
+            // spec 033: 擬似 streaming で 1 文字ずつ表示
+            await streamDisplayMessage(message: assistantMsg)
         } catch {
+            isThinking = false
             errorMessage = String(describing: error)
         }
+    }
+
+    /// spec 033: 擬似 streaming — 完成済の assistant 本文を 1 文字ずつ追加表示
+    private func streamDisplayMessage(message: ChatMessage) async {
+        let fullText = message.text
+        guard !fullText.isEmpty else { return }
+        streamingMessageID = message.id
+        streamingDisplayedText = ""
+
+        // 文字ごとに 15ms ずつ追加 (体感は本物 streaming に近い)
+        let perCharDelayNs: UInt64 = 15_000_000
+        for char in fullText {
+            streamingDisplayedText.append(char)
+            try? await Task.sleep(nanoseconds: perCharDelayNs)
+        }
+
+        // 完了後は override をクリア (永続化済の text に戻る)
+        streamingMessageID = nil
+        streamingDisplayedText = ""
     }
 }

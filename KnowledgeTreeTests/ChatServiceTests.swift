@@ -293,7 +293,121 @@ struct ChatServiceTests {
         #expect(output == input)
     }
 
-    // MARK: - 9. send で空質問 → throws
+    // MARK: - 9. multi-turn context が prompt に含まれる (spec 033)
+
+    @Test func testSendIncludesContextMessagesInPrompt() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // keyword retrieval が当たるよう、query の語と一致する essence を持たせる
+        let article = makeArticle(
+            url: "a",
+            title: "Swift 6 詳しく教えて",
+            essence: "Swift 6 詳しく教えて 解説",
+            embedding: nil,
+            in: context
+        )
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "詳しく説明します",
+            citedArticleIDs: [article.id.uuidString]
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability
+        )
+        let session = try service.createSession()
+
+        // multi-turn context (前の会話)
+        let prevUser = ChatMessage(session: session, role: "user", text: "Swift とは?")
+        let prevAssistant = ChatMessage(session: session, role: "assistant", text: "Swift は Apple の言語")
+        context.insert(prevUser)
+        context.insert(prevAssistant)
+        try context.save()
+
+        _ = try await service.send(
+            question: "詳しく教えて",
+            in: session,
+            contextMessages: [prevUser, prevAssistant]
+        )
+
+        // prompt に "## 直近の会話" + 過去 message が含まれる
+        let lastPrompt = mockSession.lastChatAnswerPrompt ?? ""
+        #expect(lastPrompt.contains("## 直近の会話"))
+        #expect(lastPrompt.contains("Swift とは?"))
+        #expect(lastPrompt.contains("Swift は Apple の言語"))
+    }
+
+    // MARK: - 10. deleteSession で session + message cascade 削除 (spec 033)
+
+    @Test func testDeleteSessionCascadesMessages() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let mockSession = MockLanguageModelSession()
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability
+        )
+
+        // 2 session 作成、片方に message を挿入
+        let s1 = try service.createSession()
+        let s2 = try service.createSession()
+        context.insert(ChatMessage(session: s1, role: "user", text: "msg in s1"))
+        context.insert(ChatMessage(session: s2, role: "user", text: "msg in s2"))
+        try context.save()
+
+        // s1 を個別削除
+        try service.deleteSession(s1)
+
+        let sessionsAfter = try context.fetch(FetchDescriptor<ChatSession>())
+        #expect(sessionsAfter.count == 1)
+        #expect(sessionsAfter.first?.id == s2.id)
+
+        let messagesAfter = try context.fetch(FetchDescriptor<ChatMessage>())
+        #expect(messagesAfter.count == 1)
+        #expect(messagesAfter.first?.text == "msg in s2")
+    }
+
+    // MARK: - 11. inline link 形式の prompt 指示 (spec 033)
+
+    @Test func testBuildPromptIncludesInlineLinkInstruction() {
+        let container = try? makeContainer()
+        let context = container?.mainContext
+
+        let article = Article(url: "https://example.com", title: "テスト")
+        let prompt = ChatService.buildPrompt(
+            question: "Swift について",
+            articles: [article],
+            contextMessages: []
+        )
+        // inline link の指示文が prompt に含まれる
+        #expect(prompt.contains("[記事タイトル](article-id://"))
+        _ = context
+    }
+
+    // MARK: - 12. stripUUIDsFromBody が inline link を保護 (spec 033)
+
+    @Test func testStripUUIDsPreservesInlineLink() {
+        let inlineLink = "詳しくは [Swift 6 リリース](article-id://12345678-1234-5678-1234-567812345678) を参照"
+        let result = ChatService.stripUUIDsFromBody(inlineLink)
+        #expect(result.contains("[Swift 6 リリース]"))
+        #expect(result.contains("article-id://12345678-1234-5678-1234-567812345678"))
+    }
+
+    // MARK: - 13. send で空質問 → throws
 
     @Test func testSendThrowsOnEmptyQuestion() async throws {
         let container = try makeContainer()
