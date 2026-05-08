@@ -72,7 +72,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld 知識  ·  %2$lld キーファクト"
+            "value" : "%1$lld 知識  ·  %2$lld 事実"
           }
         }
       }
@@ -119,7 +119,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI パワー: %1$lld 記事、%2$lld 知識、%3$lld キーファクト"
+            "value" : "AI パワー: %1$lld 記事、%2$lld 知識、%3$lld 事実"
           }
         }
       }
@@ -141,7 +141,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記事を保存するとカテゴリーが表示されます"
+            "value" : "記事を保存するとジャンルが表示されます"
           }
         }
       }
@@ -152,7 +152,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カテゴリがありません"
+            "value" : "ジャンルがありません"
           }
         }
       }
@@ -163,7 +163,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カテゴリ別知識"
+            "value" : "ジャンル別知識"
           }
         }
       }
@@ -229,7 +229,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ファクト"
+            "value" : "事実"
           }
         }
       }
@@ -1897,7 +1897,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カテゴリー分類中"
+            "value" : "分野を分類中"
           }
         }
       }
@@ -2111,7 +2111,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全タグのカテゴリー分類中"
+            "value" : "全タグの分野を分類中"
           }
         }
       }
@@ -2152,7 +2152,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "記事 %1$lld、知識 %2$lld、ファクト %3$lld"
+            "value" : "記事 %1$lld、知識 %2$lld、事実 %3$lld"
           }
         }
       }

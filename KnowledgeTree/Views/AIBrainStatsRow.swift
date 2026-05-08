@@ -34,7 +34,7 @@ struct AIBrainStatsRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("aibrain.stats_row")
         .accessibilityLabel(
-            Text("記事 \(articles.count)、知識 \(uniqueEntityCount)、ファクト \(keyFacts.count)")
+            Text("記事 \(articles.count)、知識 \(uniqueEntityCount)、事実 \(keyFacts.count)")
         )
         .onAppear {
             withAnimation(DS.Animation.ifMotionAllowed(DS.Animation.counterAppear)) {

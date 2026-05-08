@@ -78,7 +78,7 @@ struct PowerGaugeCard: View {
                         Text("\(animatedFactCount)")
                             .font(.title3.bold().monospacedDigit())
                             .contentTransition(.numericText(countsDown: false))
-                        Text("キーファクト")
+                        Text("事実")
                             .font(DS.Typography.heroSubtitle)
                             .foregroundStyle(.secondary)
                     }
@@ -101,7 +101,7 @@ struct PowerGaugeCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("aibrain.power_gauge")
         .accessibilityLabel(
-            Text("AI パワー: \(articles.count) 記事、\(entityCount) 知識、\(keyFacts.count) キーファクト")
+            Text("AI パワー: \(articles.count) 記事、\(entityCount) 知識、\(keyFacts.count) 事実")
         )
         .onAppear {
             withAnimation(DS.Animation.ifMotionAllowed(DS.Animation.counterAppear)) {

@@ -759,3 +759,49 @@ This migration is purely visual; no `@Model` / Schema / Service / data-layer cha
 **Reduce Transparency 対応**: spec 014 で gradient/shadow/blur 全廃済のため追加コードゼロで自動対応。
 
 **テスト**: `KnowledgeTreeTests/ColorAdaptiveTests.swift` の 7 ケース (UITraitCollection で Light/Dark 注入 + 5 tokens の RGB 検証) で auto adapt 挙動を保証。
+
+---
+
+## 📝 Vocabulary (用語ガイド) — spec 038
+
+**目的**: 非エンジニア (完全に技術用語に馴染みのないユーザー) でも違和感なく使える日本語を UI 全体で統一する。
+
+### コード内の型名は技術用語のまま、UI 文言のみ和訳する
+
+`KeyFact`、`KnowledgeEntity`、`Category` 等の Swift 型名 / クラス名 / プロパティ名は維持。これらをリネームすると影響範囲が大きく、Spec Kit 経由のドキュメント追跡 (spec 004 等の歴史的記録) との整合性が崩れる。**UI に出る日本語文字列のみ** やさしい用語に統一する。
+
+### 用語マッピング表
+
+| 内部名 (コード) | UI 表示 (新) | UI 表示 (旧、廃止) | 備考 |
+|---|---|---|---|
+| `KeyFact` / `keyFacts` | **事実** / **ポイント** | ファクト / キーファクト | 統計表示でも「事実」 |
+| `KnowledgeEntity` / `entities` | **人物・場所・モノ** / **知識** | エンティティ | aibrain.stats.entities は既に「知識」、維持 |
+| `Category` / `categoryRaw` | **ジャンル** | カテゴリ / カテゴリー | spec 016 等の Category 詳細画面文言は段階的に「ジャンル」へ |
+| `Tag` / `tags` | **タグ** | (そのまま) | 一般的に認知済 |
+| `essence` | **要点** | (そのまま) | 既に和訳済 |
+| `KnowledgeDigest` | **この分野のまとめ** | ダイジェスト | spec 018 で `clip.detail.summary.title` 等は確認の上対応 |
+| `AutoTagApplier` | **AI タグ** | 自動タグ | "AI" を全面に |
+| `AutoCategoryClassifier` | **AI 分類** | 自動分類 | 同上 |
+| `EmbeddingService` | (内部のみ) | (UI 露出なし) | 露出させない |
+| `Foundation Models` | **Apple Intelligence** / **AI** | Foundation Models | ブランド名 |
+| `enrichment.fetching` | **ページを取得中** | enrichment 中 | 状態 UI |
+| `extractionService.extracting` | **AI 解析中** | 抽出中 | 状態 UI |
+| `succeeded` / `partiallySucceeded` / `failed` | **完了** / **一部完了** / **失敗** | (現状維持で OK) | |
+
+### 新規 view / 機能追加時のチェックリスト
+
+- [ ] `Text(...)` のハードコード日本語文字列は xcstrings 経由か?
+- [ ] 上記マッピング表の旧用語を使っていないか?
+- [ ] accessibilityLabel も同マッピングに従っているか?
+- [ ] エラー文言は「失敗」「エラー」を避け、「うまくいきませんでした」のような穏やかな表現か?
+- [ ] 数字単位 (件 / 個 / 回) は適切か?
+
+### 段階的移行戦略
+
+spec 038 では以下を優先的に対応:
+1. 「**ファクト / キーファクト**」 → **事実** (頻出、最重要)
+2. 「**カテゴリ / カテゴリー**」 → **ジャンル** (固定 10 ジャンルの表現)
+3. 「**カテゴリー分類中**」 → **分野を分類中** (状態 UI)
+4. PowerGaugeCard / AIBrainStatsRow のハードコード `Text("キーファクト")` / `Text("ファクト")` 等
+
+その他 (entity 関連、Auto-Tag 等) は徐々に対応。コード型名のリネームは将来 spec で別途検討。
