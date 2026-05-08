@@ -22,6 +22,7 @@ struct CategoryFilteredListView: View {
 
     @Query private var allTags: [Tag]
     @Environment(RefreshTrigger.self) private var refresh
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedTagNames: Set<String> = []
     @State private var showsAllTags: Bool = false
     @State private var presentedArticle: Article?
@@ -124,12 +125,24 @@ struct CategoryFilteredListView: View {
                         ArticleRow(article: article, refreshTick: refreshTick)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            delete(article)
+                        } label: {
+                            Label("list.deleteAction", systemImage: "trash")
+                        }
+                    }
                     Divider().padding(.leading, DS.Spacing.xxl)
                 }
             }
             .padding(.horizontal, DS.Spacing.xxl)
             .accessibilityIdentifier("category.detail.list")
         }
+    }
+
+    private func delete(_ article: Article) {
+        modelContext.delete(article)
+        try? modelContext.save()
     }
 
     private func toggleSelection(_ tagName: String) {
