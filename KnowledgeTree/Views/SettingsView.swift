@@ -40,6 +40,19 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.safariSetup.entry")
             }
 
+            // spec 024: タグ管理
+            Section {
+                NavigationLink(value: TagManagementDestination()) {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "tag")
+                            .foregroundStyle(DS.Color.actionBlue)
+                            .frame(width: 24)
+                        Text("settings.tag.entry")
+                    }
+                }
+                .accessibilityIdentifier("settings.tag.entry")
+            }
+
             // spec 021: AI チャット履歴削除
             Section {
                 Button(role: .destructive) {
@@ -59,6 +72,9 @@ struct SettingsView: View {
         .navigationDestination(for: SafariSetupDestination.self) { _ in
             SafariSetupView()
         }
+        .navigationDestination(for: TagManagementDestination.self) { _ in
+            TagManagementView()
+        }
         .alert(
             "chat.settings.deleteAllHistory.confirmTitle",
             isPresented: $showDeleteChatConfirm
@@ -76,3 +92,6 @@ struct SettingsView: View {
 
 /// AIBrainView 右上の歯車から SettingsView に push 遷移する Hashable destination。
 struct SettingsDestination: Hashable {}
+
+/// SettingsView から TagManagementView (spec 024) に push 遷移する Hashable destination。
+struct TagManagementDestination: Hashable {}
