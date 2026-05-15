@@ -19,6 +19,7 @@ struct CategoryKnowledgeDetailView: View {
     @Query private var allArticles: [Article]
     @Environment(ServiceContainer.self) private var services
     @Environment(RefreshTrigger.self) private var refresh
+    @Environment(\.modelContext) private var modelContext
     @State private var presentedArticle: Article?
     @State private var refreshTick: Int = 0
 
@@ -171,10 +172,22 @@ struct CategoryKnowledgeDetailView: View {
                         ArticleRow(article: article, refreshTick: refreshTick)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            delete(article)
+                        } label: {
+                            Label("list.deleteAction", systemImage: "trash")
+                        }
+                    }
                     Divider()
                 }
             }
             .accessibilityIdentifier("clip.detail.articles")
         }
+    }
+
+    private func delete(_ article: Article) {
+        modelContext.delete(article)
+        try? modelContext.save()
     }
 }

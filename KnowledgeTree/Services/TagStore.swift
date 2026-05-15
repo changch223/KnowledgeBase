@@ -114,4 +114,74 @@ final class TagStore {
         try context.save()
         refreshTrigger?.bump()
     }
+
+    // MARK: - spec 024: Tag rename / merge / delete
+
+    /// Tag 名を変更。新名と同じ name の既存 Tag があれば自動 merge。
+    /// 失敗時は throws、成功時は最終的に articles を保持する Tag を返す。
+    @discardableResult
+    func rename(_ tag: Tag, to newRawName: String) throws -> Tag {
+        guard let normalized = TagNormalizer.normalize(newRawName) else {
+            throw TagStoreError.invalidName
+        }
+
+        // 同名なら no-op
+        if normalized == tag.name {
+            return tag
+        }
+
+        // 同名既存 Tag があるか
+        var descriptor = FetchDescriptor<Tag>(
+            predicate: #Predicate<Tag> { $0.name == normalized }
+        )
+        descriptor.fetchLimit = 1
+        if let existing = try context.fetch(descriptor).first, existing.id != tag.id {
+            // merge 経路: tag を existing に統合
+            try merge(source: tag, into: existing)
+            return existing
+        }
+
+        // 単純 rename
+        tag.name = normalized
+        try context.save()
+        refreshTrigger?.bump()
+        return tag
+    }
+
+    /// source Tag を target Tag に統合。source.articles を target に append、source 削除。
+    func merge(source: Tag, into target: Tag) throws {
+        guard source.id != target.id else { return }
+
+        // source の articles を target に移動 (重複は skip)
+        let sourceArticles = source.articles
+        for article in sourceArticles {
+            // article.tags から source を除去
+            article.tags.removeAll { $0.id == source.id }
+            // 既に target が article に紐付いていれば skip
+            if !article.tags.contains(where: { $0.id == target.id }) {
+                article.tags.append(target)
+            }
+        }
+
+        // source Tag 削除
+        context.delete(source)
+        try context.save()
+        refreshTrigger?.bump()
+    }
+
+    /// Tag を削除。全 articles の relationship を解除してから Tag 削除。
+    func delete(_ tag: Tag) throws {
+        // 全 articles から Tag relationship を解除
+        let articles = tag.articles
+        for article in articles {
+            article.tags.removeAll { $0.id == tag.id }
+        }
+        context.delete(tag)
+        try context.save()
+        refreshTrigger?.bump()
+    }
+}
+
+enum TagStoreError: Error {
+    case invalidName
 }

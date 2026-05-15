@@ -24,13 +24,23 @@ import os
 @MainActor
 protocol ChatServiceProtocol: AnyObject {
     /// 質問を送信、retrieval + 回答生成 + 永続化を行い、assistant ChatMessage を返す。
-    func send(question: String, in session: ChatSession) async throws -> ChatMessage
+    /// spec 033: contextMessages で直前の会話履歴 (multi-turn 対応)。default 空 = single-turn。
+    func send(question: String, in session: ChatSession, contextMessages: [ChatMessage]) async throws -> ChatMessage
     /// 新セッション作成 (50 件超過なら最古を FIFO 削除)。
     func createSession() throws -> ChatSession
     /// 全セッション + メッセージ削除。
     func deleteAllSessions() throws
+    /// spec 033: 個別セッション削除 (cascade で message も削除)
+    func deleteSession(_ session: ChatSession) throws
     /// 既存記事への embedding backfill (起動時 / 必要な時に呼び出す)。
     func backfillEmbeddings() async
+}
+
+extension ChatServiceProtocol {
+    /// 後方互換用: 既存 (single-turn) 呼び出しを維持。
+    func send(question: String, in session: ChatSession) async throws -> ChatMessage {
+        try await send(question: question, in: session, contextMessages: [])
+    }
 }
 
 @MainActor
@@ -65,7 +75,7 @@ final class ChatService: ChatServiceProtocol {
 
     // MARK: - send
 
-    func send(question: String, in session: ChatSession) async throws -> ChatMessage {
+    func send(question: String, in session: ChatSession, contextMessages: [ChatMessage] = []) async throws -> ChatMessage {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw ChatServiceError.emptyQuestion
@@ -100,7 +110,11 @@ final class ChatService: ChatServiceProtocol {
         let answer: ChatAnswerOutput
         if availability.isAvailable {
             do {
-                let prompt = Self.buildPrompt(question: trimmed, articles: aboveThreshold.map { $0.article })
+                let prompt = Self.buildPrompt(
+                    question: trimmed,
+                    articles: aboveThreshold.map { $0.article },
+                    contextMessages: contextMessages
+                )
                 answer = try await self.session.generateChatAnswer(prompt: prompt)
             } catch {
                 logger.error("ChatAnswer generation failed: \(String(describing: error), privacy: .public)")
@@ -169,6 +183,14 @@ final class ChatService: ChatServiceProtocol {
         try context.save()
     }
 
+    // MARK: - deleteSession (spec 033)
+
+    func deleteSession(_ session: ChatSession) throws {
+        // cascade で messages も削除される (spec 021 ChatSession の @Relationship)
+        context.delete(session)
+        try context.save()
+    }
+
     // MARK: - backfillEmbeddings
 
     func backfillEmbeddings() async {
@@ -226,19 +248,34 @@ final class ChatService: ChatServiceProtocol {
     }
 
     /// Foundation Models prompt 組立て (R5)。
-    static func buildPrompt(question: String, articles: [Article]) -> String {
+    /// spec 033: contextMessages で multi-turn 対応 + inline link 形式の指示。
+    static func buildPrompt(question: String, articles: [Article], contextMessages: [ChatMessage] = []) -> String {
         var prompt = """
         あなたは知積 (KnowledgeTree) の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
 
         ## ルール
         1. 必ず以下の【参考記事】の内容のみに基づいて回答してください。一般知識から推測してはいけません。
         2. 回答に使った記事の ID は citedArticleIDs フィールドにのみ含めてください (Article.id の UUID 文字列)。
-        3. **回答本文 (answer フィールド) には ID や UUID を絶対に書かないでください**。「[1] によれば」のような番号も避け、自然な日本語で要点を伝えてください。
-        4. 参考記事に答えがない場合は「分かりません。保存された記事の中に該当する情報が見つかりませんでした。」と回答し、citedArticleIDs を空配列にしてください。
-        5. 簡潔に、3 段落以内で日本語で回答してください。
+        3. **回答本文 (answer フィールド) には UUID 文字列を絶対に書かないでください**。「[1] によれば」のような番号も避けます。
+        4. 参考記事に言及するときは `[記事タイトル](article-id://UUID)` の形式で本文中にリンクを埋め込んでください。例: 「Swift 6 については [Swift 6 リリース記事](article-id://12345...) で詳しく説明されています」。
+        5. 参考記事に答えがない場合は「分かりません。保存された記事の中に該当する情報が見つかりませんでした。」と回答し、citedArticleIDs を空配列にしてください。
+        6. 簡潔に、3 段落以内で日本語で回答してください。
+        7. 直近の会話があれば、文脈を踏まえて回答してください。「詳しく教えて」のような短い質問は直前の話題の深掘りとして扱ってください。
 
-        ## 参考記事
         """
+
+        // spec 033: multi-turn 対応 — 直前の会話履歴
+        if !contextMessages.isEmpty {
+            prompt += "\n## 直近の会話\n"
+            for msg in contextMessages {
+                let role = msg.role == ChatMessageRole.user.rawValue ? "ユーザー" : "アシスタント"
+                let truncated = msg.text.count > 200 ? String(msg.text.prefix(200)) + "…" : msg.text
+                prompt += "\n\(role): \(truncated)"
+            }
+            prompt += "\n"
+        }
+
+        prompt += "\n## 参考記事"
 
         for (i, article) in articles.enumerated() {
             let essence = article.extractedKnowledge?.essence ?? ""
@@ -261,16 +298,39 @@ final class ChatService: ChatServiceProtocol {
     }
 
     /// 答え本文から UUID 文字列を除去 (LM が prompt に反して書いた場合の保険)。
-    /// 標準的な UUID 8-4-4-4-12 形式に加え、それを囲む角括弧 / カッコ / 「ID:」プレフィックスも一緒に除去。
+    /// spec 033: inline link `[タイトル](article-id://UUID)` 形式は保護する。
+    /// 単独で出てきた UUID (周囲が `article-id://` でない) のみ除去。
     static func stripUUIDsFromBody(_ text: String) -> String {
-        // UUID v4 形式: 8-4-4-4-12 桁の hex
-        // 周囲の `[ID: ...]` `(ID: ...)` `「ID: ...」` も同時にマッチ
+        // 1. まず inline link `(article-id://UUID)` をプレースホルダに退避
+        let inlineLinkPattern = #"\(article-id://[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\)"#
+        let placeholder = "\u{E000}INLINE_LINK_\u{E001}"  // 私用領域 Unicode で衝突回避
+        var result = text
+        var savedLinks: [String] = []
+        if let regex = try? NSRegularExpression(pattern: inlineLinkPattern) {
+            let nsText = result as NSString
+            let matches = regex.matches(in: result, range: NSRange(location: 0, length: nsText.length))
+            for match in matches.reversed() {
+                let matched = nsText.substring(with: match.range)
+                savedLinks.insert(matched, at: 0)
+                result = (result as NSString).replacingCharacters(in: match.range, with: placeholder)
+            }
+        }
+
+        // 2. 単独 UUID (周囲が `[ID:...]` `(ID:...)` `「ID:...」` または裸) を除去
         let uuidPattern = #"[\[\(「【]*\s*(?:ID\s*[::]\s*)?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\s*[\]\)」】]*"#
-        var result = text.replacingOccurrences(of: uuidPattern, with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: uuidPattern, with: "", options: .regularExpression)
         // 連続する空白 / カンマ / 句読点の前後の空白を整理
         result = result.replacingOccurrences(of: #"\s+([、。,.])"#, with: "$1", options: .regularExpression)
         result = result.replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 3. 退避した inline link を復元
+        for link in savedLinks {
+            if let range = result.range(of: placeholder) {
+                result.replaceSubrange(range, with: link)
+            }
+        }
+        return result
     }
 
     /// Foundation Models 不可時の fallback。top-k 記事の essence + KeyFact を整形。

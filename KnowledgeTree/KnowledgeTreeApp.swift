@@ -18,11 +18,21 @@
 import SwiftUI
 import SwiftData
 
+/// spec 035: TabView selection 識別子。
+enum AppTab: Hashable {
+    case library
+    case knowledgeClip
+    case aibrain
+    case chat
+}
+
 @main
 struct KnowledgeTreeApp: App {
     @State private var processingMonitor = ProcessingMonitor()
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
+    /// spec 035: 起動時 default は知識 Clip タブ (「最近のあなた」を最初に見せる)
+    @State private var selectedTab: AppTab = .knowledgeClip
 
     @MainActor
     init() {
@@ -50,24 +60,28 @@ struct KnowledgeTreeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TabView {
+            TabView(selection: $selectedTab) {
                 ArticleListView()
                     .tabItem {
                         Label("library.tab.title", systemImage: "books.vertical")
                     }
+                    .tag(AppTab.library)
                     .accessibilityIdentifier("tab.library")
 
                 // spec 018: 知識 Clip タブ (3rd タブ、Library と AI ブレインの間)
+                // spec 035: 起動時 default selection
                 KnowledgeClipView()
                     .tabItem {
                         Label("clip.tab.title", systemImage: "lightbulb.fill")
                     }
+                    .tag(AppTab.knowledgeClip)
                     .accessibilityIdentifier("tab.knowledgeClip")
 
                 AIBrainView()
                     .tabItem {
                         Label("aibrain.tab.title", systemImage: "brain")
                     }
+                    .tag(AppTab.aibrain)
                     .accessibilityIdentifier("tab.aibrain")
 
                 // spec 021: AI チャット (4th タブ)
@@ -75,6 +89,7 @@ struct KnowledgeTreeApp: App {
                     .tabItem {
                         Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
                     }
+                    .tag(AppTab.chat)
                     .accessibilityIdentifier("tab.chat")
             }
             .environment(processingMonitor)
@@ -126,8 +141,22 @@ struct KnowledgeTreeApp: App {
         // spec 021: NLEmbedding ベースの文章 embedding service (起動時に 1 度ロード)
         let embeddingService = EmbeddingService()
 
-        // spec 004 + 009 + 010 + 012 + 018 + 021: 知識抽出 service
-        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook)
+        // spec 037: ConflictDetectionService (knowledge service の hook 用に先構築)
+        let conflictDetectionService: ConflictDetectionServiceProtocol = ConflictDetectionService(
+            context: context,
+            session: session,
+            availability: availability
+        )
+
+        // spec 036: TopicClusteringService (起動時 + 7 日 batch)
+        let topicClusteringService: TopicClusteringServiceProtocol = TopicClusteringService(
+            context: context,
+            session: session,
+            availability: availability
+        )
+
+        // spec 004 + 009 + 010 + 012 + 018 + 021 + 037: 知識抽出 service
+        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook + conflict 検出 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -140,7 +169,8 @@ struct KnowledgeTreeApp: App {
             chunkProgressStore: chunkProgressStore,
             tagStore: tagStore,
             digestService: digestService,
-            embeddingService: embeddingService
+            embeddingService: embeddingService,
+            conflictDetectionService: conflictDetectionService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -185,6 +215,13 @@ struct KnowledgeTreeApp: App {
             availability: availability
         )
 
+        // spec 035: RecentDigestService + LastOpenedStore 構築
+        let recentDigestService: RecentDigestServiceProtocol = RecentDigestService(
+            session: session,
+            availability: availability
+        )
+        let lastOpenedStore = LastOpenedStore()
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -194,6 +231,10 @@ struct KnowledgeTreeApp: App {
         serviceContainer.digestService = digestService  // spec 018
         serviceContainer.embeddingService = embeddingService  // spec 021
         serviceContainer.chatService = chatService            // spec 021
+        serviceContainer.recentDigestService = recentDigestService  // spec 035
+        serviceContainer.lastOpenedStore = lastOpenedStore          // spec 035
+        serviceContainer.conflictDetectionService = conflictDetectionService // spec 037
+        serviceContainer.topicClusteringService = topicClusteringService     // spec 036
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
@@ -223,5 +264,8 @@ struct KnowledgeTreeApp: App {
 
         // spec 021: 既存記事への essence embedding backfill (Apple Intelligence 端末のみ動作)
         await chatService.backfillEmbeddings()
+
+        // spec 036: 動的トピック batch (前回から 7 日経過していれば実行)
+        await topicClusteringService.runIfDue(force: false)
     }
 }

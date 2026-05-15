@@ -43,6 +43,11 @@ final class Article {
     /// - nil = 未生成 (Apple Intelligence 不可端末 / 旧データ)
     @Attribute(.externalStorage) var essenceEmbedding: Data?
 
+    /// spec 037: 時系列事実上書きで「旧情報」と判定された Article は true。
+    /// KnowledgeDigest 生成時に「過去」併記 or skip される。
+    /// ライブラリ表示は維持 (ユーザーは見られる)。
+    var isObsolete: Bool = false
+
     init(id: UUID = UUID(), url: String, title: String, savedAt: Date = Date()) {
         self.id = id
         self.url = url

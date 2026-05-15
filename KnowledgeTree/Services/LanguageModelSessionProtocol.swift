@@ -92,6 +92,39 @@ struct DigestCardOutput: Codable {
     let sourceArticleIDs: [String]
 }
 
+// MARK: - spec 035: 「最近のあなた」差分ダイジェスト用 Generable Output
+
+@Generable
+struct RecentDigestOutput: Codable {
+    @Guide(description: "最近の記事を統合した自然な日本語の 3 段落要約。各段落 80-150 字。読み手は『最近の自分が学んだこと』を一目で把握できるように。")
+    let paragraphs: [String]
+}
+
+// MARK: - spec 036: 動的トピック命名用 Generable Output
+
+@Generable
+struct TopicNameOutput: Codable {
+    @Guide(description: "クラスタの記事群の共通テーマを 5-20 字の自然な日本語で命名。技術用語を避け、ユーザーが直感的に理解できる名前。例: 『AI と Product Management』『SwiftUI 状態管理』『日本企業 DX 動向』。")
+    let name: String
+}
+
+// MARK: - spec 037: 時系列事実上書き用 Generable Output
+
+@Generable
+struct ConflictDetectionOutput: Codable {
+    @Guide(description: "2 つの記事の間で同じ entity (人物・場所・モノ等) について書かれた事実が矛盾しているか。例: 『開店』vs『閉店』、『就任』vs『退任』、『リリース』vs『廃止』など、明らかに片方が古い情報になっている場合のみ true。"  )
+    let hasConflict: Bool
+
+    @Guide(description: "矛盾の内容説明。20-50 字の自然な日本語。例: 『前回は開店、今回は閉店』。hasConflict=false なら空文字。")
+    let conflictDescription: String
+
+    @Guide(description: "新しい記事側の事実 (1 文、50 字以内)。hasConflict=false なら空文字。")
+    let newFact: String
+
+    @Guide(description: "古い記事側の事実 (1 文、50 字以内)。hasConflict=false なら空文字。")
+    let oldFact: String
+}
+
 // MARK: - spec 021: AI Chat (RAG) 用 Generable Output
 
 @Generable
@@ -124,6 +157,15 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 021: AI Chat (RAG) 回答生成
     func generateChatAnswer(prompt: String) async throws -> ChatAnswerOutput
+
+    /// spec 035: 「最近のあなた」差分 3 段落要約生成
+    func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput
+
+    /// spec 037: 2 記事間の事実矛盾検出
+    func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput
+
+    /// spec 036: 動的トピック命名
+    func generateTopicName(prompt: String) async throws -> TopicNameOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -156,6 +198,39 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: ChatAnswerOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 035: 「最近のあなた」差分 3 段落要約生成
+    func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: RecentDigestOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 037: 2 記事間の事実矛盾検出
+    func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ConflictDetectionOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 036: 動的トピック命名
+    func generateTopicName(prompt: String) async throws -> TopicNameOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: TopicNameOutput.self
         ) {
             prompt
         }

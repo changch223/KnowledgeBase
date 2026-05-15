@@ -40,6 +40,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let digestService: KnowledgeDigestService?
     /// spec 021: knowledge 抽出 succeeded 後の essence embedding 生成用 (default nil で後方互換)
     private let embeddingService: EmbeddingService?
+    /// spec 037: knowledge 抽出 succeeded 後の conflict 検出用 (default nil で後方互換)
+    private let conflictDetectionService: ConflictDetectionServiceProtocol?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -55,7 +57,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         chunkProgressStore: ChunkProgressStoreProtocol? = nil,
         tagStore: TagStore? = nil,
         digestService: KnowledgeDigestService? = nil,
-        embeddingService: EmbeddingService? = nil
+        embeddingService: EmbeddingService? = nil,
+        conflictDetectionService: ConflictDetectionServiceProtocol? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -70,6 +73,17 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.tagStore = tagStore
         self.digestService = digestService
         self.embeddingService = embeddingService
+        self.conflictDetectionService = conflictDetectionService
+    }
+
+    /// spec 037: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる conflict 検出 hook。
+    /// fire-and-forget で非同期実行 (失敗しても本フローに影響しない)。
+    private func detectConflictsIfPossible(article: Article) {
+        guard let conflictDetectionService else { return }
+        Task { [weak self] in
+            _ = self
+            await conflictDetectionService.detect(article: article)
+        }
     }
 
     /// spec 021: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる embedding 生成 hook。
@@ -200,6 +214,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                     markDigestStaleIfPossible(article: article)
                     // spec 021: essence embedding 生成 hook
                     generateEmbeddingIfPossible(article: article)
+                    // spec 037: 時系列事実上書き検出 hook (fire-and-forget)
+                    detectConflictsIfPossible(article: article)
                 }
             case .failure(let error):
                 let reason = String(describing: error)
@@ -366,6 +382,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             markDigestStaleIfPossible(article: article)
             // spec 021: essence embedding 生成 hook (chunked パス)
             generateEmbeddingIfPossible(article: article)
+            // spec 037: 時系列事実上書き検出 hook (chunked パス、fire-and-forget)
+            detectConflictsIfPossible(article: article)
         case .pending, .extracting, .skipped:
             break
         }

@@ -1,8 +1,23 @@
 # KnowledgeTree (知積) — Spec Roadmap
 
-**Last updated**: 2026-05-06 (PM session)
-**Current branch**: `034-pdf-support` (PR #7 OPEN)
-**Main HEAD**: `325f62a` (PR #6 マージ済 = spec 020/021/022 + spec 019 撤回 + UX hot-fixes)
+**Last updated**: 2026-05-08 (PM session)
+**Current branch**: `vision-spec-035-038` (PR #9 予定)
+**Main HEAD**: `06cc2a9` (PR #7 = spec 034 PDF support マージ済)
+**Vision**: [VISION.md](./VISION.md) — プロダクトビジョン確定版
+
+## 🎯 次の 3 ヶ月の柱 (本セッション 2026-05-08 で確定)
+
+VISION.md コア価値「**読んだ知識を AI が自動で体系化・更新し、必要な時だけ開けば最新の自分が見える、優しい第二の脳**」を具現化する 4 spec:
+
+| spec | 機能 | 規模 | 優先度 |
+|---|---|---|---|
+| **035** | 「最近のあなた」差分ダイジェスト (機能 X) | ~340 行 | ⭐⭐⭐⭐⭐ |
+| **036** | 動的トピック自動発見 (機能 Y) | ~810 行 | ⭐⭐⭐⭐⭐ |
+| **037** | 時系列事実上書き提案 (機能 Z) | ~590 行 | ⭐⭐⭐⭐ |
+| **038** | 用語のやさしさ整理 (機能 W) | ~200-300 行 | ⭐⭐⭐⭐ |
+| **033** | AI Chat モダン UI (履歴サイドバー / multi-turn / streaming / inline link) | ~600 行 | ⭐⭐⭐⭐⭐ |
+
+詳細: `specs/035-recent-digest/`, `specs/036-dynamic-topics/`, `specs/037-fact-overwrite/`, `specs/038-friendly-terms/`
 
 このドキュメントは spec 001 〜 spec 040+ の全体計画を保存し、`/speckit-specify` 起動時の優先順位判断に使う。
 更新は spec を新たに着手する / 完了させる毎に行う。
@@ -344,7 +359,7 @@ spec 022 (ArticleRow swipe 削除) は **List 系 3 view (ArticleListView / TagF
 - **spec 030: LazyVStack 系 view の削除手段** — 📝 specify+plan 完了 (`specs/030-category-row-deletion/`、本セッション 2026-05-06)。contextMenu (長押し → メニュー) 採用、~30 行極小 spec。実装はユーザー判断後
 - **spec 031+ 候補: BodyExtractorTests test order dependency 解消** — `extractsFromArticleTag` 実行後に `extractsFromMainTag` / `extractsByDensityScoringWhenNoSemanticTag` が fail する shared global state (NSRegularExpression cache?) 問題。単独実行では PASS、suite 内連続実行で fail。Foundation の `String.replacingOccurrences(options: [.regularExpression])` 内部 state を疑う。回避策候補: 明示 NSRegularExpression インスタンス + stringByReplacingMatches、または fixture から `<header>`/`<footer>` 除去で trigger 削減
 - **spec 032+ 候補: pbxproj duplicate build file 警告クリーンアップ** — main app / Tests target の Sources Build Phase に明示登録 + filesystem-synchronized auto-sync の重複登録で warnings ~30 件。Sources Build Phase を空にすると BodyExtractorTests の挙動に影響する不可解な依存があり、根本調査が必要
-- **spec 033+ 候補: AI チャット モダン UI 刷新 (Gemini / Claude / ChatGPT 風)** — spec 021 実機検証で出た UX 要望 (2026-05-06 ユーザー):
+- **spec 033 (specify+plan 完了 2026-05-08)**: AI チャット モダン UI 刷新 → `specs/033-chat-modern-ui/` 参照。spec 021 実機検証 UX 要望:
   - 左側に **会話履歴サイドバー**、ハンバーガーで開閉 (画面狭い時は overlay)
   - **multi-turn context** (現状 single-turn): 直前の 1〜数 message を context に含めて深掘り対応 (「詳しく教えて」「もっと具体的に」「先ほどの記事について」等)
   - 履歴 row タップで session 切替 (既存 50 件 FIFO + UI で表示)

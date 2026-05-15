@@ -21,21 +21,37 @@ struct KnowledgeClipView: View {
     @State private var path = NavigationPath()
     /// spec 018 fix: 初回 / 既存記事 → Digest 生成中フラグ
     @State private var isGenerating: Bool = false
+    /// spec 035: タブ表示時に lock した「前回開いた時刻」(view ライフタイム中は固定で差分が消えない)
+    @State private var sinceForRecent: Date?
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: DS.Spacing.xxl) {
+                    // spec 035: 最上部に「最近のあなた」セクション
+                    if let since = sinceForRecent {
+                        RecentDigestSection(since: since)
+                    }
+                    // spec 037: 事実更新の提案
+                    FactConflictsSection()
+                    // spec 036: 動的トピック (候補 + 採用済)
+                    DynamicTopicsSection()
                     timeFilterChips
                     digestsContent
                 }
-                .padding(DS.Spacing.xxl)
+                .padding(.vertical, DS.Spacing.xxl)
             }
             .scrollIndicators(.hidden)
             .navigationTitle("clip.tab.title")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: CategoryDigestDetailDestination.self) { dest in
                 CategoryKnowledgeDetailView(category: dest.category)
+            }
+            .navigationDestination(for: UserTopicDestination.self) { dest in
+                UserTopicDetailView(topicID: dest.topicID)
+            }
+            .navigationDestination(for: Article.self) { article in
+                ArticleDetailView(article: article)
             }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()
@@ -45,7 +61,19 @@ struct KnowledgeClipView: View {
         .accessibilityIdentifier("clip.root")
         .task {
             await tryInitialGeneration()
+            captureRecentSinceAndTouch()
         }
+    }
+
+    /// spec 035: タブ初表示時に lastOpenedAt を取得 (差分起点)、その後現在時刻で touch。
+    /// view ライフタイム中は sinceForRecent を固定し、表示中に差分が空にならないようにする。
+    private func captureRecentSinceAndTouch() {
+        guard let store = services.lastOpenedStore else { return }
+        let since = store.lastOpenedAt ?? Date.distantPast
+        if sinceForRecent == nil {
+            sinceForRecent = since
+        }
+        store.touch()
     }
 
     /// 初回 (or 既存記事ありで Digest 0 件) の状態で自動生成を起動。
