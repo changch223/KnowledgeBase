@@ -100,6 +100,29 @@ struct RecentDigestOutput: Codable {
     let paragraphs: [String]
 }
 
+// MARK: - spec 040: Knowledge Graph triple 抽出用 Generable Output
+
+@Generable
+struct GraphTripleOutput: Codable {
+    @Guide(description: "記事から抽出した事実関係の triple リスト。最大 10 件、確信度 0.5 未満は除外。同じ subject-predicate-object の組合せは 1 つにまとめる。")
+    let triples: [GraphTripleItem]
+}
+
+@Generable
+struct GraphTripleItem: Codable {
+    @Guide(description: "主語となる entity (人物・場所・モノ・概念)。記事に明示されているものに限る、30 字以内。例: 『Apple』『Tim Cook』『Swift 6』")
+    let subject: String
+
+    @Guide(description: "関係性を表す短い動詞句 (release / lead / succeed / criticize / create / belong to 等)、30 字以内。日本語可。記事の文脈から確実に読み取れるものに限る。")
+    let predicate: String
+
+    @Guide(description: "目的語となる entity (人物・場所・モノ・概念)、30 字以内。記事に明示されているもの。")
+    let object: String
+
+    @Guide(description: "この triple の確信度 0.0-1.0。記事に明確に書かれていれば 0.8 以上、推測が必要なら 0.5-0.7、推測の域を出ないなら 0.0-0.5。0.5 未満は出力しない。")
+    let confidence: Double
+}
+
 // MARK: - spec 036: 動的トピック命名用 Generable Output
 
 @Generable
@@ -166,6 +189,9 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 036: 動的トピック命名
     func generateTopicName(prompt: String) async throws -> TopicNameOutput
+
+    /// spec 040: Knowledge Graph triple 抽出
+    func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -231,6 +257,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: TopicNameOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 040: Knowledge Graph triple 抽出
+    func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: GraphTripleOutput.self
         ) {
             prompt
         }

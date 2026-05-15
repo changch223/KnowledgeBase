@@ -39,18 +39,22 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
     private let context: ModelContext
     private let availability: AvailabilityChecker
     private let fallback: KnowledgeDigestService
+    /// spec 040: graph 構造を prompt に渡すための traversal (optional、nil なら従来 prompt)
+    private let graphTraversal: GraphTraversalServiceProtocol?
     private let logger = Logger(subsystem: "app.KnowledgeTree", category: "digest")
 
     init(
         session: LanguageModelSessionProtocol,
         context: ModelContext,
         availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
-        fallback: KnowledgeDigestService
+        fallback: KnowledgeDigestService,
+        graphTraversal: GraphTraversalServiceProtocol? = nil
     ) {
         self.session = session
         self.context = context
         self.availability = availability
         self.fallback = fallback
+        self.graphTraversal = graphTraversal
     }
 
     func regenerate(for category: Category) async throws -> [KnowledgeDigest] {
@@ -142,11 +146,46 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
                   !essence.isEmpty else { return nil }
             return "[\(idx + 1)] (id=\(article.id.uuidString)) \(essence)"
         }
+
+        // spec 040: graph 構造を prompt に注入 (主要 entity 中心の文章生成のため)
+        var graphSection = ""
+        if let graphTraversal {
+            let topNodes = graphTraversal.topByDegree(categoryRaw: categoryName, limit: 5, in: context)
+            if !topNodes.isEmpty {
+                var graphLines: [String] = []
+                for node in topNodes {
+                    // 各 node の outgoing edge 上位 2 件 (label + target、ラベル付きを優先)
+                    let labeledOutgoing = node.outgoingEdges
+                        .filter { $0.label != nil && $0.target?.isActive == true }
+                        .sorted { $0.weight > $1.weight }
+                        .prefix(2)
+                    let edgeStr = labeledOutgoing
+                        .compactMap { edge -> String? in
+                            guard let label = edge.label, let target = edge.target else { return nil }
+                            return "\(label) → \(target.name)"
+                        }
+                        .joined(separator: " / ")
+                    let line = edgeStr.isEmpty
+                        ? "・\(node.name) (記事数 \(node.mentionCount))"
+                        : "・\(node.name) (記事数 \(node.mentionCount)): \(edgeStr)"
+                    graphLines.append(line)
+                }
+                graphSection = """
+
+                ## このカテゴリーの主要エンティティと関係性
+                \(graphLines.joined(separator: "\n"))
+
+                主要エンティティを中心に物語る文章を生成してください。
+                """
+            }
+        }
+
         return """
             あなたは「\(categoryName)」カテゴリの \(lines.count) 件の記事要約を統合する AI です。
 
             各記事の要点:
             \(lines.joined(separator: "\n"))
+            \(graphSection)
 
             上記を統合し、1〜3 個の知識カードを生成してください。
             各カードは summary (150 字以内)、topKeyFacts (3 個)、topEntityNames (3 個)、

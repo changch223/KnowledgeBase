@@ -35,6 +35,8 @@ enum SharedSchema {
             ChatMessage.self,                      // spec 021
             ConflictProposal.self,                 // spec 037
             UserTopic.self,                        // spec 036
+            GraphNode.self,                        // spec 040
+            GraphEdge.self,                        // spec 040
         ])
     }
 

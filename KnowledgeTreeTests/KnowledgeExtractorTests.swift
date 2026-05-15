@@ -124,6 +124,11 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var topicNameCallCount = 0
     var lastTopicNamePrompt: String?
 
+    /// spec 040: GraphTriples 用 mock 出力 (デフォルトは空)
+    var nextGraphTriplesResult: Result<GraphTripleOutput, Error> = .success(GraphTripleOutput(triples: []))
+    var graphTriplesCallCount = 0
+    var lastGraphTriplesPrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -173,6 +178,15 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         topicNameCallCount += 1
         lastTopicNamePrompt = prompt
         switch nextTopicNameResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput {
+        graphTriplesCallCount += 1
+        lastGraphTriplesPrompt = prompt
+        switch nextGraphTriplesResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

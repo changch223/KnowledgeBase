@@ -51,6 +51,8 @@ final class ChatService: ChatServiceProtocol {
     private let embeddingService: EmbeddingService
     private let session: LanguageModelSessionProtocol
     private let availability: AvailabilityChecker
+    /// spec 040: graph traversal で関連 entity を context に追加 (optional、nil なら従来動作)
+    private let graphTraversal: GraphTraversalServiceProtocol?
 
     /// 上位 k の retrieval 件数。
     private let topK: Int = 5
@@ -65,12 +67,14 @@ final class ChatService: ChatServiceProtocol {
         context: ModelContext,
         embeddingService: EmbeddingService,
         session: LanguageModelSessionProtocol,
-        availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker()
+        availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
+        graphTraversal: GraphTraversalServiceProtocol? = nil
     ) {
         self.context = context
         self.embeddingService = embeddingService
         self.session = session
         self.availability = availability
+        self.graphTraversal = graphTraversal
     }
 
     // MARK: - send
@@ -107,13 +111,17 @@ final class ChatService: ChatServiceProtocol {
         }
 
         // 4. 回答生成
+        // spec 040: top-k 記事の entity → GraphNode 解決 → 1-hop 近傍を prompt に注入
+        let relatedEntities: [GraphNode] = resolveRelatedEntities(from: aboveThreshold.map { $0.article })
+
         let answer: ChatAnswerOutput
         if availability.isAvailable {
             do {
                 let prompt = Self.buildPrompt(
                     question: trimmed,
                     articles: aboveThreshold.map { $0.article },
-                    contextMessages: contextMessages
+                    contextMessages: contextMessages,
+                    relatedEntities: relatedEntities
                 )
                 answer = try await self.session.generateChatAnswer(prompt: prompt)
             } catch {
@@ -247,9 +255,30 @@ final class ChatService: ChatServiceProtocol {
         return title.isEmpty ? nil : title
     }
 
+    /// spec 040: 上位記事の entity 名から GraphNode を解決し、1-hop 近傍まで含めた dedupe 済 list を返す。
+    /// graphTraversal が nil なら常に空配列。entity が無い記事はスキップ。
+    private func resolveRelatedEntities(from articles: [Article]) -> [GraphNode] {
+        guard let graphTraversal else { return [] }
+        let entityNames: [String] = articles.flatMap { article -> [String] in
+            guard let entities = article.extractedKnowledge?.entities else { return [] }
+            return entities.map { $0.name }
+        }
+        guard !entityNames.isEmpty else { return [] }
+        let resolved = graphTraversal.resolveNodes(entityNames: entityNames, categoryRaw: nil, in: context)
+        var collected: [UUID: GraphNode] = [:]
+        for node in resolved {
+            collected[node.id] = node
+            for neighbor in graphTraversal.neighbors(of: node) {
+                collected[neighbor.id] = neighbor
+            }
+        }
+        return Array(collected.values)
+    }
+
     /// Foundation Models prompt 組立て (R5)。
     /// spec 033: contextMessages で multi-turn 対応 + inline link 形式の指示。
-    static func buildPrompt(question: String, articles: [Article], contextMessages: [ChatMessage] = []) -> String {
+    /// spec 040: relatedEntities が非空なら「## 関連エンティティ」セクションを記事一覧の後に挿入。
+    static func buildPrompt(question: String, articles: [Article], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = []) -> String {
         var prompt = """
         あなたは知積 (KnowledgeTree) の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
 
@@ -287,6 +316,26 @@ final class ChatService: ChatServiceProtocol {
             要点: \(essence)
             KeyFacts: \(keyFacts)
             """
+        }
+
+        // spec 040: 関連エンティティ (1-hop graph neighborhood)
+        if !relatedEntities.isEmpty {
+            prompt += "\n\n## 関連エンティティ (参考)\n"
+            for node in relatedEntities.prefix(10) {
+                let labeledOutgoing = node.outgoingEdges
+                    .filter { $0.label != nil && $0.target?.isActive == true }
+                    .sorted { $0.weight > $1.weight }
+                    .prefix(2)
+                let edgeSummary = labeledOutgoing.compactMap { edge -> String? in
+                    guard let label = edge.label, let target = edge.target else { return nil }
+                    return "\(label) → \(target.name)"
+                }.joined(separator: " / ")
+                if edgeSummary.isEmpty {
+                    prompt += "- \(node.name)\n"
+                } else {
+                    prompt += "- \(node.name): \(edgeSummary)\n"
+                }
+            }
         }
 
         prompt += """

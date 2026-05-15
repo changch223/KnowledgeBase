@@ -34,4 +34,8 @@ final class ServiceContainer {
     var conflictDetectionService: ConflictDetectionServiceProtocol?
     /// spec 036: 動的トピック clustering service
     var topicClusteringService: TopicClusteringServiceProtocol?
+    /// spec 040: Knowledge Graph 抽出 service (記事保存 hook で fire-and-forget)
+    var graphExtractionService: GraphExtractionServiceProtocol?
+    /// spec 040: Knowledge Graph traversal service (Digest / Chat prompt 拡張で使用)
+    var graphTraversalService: GraphTraversalServiceProtocol?
 }

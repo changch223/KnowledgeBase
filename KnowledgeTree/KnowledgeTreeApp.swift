@@ -130,12 +130,23 @@ struct KnowledgeTreeApp: App {
         // KnowledgeExtractionService に inject する
         let session = FoundationModelLanguageModelSession()
         let availability = SystemLanguageModelAvailabilityChecker()
+
+        // spec 040: Knowledge Graph 抽出 + traversal service
+        // (Digest / Chat / Extraction の prompt 拡張 + 記事保存 hook で inject)
+        let graphTraversalService: GraphTraversalServiceProtocol = GraphTraversalService()
+        let graphExtractionService: GraphExtractionServiceProtocol = GraphExtractionService(
+            context: context,
+            session: session,
+            availability: availability
+        )
+
         let fallbackDigestService = FallbackKnowledgeDigestService(context: context)
         let digestService: KnowledgeDigestService = FoundationModelsKnowledgeDigestService(
             session: session,
             context: context,
             availability: availability,
-            fallback: fallbackDigestService
+            fallback: fallbackDigestService,
+            graphTraversal: graphTraversalService
         )
 
         // spec 021: NLEmbedding ベースの文章 embedding service (起動時に 1 度ロード)
@@ -170,7 +181,8 @@ struct KnowledgeTreeApp: App {
             tagStore: tagStore,
             digestService: digestService,
             embeddingService: embeddingService,
-            conflictDetectionService: conflictDetectionService
+            conflictDetectionService: conflictDetectionService,
+            graphExtractionService: graphExtractionService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -208,11 +220,13 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
 
         // spec 021: ChatService 構築 (embedding + Foundation Models + availability で 3 経路分岐)
+        // spec 040: graphTraversal を inject、RAG prompt に「## 関連エンティティ」を追加
         let chatService: ChatServiceProtocol = ChatService(
             context: context,
             embeddingService: embeddingService,
             session: session,
-            availability: availability
+            availability: availability,
+            graphTraversal: graphTraversalService
         )
 
         // spec 035: RecentDigestService + LastOpenedStore 構築
@@ -235,6 +249,8 @@ struct KnowledgeTreeApp: App {
         serviceContainer.lastOpenedStore = lastOpenedStore          // spec 035
         serviceContainer.conflictDetectionService = conflictDetectionService // spec 037
         serviceContainer.topicClusteringService = topicClusteringService     // spec 036
+        serviceContainer.graphExtractionService = graphExtractionService     // spec 040
+        serviceContainer.graphTraversalService = graphTraversalService       // spec 040
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
