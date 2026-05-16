@@ -38,4 +38,8 @@ final class ServiceContainer {
     var graphExtractionService: GraphExtractionServiceProtocol?
     /// spec 040: Knowledge Graph traversal service (Digest / Chat prompt 拡張で使用)
     var graphTraversalService: GraphTraversalServiceProtocol?
+    /// spec 041: Knowledge Graph 編集 store (rename / merge / delete)
+    var graphNodeStore: GraphNodeStore?
+    /// spec 041: AI 提案 (isUncertain edge) のレビュー service
+    var graphProposalReviewService: GraphProposalReviewServiceProtocol?
 }

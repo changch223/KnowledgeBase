@@ -15,6 +15,10 @@ import os
 @MainActor
 protocol ConflictDetectionServiceProtocol: AnyObject {
     func detect(article: Article) async
+    /// spec 041: graph triple 衝突検出 (AI 不要、SwiftData fetch のみ)。
+    /// graph extraction 完了後に呼ばれる前提。同 (source, label) で複数 target があれば
+    /// ConflictProposal を作成 (graphEdgeID 付き)。
+    func detectGraphConflicts(article: Article)
 }
 
 @MainActor
@@ -139,6 +143,77 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
             // overwrite / keepBoth は同ペアで再作成しない
             return p.status == ConflictStatus.overwrite.rawValue
                 || p.status == ConflictStatus.keepBoth.rawValue
+        }
+    }
+
+    // MARK: - spec 041: graph triple 衝突検出
+
+    func detectGraphConflicts(article: Article) {
+        // article が紐づく Category を解決 (categoryRaw は Tag で optional)
+        let resolvedCategory: String? = article.tags.lazy
+            .compactMap { $0.categoryRaw }
+            .first(where: { !$0.isEmpty })
+        guard let categoryRaw = resolvedCategory else { return }
+
+        // article の entities → GraphNode 解決
+        let entityNames: [String] = article.extractedKnowledge?.entities.map { $0.name } ?? []
+        guard !entityNames.isEmpty else { return }
+        let normalized = Set(entityNames
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty })
+        guard !normalized.isEmpty else { return }
+
+        let descriptor = FetchDescriptor<GraphNode>(
+            predicate: #Predicate<GraphNode> { node in
+                node.isActive == true && node.categoryRaw == categoryRaw
+            }
+        )
+        let candidates: [GraphNode] = (try? context.fetch(descriptor)) ?? []
+        let articleNodes = candidates.filter { normalized.contains($0.name.lowercased()) }
+
+        for node in articleNodes {
+            // ラベル付き outgoing edges を label でグループ化、target が複数あれば衝突候補
+            let labeledEdges = node.outgoingEdges.filter { $0.label != nil && $0.target?.isActive == true }
+            let groupedByLabel = Dictionary(grouping: labeledEdges, by: { $0.label ?? "" })
+            for (label, edges) in groupedByLabel where edges.count >= 2 {
+                // updatedAt 降順で sort、最新 / 1 つ前を比較
+                let sorted = edges.sorted { $0.updatedAt > $1.updatedAt }
+                let newest = sorted[0]
+                let older = sorted[1]
+                guard let newestTarget = newest.target,
+                      let olderTarget = older.target,
+                      newestTarget.id != olderTarget.id else { continue }
+
+                // 既存 ConflictProposal (同 graphEdgeID) は skip
+                if hasGraphProposalForEdge(edgeID: newest.id) { continue }
+
+                let description = "「\(node.name)」の「\(label)」が更新されています"
+                let proposal = ConflictProposal(
+                    newArticle: article,
+                    oldArticle: nil,
+                    entityName: node.name,
+                    conflictDescription: description,
+                    newFact: "\(node.name) は \(label): \(newestTarget.name)",
+                    oldFact: "\(node.name) は \(label): \(olderTarget.name)",
+                    graphEdgeID: newest.id
+                )
+                context.insert(proposal)
+            }
+        }
+        try? context.save()
+    }
+
+    private func hasGraphProposalForEdge(edgeID: UUID) -> Bool {
+        let descriptor = FetchDescriptor<ConflictProposal>(
+            predicate: #Predicate<ConflictProposal> { $0.graphEdgeID == edgeID }
+        )
+        let existing = (try? context.fetch(descriptor)) ?? []
+        // pending or 直近の resolved があれば skip
+        let cooldownDate = Date.now.addingTimeInterval(-Double(dismissCooldownDays) * 86400)
+        return existing.contains { p in
+            if p.status == ConflictStatus.pending.rawValue { return true }
+            if let resolved = p.resolvedAt, resolved > cooldownDate { return true }
+            return false
         }
     }
 

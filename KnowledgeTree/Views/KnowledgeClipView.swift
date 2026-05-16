@@ -34,6 +34,8 @@ struct KnowledgeClipView: View {
                     }
                     // spec 037: 事実更新の提案
                     FactConflictsSection()
+                    // spec 041: AI が見つけた graph 仮説 (isUncertain edge レビュー)
+                    GraphProposalsSection()
                     // spec 036: 動的トピック (候補 + 採用済)
                     DynamicTopicsSection()
                     timeFilterChips

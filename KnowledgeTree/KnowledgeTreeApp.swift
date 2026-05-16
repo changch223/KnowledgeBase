@@ -236,6 +236,13 @@ struct KnowledgeTreeApp: App {
         )
         let lastOpenedStore = LastOpenedStore()
 
+        // spec 041: Knowledge Graph 編集 store + 提案レビュー service
+        let graphNodeStore = GraphNodeStore(context: context, refreshTrigger: refreshTrigger)
+        let graphProposalReviewService: GraphProposalReviewServiceProtocol = GraphProposalReviewService(
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -251,6 +258,8 @@ struct KnowledgeTreeApp: App {
         serviceContainer.topicClusteringService = topicClusteringService     // spec 036
         serviceContainer.graphExtractionService = graphExtractionService     // spec 040
         serviceContainer.graphTraversalService = graphTraversalService       // spec 040
+        serviceContainer.graphNodeStore = graphNodeStore                     // spec 041
+        serviceContainer.graphProposalReviewService = graphProposalReviewService // spec 041
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

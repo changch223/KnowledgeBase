@@ -1224,6 +1224,39 @@
     "entity.filtered.title %@" : {
 
     },
+    "graph.empty.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を保存すると AI が entity を抽出し、ここにグラフを描きます。"
+          }
+        }
+      }
+    },
+    "graph.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グラフはまだありません"
+          }
+        }
+      }
+    },
+    "graph.section.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレッジグラフ"
+          }
+        }
+      }
+    },
     "knowledge.aiGeneratedLabel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1736,6 +1769,28 @@
         }
       }
     },
+    "settings.graph.entry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレッジグラフを表示"
+          }
+        }
+      }
+    },
+    "settings.graph.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリー画面で entity と関係性のグラフを描画します。"
+          }
+        }
+      }
+    },
     "settings.safariSetup.autoSaveExplain" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1963,6 +2018,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Safari 拡張機能"
+          }
+        }
+      }
+    },
+    "settings.section.display" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示"
           }
         }
       }

@@ -22,10 +22,16 @@ struct CategoryKnowledgeDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var presentedArticle: Article?
     @State private var refreshTick: Int = 0
+    /// spec 041: ナレッジグラフ表示 toggle (Settings から制御、default OFF)
+    @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DS.Spacing.xxl) {
+                if graphVisible {
+                    CategoryGraphView(categoryRaw: category.name)
+                    Divider()
+                }
                 aggregatedSummarySection
                 Divider()
                 topKeyFactsSection
@@ -41,6 +47,9 @@ struct CategoryKnowledgeDetailView: View {
         .accessibilityIdentifier("clip.detail.\(category.name)")
         .sheet(item: $presentedArticle) { article in
             ArticleDetailView(article: article)
+        }
+        .navigationDestination(for: GraphNodeDetailDestination.self) { destination in
+            GraphNodeDetailDestinationLoader(nodeID: destination.nodeID)
         }
         .refreshable {
             try? await services.digestService?.regenerate(for: category)
