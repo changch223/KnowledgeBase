@@ -121,11 +121,11 @@ private struct ArticleListContent: View {
         )
     }
 
-    /// View 側 post-filter (research.md R1 の B 案)
+    /// spec 044: 検索時は SearchService で score 降順、空クエリは savedAt desc。
     private var filteredArticles: [Article] {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return articles }
-        return articles.filter { SearchPredicate.matches(article: $0, query: q) }
+        return SearchService.search(query: q, in: articles).map { $0.article }
     }
 
     var body: some View {
