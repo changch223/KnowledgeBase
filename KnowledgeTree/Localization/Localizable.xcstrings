@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "—" : {
+
+    },
     "・" : {
 
     },
@@ -11,6 +14,12 @@
 
     },
     "(%lld)" : {
+
+    },
+    "「%@」とこのノードの関係 (edge) を削除します。記事自体は残ります。" : {
+
+    },
+    "「%@」を統合" : {
 
     },
     "%@ ↔ %@" : {
@@ -107,10 +116,19 @@
     "• %@" : {
 
     },
+    "→" : {
+
+    },
     "+%lld" : {
 
     },
     "+%lld 件のタグ ▼" : {
+
+    },
+    "×%lld" : {
+
+    },
+    "AI が見つけた仮説" : {
 
     },
     "AI パワー: %lld 記事、%lld 知識、%lld キーファクト" : {
@@ -144,6 +162,9 @@
           }
         }
       }
+    },
+    "AI 確信度が中程度です。" : {
+
     },
     "aibrain.categories.empty.body" : {
       "extractionState" : "manual",
@@ -819,6 +840,17 @@
         }
       }
     },
+    "clip.message.assistant.thinking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が要約中…"
+          }
+        }
+      }
+    },
     "clip.recent.empty" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -907,13 +939,13 @@
         }
       }
     },
-    "clip.topics.empty.title" : {
+    "clip.topics.candidates.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI が興味分野を発見中"
+            "value" : "新しいトピック候補"
           }
         }
       }
@@ -940,24 +972,13 @@
         }
       }
     },
-    "clip.message.assistant.thinking" : {
+    "clip.topics.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI が要約中…"
-          }
-        }
-      }
-    },
-    "clip.topics.candidates.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいトピック候補"
+            "value" : "AI が興味分野を発見中"
           }
         }
       }
@@ -1222,6 +1243,9 @@
       }
     },
     "entity.filtered.title %@" : {
+
+    },
+    "From" : {
 
     },
     "graph.empty.description" : {
@@ -2286,6 +2310,17 @@
         }
       }
     },
+    "tag.edit.section.delete.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このタグを完全に削除します。記事は残ります。"
+          }
+        }
+      }
+    },
     "tag.edit.section.merge" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2297,6 +2332,17 @@
         }
       }
     },
+    "tag.edit.section.merge.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このタグの記事をすべて別のタグに移動します。元のタグは削除されます。"
+          }
+        }
+      }
+    },
     "tag.edit.section.rename" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2304,6 +2350,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "タグ名"
+          }
+        }
+      }
+    },
+    "tag.edit.section.rename.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグの名前を変更します。同じ名前の既存タグがあれば自動で統合されます。"
           }
         }
       }
@@ -2399,6 +2456,17 @@
         }
       }
     },
+    "tag.management.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグをタップして、名前変更・統合・削除ができます"
+          }
+        }
+      }
+    },
     "tag.management.row.articleCount %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2421,50 +2489,6 @@
         }
       }
     },
-    "tag.management.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグをタップして、名前変更・統合・削除ができます"
-          }
-        }
-      }
-    },
-    "tag.edit.section.rename.help" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タグの名前を変更します。同じ名前の既存タグがあれば自動で統合されます。"
-          }
-        }
-      }
-    },
-    "tag.edit.section.merge.help" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このタグの記事をすべて別のタグに移動します。元のタグは削除されます。"
-          }
-        }
-      }
-    },
-    "tag.edit.section.delete.help" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このタグを完全に削除します。記事は残ります。"
-          }
-        }
-      }
-    },
     "tag.management.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2475,6 +2499,9 @@
           }
         }
       }
+    },
+    "To" : {
+
     },
     "URL" : {
 
@@ -2494,6 +2521,15 @@
       }
     },
     "エラー" : {
+
+    },
+    "キャンセル" : {
+
+    },
+    "このノードは削除されたか、まだ抽出されていません。" : {
+
+    },
+    "この関係 (edge) を削除します。両端のノードと記事は残ります。" : {
 
     },
     "コンテンツ" : {
@@ -2519,6 +2555,18 @@
     "タップで該当記事一覧へ遷移" : {
 
     },
+    "ノードが見つかりません" : {
+
+    },
+    "ノードを削除すると関連する関係 (edge) も削除されます。記事自体は残ります。" : {
+
+    },
+    "ノードを編集" : {
+
+    },
+    "ノード名" : {
+
+    },
     "まだありません" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2540,6 +2588,15 @@
           }
         }
       }
+    },
+    "ラベル" : {
+
+    },
+    "ラベル (例: 開発, 所属, 発表)" : {
+
+    },
+    "ラベル変更" : {
+
     },
     "事実" : {
 
@@ -2577,6 +2634,9 @@
         }
       }
     },
+    "他のノードと統合" : {
+
+    },
     "保存" : {
 
     },
@@ -2591,6 +2651,9 @@
         }
       }
     },
+    "共起" : {
+
+    },
     "最も読んでいる分野" : {
 
     },
@@ -2604,6 +2667,27 @@
           }
         }
       }
+    },
+    "出現記事数" : {
+
+    },
+    "分野" : {
+
+    },
+    "削除" : {
+
+    },
+    "削除しますか？" : {
+
+    },
+    "却下" : {
+
+    },
+    "名前" : {
+
+    },
+    "採用" : {
+
     },
     "新しい繋がり" : {
       "extractionState" : "manual",
@@ -2622,6 +2706,24 @@
     "知識" : {
 
     },
+    "確信度" : {
+
+    },
+    "確信度 %@%%" : {
+
+    },
+    "空のままにすると「共起」(label なし) 扱いになります。" : {
+
+    },
+    "統合できる他のノードがありません。" : {
+
+    },
+    "統計" : {
+
+    },
+    "観測回数" : {
+
+    },
     "記事 %lld、知識 %lld、事実 %lld" : {
       "localizations" : {
         "ja" : {
@@ -2631,6 +2733,33 @@
           }
         }
       }
+    },
+    "重要度" : {
+
+    },
+    "関係" : {
+
+    },
+    "関係 (←)" : {
+
+    },
+    "関係 (→)" : {
+
+    },
+    "関係を削除" : {
+
+    },
+    "関係を削除しますか？" : {
+
+    },
+    "関係を編集" : {
+
+    },
+    "関連エンティティ数" : {
+
+    },
+    "関連記事 (%lld)" : {
+
     }
   },
   "version" : "1.0"

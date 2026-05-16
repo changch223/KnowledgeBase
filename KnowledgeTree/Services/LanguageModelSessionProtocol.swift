@@ -192,6 +192,10 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 040: Knowledge Graph triple 抽出
     func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput
+
+    /// spec 042: 任意言語 → 日本語の翻訳 (KnowledgeExtractor 前処理)
+    /// 固有名詞は原文表記維持、訳文のみを返す。
+    func generateTranslation(prompt: String) async throws -> String
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -269,6 +273,15 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let response = try await session.respond(
             generating: GraphTripleOutput.self
         ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 042: 翻訳 (plain String 返却、Generable なし)
+    func generateTranslation(prompt: String) async throws -> String {
+        let session = LanguageModelSession()
+        let response = try await session.respond {
             prompt
         }
         return response.content

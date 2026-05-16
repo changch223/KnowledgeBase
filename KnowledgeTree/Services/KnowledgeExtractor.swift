@@ -26,20 +26,53 @@ struct KnowledgeExtractor {
         maxBodyChars: Int = KnowledgeExtractor.defaultMaxBodyChars
     ) async throws -> ExtractedKnowledgeOutput {
         let truncated = Self.truncate(text: extractedText, maxChars: maxBodyChars)
-        let prompt = Self.buildPrompt(text: truncated)
+        let prepared = await prepareForExtraction(truncated)
+        let prompt = Self.buildPrompt(text: prepared)
         return try await session.generateKnowledge(prompt: prompt)
     }
 
     /// spec 006: 1 chunk を Foundation Models に渡して結果を ChunkResult として返す。
     /// throw しない (失敗は ChunkResult.error に格納)。
     func extractFromChunk(_ chunk: Chunk) async -> ChunkResult {
-        let prompt = Self.buildPrompt(text: chunk.text)
+        let prepared = await prepareForExtraction(chunk.text)
+        let prompt = Self.buildPrompt(text: prepared)
         do {
             let output = try await session.generateKnowledge(prompt: prompt)
             return ChunkResult(chunkIndex: chunk.index, output: output, error: nil)
         } catch {
             return ChunkResult(chunkIndex: chunk.index, output: nil, error: error)
         }
+    }
+
+    /// spec 042: 言語判定 + 英語なら翻訳して日本語化、それ以外はそのまま返す。
+    /// 翻訳失敗 / 空 / 極端に短い結果は raw text を返して silent fallback (constitution V)。
+    func prepareForExtraction(_ text: String) async -> String {
+        guard LanguageDetector.detect(text) == .english else { return text }
+        do {
+            let prompt = Self.buildTranslationPrompt(text: text)
+            let translated = try await session.generateTranslation(prompt: prompt)
+            let trimmed = translated.trimmingCharacters(in: .whitespacesAndNewlines)
+            // 翻訳結果が極端に短い (元の 1/4 未満) → 失敗扱いで raw を返す
+            guard trimmed.count >= max(20, text.count / 4) else { return text }
+            return trimmed
+        } catch {
+            return text
+        }
+    }
+
+    /// spec 042: 英語 → 日本語の翻訳 prompt。固有名詞は原文維持を指示。
+    static func buildTranslationPrompt(text: String) -> String {
+        """
+        次の英文を日本語に訳してください。
+
+        # ルール
+        - 固有名詞 (会社名・人名・技術名・製品名・地名) は英語のまま残してください
+        - 訳文のみを出力し、説明や前置きは書かないでください
+        - 元の段落構造を保ってください
+
+        # 本文
+        \(text)
+        """
     }
 
     /// spec 006: 全 chunk の essence を統合して 1 つの essence + summary を生成。
