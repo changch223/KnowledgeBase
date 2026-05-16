@@ -42,4 +42,6 @@ final class ServiceContainer {
     var graphNodeStore: GraphNodeStore?
     /// spec 041: AI 提案 (isUncertain edge) のレビュー service
     var graphProposalReviewService: GraphProposalReviewServiceProtocol?
+    /// spec 042: Apple Translation framework の en→ja セットアップ状態管理
+    var translationAvailability: TranslationAvailabilityProtocol?
 }

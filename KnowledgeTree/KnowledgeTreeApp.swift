@@ -172,7 +172,12 @@ struct KnowledgeTreeApp: App {
             context: context,
             refreshTrigger: refreshTrigger
         )
-        let knowledgeExtractor = KnowledgeExtractor(session: session)
+        // spec 042: 翻訳失敗 → SettingsView 誘導 flag
+        let translationAvailability = TranslationAvailability()
+        let knowledgeExtractor = KnowledgeExtractor(
+            session: session,
+            translationAvailability: translationAvailability
+        )
         let knowledgeService = DefaultKnowledgeExtractionService(
             extractor: knowledgeExtractor,
             store: knowledgeStore,
@@ -260,6 +265,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.graphTraversalService = graphTraversalService       // spec 040
         serviceContainer.graphNodeStore = graphNodeStore                     // spec 041
         serviceContainer.graphProposalReviewService = graphProposalReviewService // spec 041
+        serviceContainer.translationAvailability = translationAvailability   // spec 042
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

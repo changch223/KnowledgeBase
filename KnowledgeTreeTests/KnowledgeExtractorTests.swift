@@ -128,7 +128,7 @@ struct KnowledgeExtractorTests {
         _ = try await extractor.extract(extractedText: englishText)
 
         #expect(session.translationCallCount == 1)
-        #expect(session.lastTranslationPrompt?.contains(englishText) == true)
+        #expect(session.lastTranslationText?.contains("announced a new framework") == true)
         // 抽出 prompt は翻訳後の日本語テキストを含む
         #expect(session.lastPrompt?.contains("Foundation Models フレームワーク") == true)
         // 元の英文は抽出 prompt に流れない
@@ -200,7 +200,7 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     /// spec 042: Translation 用 mock 出力 (デフォルトは空文字列)
     var nextTranslationResult: Result<String, Error> = .success("")
     var translationCallCount = 0
-    var lastTranslationPrompt: String?
+    var lastTranslationText: String?
 
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
@@ -265,9 +265,9 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         }
     }
 
-    func generateTranslation(prompt: String) async throws -> String {
+    func translate(text: String) async throws -> String {
         translationCallCount += 1
-        lastTranslationPrompt = prompt
+        lastTranslationText = text
         switch nextTranslationResult {
         case .success(let output): return output
         case .failure(let error): throw error

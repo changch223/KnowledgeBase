@@ -57,6 +57,23 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.safariSetup.entry")
+
+                // spec 042: 翻訳セットアップ (英語記事抽出時に必要)
+                NavigationLink(value: TranslationSetupDestination()) {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "character.book.closed")
+                            .foregroundStyle(DS.Color.actionBlue)
+                            .frame(width: 24)
+                        Text("settings.translationSetup.entry")
+                        Spacer()
+                        if serviceContainer.translationAvailability?.needsSetup == true {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.orange)
+                                .accessibilityIdentifier("settings.translationSetup.needsSetupMark")
+                        }
+                    }
+                }
+                .accessibilityIdentifier("settings.translationSetup.entry")
             }
 
             // spec 024: タグ管理
@@ -93,6 +110,9 @@ struct SettingsView: View {
         }
         .navigationDestination(for: TagManagementDestination.self) { _ in
             TagManagementView()
+        }
+        .navigationDestination(for: TranslationSetupDestination.self) { _ in
+            TranslationSetupView()
         }
         .alert(
             "chat.settings.deleteAllHistory.confirmTitle",

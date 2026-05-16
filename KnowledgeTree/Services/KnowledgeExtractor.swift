@@ -10,10 +10,27 @@
 //
 
 import Foundation
+import os
 
 @MainActor
 struct KnowledgeExtractor {
     let session: LanguageModelSessionProtocol
+
+    /// spec 042: 翻訳失敗時に SettingsView の誘導 flag を立てるための optional 依存。
+    /// nil なら failure tracking ゼロ (テスト経路)。
+    let translationAvailability: TranslationAvailabilityProtocol?
+
+    init(
+        session: LanguageModelSessionProtocol,
+        translationAvailability: TranslationAvailabilityProtocol? = nil
+    ) {
+        self.session = session
+        self.translationAvailability = translationAvailability
+    }
+
+    /// spec 042: 翻訳前処理の挙動を実機 (Console.app) で diagnose するための logger。
+    /// subsystem は他 service と統一、category は "extractor"。
+    private static let logger = Logger(subsystem: "app.KnowledgeTree", category: "extractor")
 
     /// 単発パス (本文 ≤ defaultMaxBodyChars) で使う上限。
     /// spec 006 で 1,200 → 1,000 に変更し、超過時は chunked パスに振り分ける。
@@ -46,33 +63,30 @@ struct KnowledgeExtractor {
 
     /// spec 042: 言語判定 + 英語なら翻訳して日本語化、それ以外はそのまま返す。
     /// 翻訳失敗 / 空 / 極端に短い結果は raw text を返して silent fallback (constitution V)。
+    /// Console.app (subsystem: app.KnowledgeTree, category: extractor) で挙動を追跡可能。
     func prepareForExtraction(_ text: String) async -> String {
-        guard LanguageDetector.detect(text) == .english else { return text }
+        let detected = LanguageDetector.detect(text)
+        Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count)")
+        guard detected == .english else { return text }
+        let start = Date()
         do {
-            let prompt = Self.buildTranslationPrompt(text: text)
-            let translated = try await session.generateTranslation(prompt: prompt)
+            let translated = try await session.translate(text: text)
             let trimmed = translated.trimmingCharacters(in: .whitespacesAndNewlines)
+            let elapsedMs = Int(Date().timeIntervalSince(start) * 1000)
+            let minRequired = max(20, text.count / 4)
             // 翻訳結果が極端に短い (元の 1/4 未満) → 失敗扱いで raw を返す
-            guard trimmed.count >= max(20, text.count / 4) else { return text }
+            guard trimmed.count >= minRequired else {
+                Self.logger.notice("translate fallback: too short translated=\(trimmed.count) required=\(minRequired) elapsedMs=\(elapsedMs)")
+                return text
+            }
+            Self.logger.notice("translate ok: input=\(text.count) translated=\(trimmed.count) elapsedMs=\(elapsedMs)")
             return trimmed
         } catch {
+            Self.logger.error("translate failed: \(String(describing: error), privacy: .public)")
+            // spec 042: 翻訳失敗 → SettingsView の誘導 flag を立てる (calm UX、UI 喚起なし)
+            translationAvailability?.markNeedsSetup()
             return text
         }
-    }
-
-    /// spec 042: 英語 → 日本語の翻訳 prompt。固有名詞は原文維持を指示。
-    static func buildTranslationPrompt(text: String) -> String {
-        """
-        次の英文を日本語に訳してください。
-
-        # ルール
-        - 固有名詞 (会社名・人名・技術名・製品名・地名) は英語のまま残してください
-        - 訳文のみを出力し、説明や前置きは書かないでください
-        - 元の段落構造を保ってください
-
-        # 本文
-        \(text)
-        """
     }
 
     /// spec 006: 全 chunk の essence を統合して 1 つの essence + summary を生成。

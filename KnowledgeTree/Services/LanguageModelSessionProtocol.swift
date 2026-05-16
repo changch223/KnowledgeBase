@@ -11,6 +11,7 @@
 
 import Foundation
 import FoundationModels
+import Translation
 
 // MARK: - Generable Output Types (transient、生成スキーマ)
 
@@ -193,9 +194,12 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// spec 040: Knowledge Graph triple 抽出
     func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput
 
-    /// spec 042: 任意言語 → 日本語の翻訳 (KnowledgeExtractor 前処理)
-    /// 固有名詞は原文表記維持、訳文のみを返す。
-    func generateTranslation(prompt: String) async throws -> String
+    /// spec 042: 英語等の本文を日本語に翻訳する。
+    /// 実装は Apple Translation framework (iOS 18+ offline)。
+    /// Foundation Models は非日本語入力を `unsupportedLanguageOrLocale` で拒否するため、
+    /// 入口で別エンジンで翻訳してから既存 generateKnowledge に流す。
+    /// 翻訳エラー / 未インストール言語ペアは throws (caller で raw fallback)。
+    func translate(text: String) async throws -> String
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -278,13 +282,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         return response.content
     }
 
-    /// spec 042: 翻訳 (plain String 返却、Generable なし)
-    func generateTranslation(prompt: String) async throws -> String {
-        let session = LanguageModelSession()
-        let response = try await session.respond {
-            prompt
-        }
-        return response.content
+    /// spec 042: 英語 → 日本語の翻訳 (Apple Translation framework、iOS 26+ offline)。
+    /// `installedSource:` は事前に Settings > General > Language で日本語/英語ペアが
+    /// ダウンロードされている前提。未インストール / 失敗時は throws → caller が raw fallback。
+    /// Foundation Models は非日本語入力を unsupportedLanguageOrLocale で拒否するため、
+    /// 翻訳経路だけは別エンジンを使う。
+    func translate(text: String) async throws -> String {
+        let source = Locale.Language(identifier: "en")
+        let target = Locale.Language(identifier: "ja")
+        let session = TranslationSession(installedSource: source, target: target)
+        let response = try await session.translate(text)
+        return response.targetText
     }
 }
 
