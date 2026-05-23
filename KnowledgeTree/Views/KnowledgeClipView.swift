@@ -71,7 +71,8 @@ struct KnowledgeClipView: View {
                 UserTopicDetailView(topicID: dest.topicID)
             }
             .navigationDestination(for: Article.self) { article in
-                ArticleDetailView(article: article)
+                // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない (入れ子防止)
+                ArticleDetailView(article: article, embedNavigationStack: false)
             }
             // spec 042: ConceptPage 詳細遷移 (ID 経由で安全に fetch)
             .navigationDestination(for: ConceptPageDetailDestination.self) { dest in

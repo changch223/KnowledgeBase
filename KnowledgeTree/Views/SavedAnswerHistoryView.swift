@@ -67,7 +67,8 @@ struct SavedAnswerHistoryView: View {
             SavedAnswerDetailLoader(destinationID: dest.id)
         }
         .navigationDestination(for: Article.self) { article in
-            ArticleDetailView(article: article)
+            // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない
+            ArticleDetailView(article: article, embedNavigationStack: false)
         }
         .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
             ConceptPageDetailLoader(destinationID: dest.id)

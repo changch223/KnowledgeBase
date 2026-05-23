@@ -17,6 +17,10 @@ struct ArticleDetailView: View {
     /// `@Bindable` で SwiftData @Model を観察。body 内で読んだ relationship target の
     /// プロパティ (article.body.extractedText 等) も Observation tracking 対象になる。
     @Bindable var article: Article
+    /// spec 043 bug fix: 外側 NavigationStack 内 (navigationDestination 経由) で push される
+    /// 時は false を指定し、内側 NavigationStack を作らないようにする (入れ子 NavigationStack 防止)。
+    /// sheet 形式で開く既存呼び出し (ArticleListView 等) は default true で従来挙動維持。
+    var embedNavigationStack: Bool = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(RefreshTrigger.self) private var refresh
@@ -72,47 +76,28 @@ struct ArticleDetailView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: DS.Spacing.xxxl) {
-                    // headerSection (サムネ AsyncImage) は refreshTick rebuild から外す。
-                    // Timer による毎秒 rebuild で AsyncImage が再 download → loading に戻り
-                    // 「写真が表示/消える」を繰り返す問題を回避。
-                    // @Bindable article で ogImageURL の変化は auto observe される。
-                    headerSection
-
-                    // spec 008: タグセクション (手動 + 自動提案)
-                    tagsSection
-
-                    // knowledge / body セクションだけ refreshTick で rebuild する。
-                    // 完了状態 (本文・知識サマリ) を確実に live update するため。
-                    Group {
-                        if shouldShowKnowledgeSection {
-                            knowledgeSection
-                        }
-                        bodySection
-                    }
-                    .id(refreshTick)
-
-                    // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
-                    RelatedArticlesSection(article: article) { related in
-                        // タップで現在の sheet を上書き表示
-                        presentedRelatedArticle = related
-                    }
-
-                    // spec 042: この記事から派生した概念ページ (relatedArticles に含む ConceptPage)
-                    derivedConceptPagesSection
-
-                    openOriginalButton
-                }
-                .padding(.horizontal, DS.Spacing.xxxl)
-                .padding(.vertical, DS.Spacing.xxl)
+        // spec 043 bug fix: 外側 NavigationStack 経由で push される時 (embedNavigationStack=false)
+        // は内側 NavigationStack を作らない。これで NavigationLink(value:) tap が正常動作する。
+        if embedNavigationStack {
+            NavigationStack {
+                contentWithModifiers
             }
+        } else {
+            contentWithModifiers
+        }
+    }
+
+    @ViewBuilder
+    private var contentWithModifiers: some View {
+        scrollContent
             .navigationTitle("reader.navigationTitle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("reader.doneButton") { dismiss() }
+                    // sheet 経由なら Done ボタン、navigation push 経由なら戻る gesture で自然に消える
+                    if embedNavigationStack {
+                        Button("reader.doneButton") { dismiss() }
+                    }
                 }
             }
             .sheet(item: $presentedSafariURL) { wrapper in
@@ -121,20 +106,18 @@ struct ArticleDetailView: View {
             .sheet(item: $presentedRelatedArticle) { related in
                 ArticleDetailView(article: related)
             }
-            // spec 042: ConceptPage 詳細遷移 (内部 NavigationStack 用)
-            .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
-                ConceptPageDetailLoader(destinationID: dest.id)
-            }
+            // spec 042: ConceptPage 詳細遷移 — sheet 経由 (内側 NS あり) の時だけ宣言。
+            // navigation push 経由 (外側 NS あり) の時は外側 NS が既に同 destination を持っているので重複宣言を避ける
+            // (重複すると「declared earlier on the stack」警告 + 動作不安定)。
+            .modifier(ConceptPageDestinationIfNeeded(enable: embedNavigationStack))
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
             }
-            // SwiftData の didSave 通知 (同 process 同 ModelContainer)
             .onReceive(
                 NotificationCenter.default.publisher(for: ModelContext.didSave)
             ) { _ in
                 refreshTick &+= 1
             }
-            // CoreData レベル: 同 process の context 変更 (save 前でも fire)
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: NSNotification.Name("NSManagedObjectContextObjectsDidChange")
@@ -142,7 +125,6 @@ struct ArticleDetailView: View {
             ) { _ in
                 refreshTick &+= 1
             }
-            // CoreData レベル: 別 process (Share Extension) の save
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: NSNotification.Name("NSPersistentStoreRemoteChange")
@@ -150,13 +132,51 @@ struct ArticleDetailView: View {
             ) { _ in
                 refreshTick &+= 1
             }
-            // Timer 1秒ポーリング fallback: 完了状態でないときのみ tick increment。
-            // 5 つの通知経路がすべて届かないケースの最終保険。
-            // tick → .id() の変化 → view tree rebuild → @Bindable article 再評価。
             .onReceive(pollTimer) { _ in
                 guard !isFullyComplete else { return }
                 refreshTick &+= 1
             }
+    }
+
+    /// ScrollView + LazyVStack 部分のみ。NavigationStack wrap の有無で共通化。
+    /// modifier (toolbar / sheet / navigationDestination / onReceive 等) は
+    /// contentWithModifiers で 1 度だけ適用。
+    @ViewBuilder
+    private var scrollContent: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: DS.Spacing.xxxl) {
+                // headerSection (サムネ AsyncImage) は refreshTick rebuild から外す。
+                // Timer による毎秒 rebuild で AsyncImage が再 download → loading に戻り
+                // 「写真が表示/消える」を繰り返す問題を回避。
+                // @Bindable article で ogImageURL の変化は auto observe される。
+                headerSection
+
+                // spec 008: タグセクション (手動 + 自動提案)
+                tagsSection
+
+                // knowledge / body セクションだけ refreshTick で rebuild する。
+                // 完了状態 (本文・知識サマリ) を確実に live update するため。
+                Group {
+                    if shouldShowKnowledgeSection {
+                        knowledgeSection
+                    }
+                    bodySection
+                }
+                .id(refreshTick)
+
+                // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
+                RelatedArticlesSection(article: article) { related in
+                    // タップで現在の sheet を上書き表示
+                    presentedRelatedArticle = related
+                }
+
+                // spec 042: この記事から派生した概念ページ (relatedArticles に含む ConceptPage)
+                derivedConceptPagesSection
+
+                openOriginalButton
+            }
+            .padding(.horizontal, DS.Spacing.xxxl)
+            .padding(.vertical, DS.Spacing.xxl)
         }
         .accessibilityIdentifier("articleDetailView")
     }
@@ -491,4 +511,21 @@ struct ArticleDetailView: View {
 private struct ArticleDetailSafariWrapper: Identifiable {
     let id = UUID()
     let url: URL
+}
+
+/// spec 043 bug fix: navigationDestination 重複宣言を避ける条件付き modifier。
+/// embedNavigationStack=true (sheet 経由、自身の NS あり) の時のみ ConceptPageDetailDestination を attach。
+/// false (navigation push 経由、外側 NS あり) の時は外側 NS が既に同じ destination を持っているので skip。
+private struct ConceptPageDestinationIfNeeded: ViewModifier {
+    let enable: Bool
+
+    func body(content: Content) -> some View {
+        if enable {
+            content.navigationDestination(for: ConceptPageDetailDestination.self) { dest in
+                ConceptPageDetailLoader(destinationID: dest.id)
+            }
+        } else {
+            content
+        }
+    }
 }
