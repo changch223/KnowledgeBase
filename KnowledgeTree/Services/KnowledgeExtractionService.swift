@@ -44,6 +44,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let conflictDetectionService: ConflictDetectionServiceProtocol?
     /// spec 040: knowledge 抽出 succeeded 後の graph 抽出用 (default nil で後方互換)
     private let graphExtractionService: GraphExtractionServiceProtocol?
+    /// spec 042: knowledge 抽出 succeeded 後の ConceptPage 自動生成 / 更新用 (default nil で後方互換)
+    private let conceptSynthesisService: ConceptSynthesisServiceProtocol?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -61,7 +63,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         digestService: KnowledgeDigestService? = nil,
         embeddingService: EmbeddingService? = nil,
         conflictDetectionService: ConflictDetectionServiceProtocol? = nil,
-        graphExtractionService: GraphExtractionServiceProtocol? = nil
+        graphExtractionService: GraphExtractionServiceProtocol? = nil,
+        conceptSynthesisService: ConceptSynthesisServiceProtocol? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -78,6 +81,18 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.embeddingService = embeddingService
         self.conflictDetectionService = conflictDetectionService
         self.graphExtractionService = graphExtractionService
+        self.conceptSynthesisService = conceptSynthesisService
+    }
+
+    /// spec 042: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる ConceptPage 自動生成 hook。
+    /// fire-and-forget で非同期実行 (失敗しても本フローに影響しない)。
+    /// conceptSynthesisService が nil なら no-op (後方互換)。
+    private func synthesizeConceptIfPossible(article: Article) {
+        guard let conceptSynthesisService else { return }
+        Task { [weak self] in
+            _ = self
+            await conceptSynthesisService.processNewArticle(article: article)
+        }
     }
 
     /// spec 040: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる graph 抽出 hook。
@@ -232,6 +247,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                     detectConflictsIfPossible(article: article)
                     // spec 040: Knowledge Graph 抽出 hook (fire-and-forget)
                     extractGraphIfPossible(article: article)
+                    // spec 042: ConceptPage 自動生成 / 更新 hook (fire-and-forget)
+                    synthesizeConceptIfPossible(article: article)
                 }
             case .failure(let error):
                 let reason = String(describing: error)
@@ -402,6 +419,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             detectConflictsIfPossible(article: article)
             // spec 040: Knowledge Graph 抽出 hook (chunked パス、fire-and-forget)
             extractGraphIfPossible(article: article)
+            // spec 042: ConceptPage 自動生成 / 更新 hook (chunked パス、fire-and-forget)
+            synthesizeConceptIfPossible(article: article)
         case .pending, .extracting, .skipped:
             break
         }

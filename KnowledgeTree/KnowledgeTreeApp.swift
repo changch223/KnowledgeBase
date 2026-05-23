@@ -39,6 +39,8 @@ struct KnowledgeTreeApp: App {
         // spec 009: BGTaskScheduler への register は launch 最早タイミングで必須。
         // bootstrap (.task) では遅すぎる (View 描画後なので、launch 時 BGTask 通知を取りこぼす)。
         BackgroundExtractionScheduler.shared.registerHandler()
+        // spec 042: ConceptPage 再合成 BGTask handler の register (chunked extraction とは別 identifier)
+        BackgroundExtractionScheduler.shared.registerConceptResynthesisHandler()
     }
 
     var sharedModelContainer: ModelContainer = {
@@ -166,8 +168,22 @@ struct KnowledgeTreeApp: App {
             availability: availability
         )
 
-        // spec 004 + 009 + 010 + 012 + 018 + 021 + 037: 知識抽出 service
-        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook + conflict 検出 hook)
+        // spec 042: ConceptPage 自動生成 service (Fallback 先構築 → Foundation に inject)
+        let fallbackConceptService = FallbackConceptSynthesisService(
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+        let conceptSynthesisService: ConceptSynthesisServiceProtocol = FoundationModelsConceptSynthesisService(
+            session: session,
+            availability: availability,
+            fallback: fallbackConceptService,
+            embeddingService: embeddingService,
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+
+        // spec 004 + 009 + 010 + 012 + 018 + 021 + 037 + 042: 知識抽出 service
+        // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook + conflict 検出 hook + ConceptPage 自動生成 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
             context: context,
             refreshTrigger: refreshTrigger
@@ -187,7 +203,8 @@ struct KnowledgeTreeApp: App {
             digestService: digestService,
             embeddingService: embeddingService,
             conflictDetectionService: conflictDetectionService,
-            graphExtractionService: graphExtractionService
+            graphExtractionService: graphExtractionService,
+            conceptSynthesisService: conceptSynthesisService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -223,6 +240,8 @@ struct KnowledgeTreeApp: App {
         )
         BackgroundExtractionScheduler.shared.queueProvider = { [weak bgQueue] in bgQueue }
         BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
+        // spec 042: ConceptPage 再合成 BGTask に synthesis service を bind
+        BackgroundExtractionScheduler.shared.conceptSynthesisProvider = { conceptSynthesisService }
 
         // spec 021: ChatService 構築 (embedding + Foundation Models + availability で 3 経路分岐)
         // spec 040: graphTraversal を inject、RAG prompt に「## 関連エンティティ」を追加
@@ -248,6 +267,9 @@ struct KnowledgeTreeApp: App {
             refreshTrigger: refreshTrigger
         )
 
+        // spec 042: ConceptPage 編集 store (rename / merge / delete / setFollowing)
+        let conceptPageStore = ConceptPageStore(context: context, refreshTrigger: refreshTrigger)
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -266,6 +288,8 @@ struct KnowledgeTreeApp: App {
         serviceContainer.graphNodeStore = graphNodeStore                     // spec 041
         serviceContainer.graphProposalReviewService = graphProposalReviewService // spec 041
         serviceContainer.translationAvailability = translationAvailability   // spec 042
+        serviceContainer.conceptSynthesisService = conceptSynthesisService   // spec 042
+        serviceContainer.conceptPageStore = conceptPageStore                 // spec 042
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
@@ -298,5 +322,12 @@ struct KnowledgeTreeApp: App {
 
         // spec 036: 動的トピック batch (前回から 7 日経過していれば実行)
         await topicClusteringService.runIfDue(force: false)
+
+        // spec 042: 既存記事からの ConceptPage 初期 backfill (UserDefaults flag で 1 回限り)
+        // 完了後、stale な ConceptPage を 1 回だけ即時再合成 (BGTask 待たずに最初の summary を表示)
+        await conceptSynthesisService.backfillFromExistingArticles()
+        await conceptSynthesisService.resynthesizeAllStale()
+        // spec 042: 次回 BGTask を 1 時間後に予約
+        await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis()
     }
 }

@@ -44,4 +44,8 @@ final class ServiceContainer {
     var graphProposalReviewService: GraphProposalReviewServiceProtocol?
     /// spec 042: Apple Translation framework の en→ja セットアップ状態管理
     var translationAvailability: TranslationAvailabilityProtocol?
+    /// spec 042: ConceptPage 自動生成 / 再合成 service (Foundation + Fallback の 2 経路)
+    var conceptSynthesisService: ConceptSynthesisServiceProtocol?
+    /// spec 042: ConceptPage の編集 store (rename / merge / delete / setFollowing)、Phase 6 で実装
+    var conceptPageStore: ConceptPageStore?
 }

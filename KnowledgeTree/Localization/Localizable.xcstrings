@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "" : {
+
+    },
     "—" : {
 
     },
@@ -28,6 +31,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ ↔ %2$@"
+          }
+        }
+      }
+    },
+    "%@, 関連記事 %lld 件, %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, 関連記事 %2$lld 件, %3$@"
           }
         }
       }
@@ -111,6 +124,9 @@
       }
     },
     "%lld記事" : {
+
+    },
+    "•" : {
 
     },
     "• %@" : {
@@ -990,6 +1006,317 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 件の記事"
+          }
+        }
+      }
+    },
+    "ConceptPage.card.relatedCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連記事 %lld 件"
+          }
+        }
+      }
+    },
+    "ConceptPage.card.synthesisInProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理中…"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.crossSourceInsights.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "横断的知見"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.derivedSectionTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この記事から派生した概念ページ"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.emptyRelatedArticles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連記事はまだありません"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.relatedArticles.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連記事"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.relatedConcepts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "つながる人物・モノ"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.summary.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今わかっていること"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.synthesisInProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理中… AI が複数記事を統合しています"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.deleteConfirmMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この概念ページを削除します。関連する保存記事は残ります。"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.deleteConfirmTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念ページを削除"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.merge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他の概念と統合"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.mergeConfirmMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%1$@」を「%2$@」に統合します。関連記事は合算され、「%1$@」は削除されます。"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.mergeConfirmTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念ページを統合"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.namePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念の名前"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.pickMergeTarget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合先を選んで合流"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.pin" : {
+
+    },
+    "ConceptPage.editSheet.rename" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前を変更"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        }
+      }
+    },
+    "ConceptPage.editSheet.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念ページの編集"
+          }
+        }
+      }
+    },
+    "ConceptPage.list.navigationTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたが追っている人物・モノ"
+          }
+        }
+      }
+    },
+    "ConceptPage.sectionTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたが追っている人物・モノ"
+          }
+        }
+      }
+    },
+    "ConceptPage.showAll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld すべて見る"
+          }
+        }
+      }
+    },
+    "ConceptPageStore.error.duplicateInCategory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じカテゴリーに同名の概念ページが既に存在します"
+          }
+        }
+      }
+    },
+    "ConceptPageStore.error.emptyName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念名を入力してください"
+          }
+        }
+      }
+    },
+    "ConceptPageStore.error.nameTooLong" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念名は 30 文字以内にしてください"
+          }
+        }
+      }
+    },
+    "ConceptPageStore.error.sameSourceTarget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合元と統合先は別の概念ページを選んでください"
           }
         }
       }
@@ -2090,24 +2417,13 @@
         }
       }
     },
-    "settings.translationSetup.entry" : {
+    "settings.translationSetup.completeButton" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "翻訳セットアップ"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "翻訳セットアップ"
+            "value" : "セットアップ完了"
           }
         }
       }
@@ -2123,68 +2439,13 @@
         }
       }
     },
-    "settings.translationSetup.step1.title" : {
+    "settings.translationSetup.entry" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS の「設定」を開く"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.step1.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下のボタンから iOS Settings に移動します。"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.step2.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「一般」→「言語と地域」→「翻訳の言語」"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.step2.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhone の「設定」→「一般」→「言語と地域」→「翻訳の言語」を順にタップします。"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.step3.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「英語」と「日本語」をダウンロード"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.step3.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リストから「英語」と「日本語」の両方をダウンロードします。完了したら本画面に戻り「状態を再確認する」を押してください。"
+            "value" : "翻訳セットアップ"
           }
         }
       }
@@ -2207,17 +2468,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状態を再確認する"
-          }
-        }
-      }
-    },
-    "settings.translationSetup.completeButton" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "セットアップ完了"
           }
         }
       }
@@ -2266,6 +2516,28 @@
         }
       }
     },
+    "settings.translationSetup.status.unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状態を確認中"
+          }
+        }
+      }
+    },
+    "settings.translationSetup.status.unknown.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻訳機能の状態を確認しています…"
+          }
+        }
+      }
+    },
     "settings.translationSetup.status.unsupported" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2288,24 +2560,79 @@
         }
       }
     },
-    "settings.translationSetup.status.unknown" : {
+    "settings.translationSetup.step1.description" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "状態を確認中"
+            "value" : "下のボタンから iOS Settings に移動します。"
           }
         }
       }
     },
-    "settings.translationSetup.status.unknown.subtitle" : {
+    "settings.translationSetup.step1.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "翻訳機能の状態を確認しています…"
+            "value" : "iOS の「設定」を開く"
+          }
+        }
+      }
+    },
+    "settings.translationSetup.step2.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone の「設定」→「一般」→「言語と地域」→「翻訳の言語」を順にタップします。"
+          }
+        }
+      }
+    },
+    "settings.translationSetup.step2.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「一般」→「言語と地域」→「翻訳の言語」"
+          }
+        }
+      }
+    },
+    "settings.translationSetup.step3.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リストから「英語」と「日本語」の両方をダウンロードします。完了したら本画面に戻り「状態を再確認する」を押してください。"
+          }
+        }
+      }
+    },
+    "settings.translationSetup.step3.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「英語」と「日本語」をダウンロード"
+          }
+        }
+      }
+    },
+    "settings.translationSetup.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻訳セットアップ"
           }
         }
       }
@@ -2919,6 +3246,9 @@
           }
         }
       }
+    },
+    "概念ページが見つかりません" : {
+
     },
     "知積に保存" : {
 

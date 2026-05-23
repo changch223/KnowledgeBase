@@ -202,6 +202,20 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var translationCallCount = 0
     var lastTranslationText: String?
 
+    /// spec 042: ConceptSynthesis 用 mock 出力 (デフォルトは empty summary + empty insights)
+    var nextConceptSynthesisResult: Result<ConceptSynthesisOutput, Error> = .success(
+        ConceptSynthesisOutput(summary: "", crossSourceInsights: [])
+    )
+    var conceptSynthesisCallCount = 0
+    var lastConceptSynthesisPrompt: String?
+
+    /// spec 042: ConceptSummaryChunk 用 mock 出力 (hierarchical パス用)
+    var nextConceptSummaryChunkResult: Result<ConceptSummaryChunk, Error> = .success(
+        ConceptSummaryChunk(chunkSummary: "")
+    )
+    var conceptSummaryChunkCallCount = 0
+    var lastConceptSummaryChunkPrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -269,6 +283,24 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         translationCallCount += 1
         lastTranslationText = text
         switch nextTranslationResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
+        conceptSynthesisCallCount += 1
+        lastConceptSynthesisPrompt = prompt
+        switch nextConceptSynthesisResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk {
+        conceptSummaryChunkCallCount += 1
+        lastConceptSummaryChunkPrompt = prompt
+        switch nextConceptSummaryChunkResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

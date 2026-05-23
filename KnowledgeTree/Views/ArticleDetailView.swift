@@ -100,6 +100,9 @@ struct ArticleDetailView: View {
                         presentedRelatedArticle = related
                     }
 
+                    // spec 042: この記事から派生した概念ページ (relatedArticles に含む ConceptPage)
+                    derivedConceptPagesSection
+
                     openOriginalButton
                 }
                 .padding(.horizontal, DS.Spacing.xxxl)
@@ -117,6 +120,10 @@ struct ArticleDetailView: View {
             }
             .sheet(item: $presentedRelatedArticle) { related in
                 ArticleDetailView(article: related)
+            }
+            // spec 042: ConceptPage 詳細遷移 (内部 NavigationStack 用)
+            .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
+                ConceptPageDetailLoader(destinationID: dest.id)
             }
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
@@ -399,6 +406,50 @@ struct ArticleDetailView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, DS.Spacing.md)
+        }
+    }
+
+    /// spec 042: この記事から派生した ConceptPage 一覧を表示。
+    /// relatedArticles に article を含む ConceptPage を fetch、chip 風レイアウトで表示。
+    /// 0 件ならセクション全体を非表示。
+    @ViewBuilder
+    private var derivedConceptPagesSection: some View {
+        let derived = fetchDerivedConceptPages()
+        if !derived.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                Text("ConceptPage.detail.derivedSectionTitle")
+                    .font(.title3.bold())
+                FlowingTagsLayout(spacing: DS.Spacing.sm) {
+                    ForEach(derived, id: \.id) { page in
+                        NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
+                            HStack(spacing: DS.Spacing.xs) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.caption2)
+                                Text(page.name)
+                                    .font(.caption)
+                            }
+                            .padding(.horizontal, DS.Spacing.md)
+                            .padding(.vertical, DS.Spacing.xs)
+                            .background(DS.Color.tagFill, in: Capsule())
+                            .foregroundStyle(.primary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .accessibilityIdentifier("articleDetail_derivedConceptPagesSection")
+        }
+    }
+
+    /// 指定 article を relatedArticles に持つ ConceptPage を fetch。
+    private func fetchDerivedConceptPages() -> [ConceptPage] {
+        let articleID = article.id
+        let descriptor = FetchDescriptor<ConceptPage>(
+            sortBy: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
+        )
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        return all.filter { page in
+            page.relatedArticles.contains(where: { $0.id == articleID })
         }
     }
 

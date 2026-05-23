@@ -149,6 +149,24 @@ struct ConflictDetectionOutput: Codable {
     let oldFact: String
 }
 
+// MARK: - spec 042: ConceptPage 自動合成用 Generable Output
+
+@Generable
+struct ConceptSynthesisOutput: Codable {
+    @Guide(description: "200〜400 字の日本語、断定調、原文にあることのみ。")
+    let summary: String
+
+    @Guide(description: "最大 7 件、各 50-150 字の日本語、複数記事を横断して見える発見。")
+    let crossSourceInsights: [String]
+}
+
+/// hierarchical chunked パスで使う中間 chunk 要約 (3+ 関連記事時)。
+@Generable
+struct ConceptSummaryChunk: Codable {
+    @Guide(description: "100-200 字日本語、断定調、原文のみ。")
+    let chunkSummary: String
+}
+
 // MARK: - spec 021: AI Chat (RAG) 用 Generable Output
 
 @Generable
@@ -193,6 +211,12 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 040: Knowledge Graph triple 抽出
     func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput
+
+    /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
+    func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput
+
+    /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
+    func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk
 
     /// spec 042: 英語等の本文を日本語に翻訳する。
     /// 実装は Apple Translation framework (iOS 18+ offline)。
@@ -276,6 +300,28 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = LanguageModelSession()
         let response = try await session.respond(
             generating: GraphTripleOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
+    func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ConceptSynthesisOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
+    func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ConceptSummaryChunk.self
         ) {
             prompt
         }

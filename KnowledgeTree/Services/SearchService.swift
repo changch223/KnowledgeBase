@@ -124,4 +124,47 @@ enum SearchService {
             return lhs.article.savedAt > rhs.article.savedAt
         }
     }
+
+    // MARK: - spec 042: ConceptPage hit (P3)
+
+    /// ConceptPage 検索結果 (score 降順 + updatedAt 降順)。
+    /// - name 完全一致 (大文字小文字無視): 100
+    /// - name 部分一致: 50
+    /// - nameAliases 部分一致: 30
+    /// - summary 部分一致: 10
+    struct ScoredConceptPage: Identifiable {
+        var id: UUID { conceptPage.id }
+        let conceptPage: ConceptPage
+        let score: Int
+    }
+
+    /// query が空白のみ → 空配列。score > 0 のみ返す。
+    static func searchConceptPages(query: String, in pages: [ConceptPage]) -> [ScoredConceptPage] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+
+        let qLower = q.lowercased()
+        var results: [ScoredConceptPage] = []
+        for page in pages {
+            var score = 0
+            if page.name.lowercased() == qLower {
+                score += 100
+            } else if page.name.localizedStandardContains(q) {
+                score += 50
+            }
+            if page.nameAliases.contains(where: { $0.localizedStandardContains(q) }) {
+                score += 30
+            }
+            if page.summary.localizedStandardContains(q) {
+                score += 10
+            }
+            if score > 0 {
+                results.append(ScoredConceptPage(conceptPage: page, score: score))
+            }
+        }
+        return results.sorted { lhs, rhs in
+            if lhs.score != rhs.score { return lhs.score > rhs.score }
+            return lhs.conceptPage.updatedAt > rhs.conceptPage.updatedAt
+        }
+    }
 }
