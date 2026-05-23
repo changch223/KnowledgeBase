@@ -38,6 +38,11 @@ final class ConflictProposal {
     var createdAt: Date
     var resolvedAt: Date?
 
+    /// spec 041: graph 衝突の場合に該当 GraphEdge.id を保持。
+    /// nil = 通常の fact 矛盾 (spec 037)、非 nil = graph triple 衝突 (同 source+predicate 複数 target)。
+    /// SwiftData lightweight migration: optional + default nil。
+    var graphEdgeID: UUID?
+
     init(
         id: UUID = UUID(),
         newArticle: Article?,
@@ -48,7 +53,8 @@ final class ConflictProposal {
         oldFact: String,
         status: String = ConflictStatus.pending.rawValue,
         createdAt: Date = .now,
-        resolvedAt: Date? = nil
+        resolvedAt: Date? = nil,
+        graphEdgeID: UUID? = nil
     ) {
         self.id = id
         self.newArticle = newArticle
@@ -60,6 +66,7 @@ final class ConflictProposal {
         self.status = status
         self.createdAt = createdAt
         self.resolvedAt = resolvedAt
+        self.graphEdgeID = graphEdgeID
     }
 }
 

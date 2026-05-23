@@ -17,7 +17,8 @@ struct KnowledgeExtractionServiceTests {
 
     private func makeService(
         sessionResult: Result<ExtractedKnowledgeOutput, Error> = .success(.fixture()),
-        availabilityIsAvailable: Bool = true
+        availabilityIsAvailable: Bool = true,
+        conceptSynthesisService: ConceptSynthesisServiceProtocol? = nil
     ) -> (DefaultKnowledgeExtractionService, MockArticleKnowledgeStore, MockLanguageModelSession) {
         let session = MockLanguageModelSession()
         session.nextResult = sessionResult
@@ -28,7 +29,8 @@ struct KnowledgeExtractionServiceTests {
         let service = DefaultKnowledgeExtractionService(
             extractor: extractor,
             store: store,
-            availabilityChecker: checker
+            availabilityChecker: checker,
+            conceptSynthesisService: conceptSynthesisService
         )
         return (service, store, session)
     }
@@ -150,6 +152,47 @@ struct KnowledgeExtractionServiceTests {
         )
         #expect(DefaultKnowledgeExtractionService.determineStatus(output: empty) == .failed)
     }
+
+    // MARK: - spec 042: ConceptPage hook 検証
+
+    /// extract 末尾で conceptSynthesisService.processNewArticle が呼ばれる (single パス)
+    @Test func extractInvokesConceptSynthesisHookOnSingleShot() async {
+        let mockConcept = MockConceptSynthesisService()
+        let (service, _, _) = makeService(conceptSynthesisService: mockConcept)
+        let article = makeArticleWithBody()
+
+        await service.extract(article: article)
+
+        // fire-and-forget Task の完了を待つために短時間 sleep
+        try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+
+        #expect(mockConcept.processNewArticleCallCount == 1)
+    }
+
+    /// hook が nil でも extract が正常完了する (後方互換)
+    @Test func extractWorksWithoutConceptSynthesisService() async {
+        let (service, store, _) = makeService(conceptSynthesisService: nil)
+        let article = makeArticleWithBody()
+
+        await service.extract(article: article)
+
+        #expect(store.calls.last?.status == .succeeded)
+    }
+}
+
+// MARK: - spec 042: Mock ConceptSynthesisService (test 限定)
+
+@MainActor
+final class MockConceptSynthesisService: ConceptSynthesisServiceProtocol {
+    var processNewArticleCallCount = 0
+    var resynthesizeCallCount = 0
+    var resynthesizeAllStaleCallCount = 0
+    var backfillCallCount = 0
+
+    func processNewArticle(article: Article) async { processNewArticleCallCount += 1 }
+    func resynthesize(_ conceptPage: ConceptPage) async { resynthesizeCallCount += 1 }
+    func resynthesizeAllStale() async { resynthesizeAllStaleCallCount += 1 }
+    func backfillFromExistingArticles() async { backfillCallCount += 1 }
 }
 
 // MARK: - Mocks

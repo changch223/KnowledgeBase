@@ -29,8 +29,8 @@ struct BodyExtractorTests {
     private static let mainTagHTML = """
     <html><body>
     <main>
-    <p>main タグ内の本文。これも十分な長さの記事テキストとして扱われます。</p>
-    <p>もう一つの段落で、記事の長さを稼いでいます。十分な文字数を確保するためのテキスト。</p>
+    <p>main タグ内の本文。これも十分な長さの記事テキストとして扱われます。BodyExtractor は <article> が無い場合に <main> を fallback として拾います。</p>
+    <p>もう一つの段落で、記事の長さを稼いでいます。十分な文字数を確保するためのテキスト。100 字を超えるよう本文を追記しています。</p>
     </main>
     </body></html>
     """
@@ -38,9 +38,9 @@ struct BodyExtractorTests {
     private static let noSemanticHTML = """
     <html><body>
     <div class="content">
-    <p>semantic タグなしのページ。text-density スコアリングで本文ブロックを検出する想定。</p>
-    <p>記事のメインコンテンツ部分。このブロックが density スコアで最高評価を獲得するはず。</p>
-    <p>段落を 3 つ以上含めて十分な text 長を確保します。閾値 200 を超える必要があります。</p>
+    <p>semantic タグなしのページ。text-density スコアリングで本文ブロックを検出する想定です。記事本体はこちらに集中しています。</p>
+    <p>記事のメインコンテンツ部分。このブロックが density スコアで最高評価を獲得するはず。十分な text 長を持たせて density 閾値 200 を超えるようにしています。</p>
+    <p>段落を 3 つ以上含めて十分な text 長を確保します。閾値 200 を超える必要があります。BodyExtractor は textDensityScoring 戦略でこの div を採用します。</p>
     </div>
     <div class="sidebar">
     <a href="#">Link 1</a><a href="#">Link 2</a><a href="#">Link 3</a>

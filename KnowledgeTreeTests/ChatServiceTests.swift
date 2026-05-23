@@ -407,7 +407,140 @@ struct ChatServiceTests {
         #expect(result.contains("article-id://12345678-1234-5678-1234-567812345678"))
     }
 
-    // MARK: - 13. send で空質問 → throws
+    // MARK: - 13a. spec 040: graphTraversal nil → 「## 関連エンティティ」セクション無し
+
+    @Test func testSendWithoutGraphTraversalOmitsEntitySection() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = makeArticle(url: "a", title: "Swift 6", essence: "Swift 6 が登場", embedding: nil, in: context)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "Swift 6 は新機能を含むメジャーリリースです。",
+            citedArticleIDs: [article.id.uuidString]
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            graphTraversal: nil
+        )
+        let session = try service.createSession()
+        _ = try await service.send(question: "Swift 6 について", in: session)
+
+        let lastPrompt = mockSession.lastChatAnswerPrompt ?? ""
+        #expect(!lastPrompt.contains("## 関連エンティティ"))
+    }
+
+    // MARK: - 13b. spec 040: graph node 解決 → 関連エンティティ + 1-hop が prompt に注入される
+
+    @Test func testSendInjectsRelatedEntitiesIntoPrompt() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = makeArticle(url: "a", title: "Swift 6", essence: "Swift 6 と Apple", embedding: nil, in: context)
+        let knowledge = article.extractedKnowledge!
+        let entity = KnowledgeEntity(knowledge: knowledge, name: "Apple", typeRaw: "organization", salience: 5, order: 0)
+        context.insert(entity)
+
+        let appleNode = GraphNode(name: "Apple", categoryRaw: "テクノロジー", salience: 5, mentionCount: 2)
+        let xcodeNode = GraphNode(name: "Xcode", categoryRaw: "テクノロジー", salience: 3, mentionCount: 1)
+        context.insert(appleNode)
+        context.insert(xcodeNode)
+        let edge = GraphEdge(
+            source: appleNode, target: xcodeNode,
+            label: "develops", confidence: 0.9,
+            categoryRaw: "テクノロジー"
+        )
+        context.insert(edge)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "Apple は Xcode を開発しています。",
+            citedArticleIDs: [article.id.uuidString]
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            graphTraversal: GraphTraversalService()
+        )
+        let session = try service.createSession()
+        _ = try await service.send(question: "Apple について", in: session)
+
+        let lastPrompt = mockSession.lastChatAnswerPrompt ?? ""
+        #expect(lastPrompt.contains("## 関連エンティティ"))
+        // 直接 resolved の Apple、1-hop neighbor の Xcode、両方含まれる
+        guard let entityStart = lastPrompt.range(of: "## 関連エンティティ") else {
+            Issue.record("関連エンティティ section not found")
+            return
+        }
+        let section = lastPrompt[entityStart.lowerBound...]
+        #expect(section.contains("Apple"))
+        #expect(section.contains("Xcode"))
+    }
+
+    // MARK: - 13c. spec 040: 複数記事で同 entity → entity section で 1 度のみ列挙
+
+    @Test func testSendDedupesEntitiesAcrossArticles() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article1 = makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 リリース", embedding: nil, in: context)
+        let k1 = article1.extractedKnowledge!
+        let e1 = KnowledgeEntity(knowledge: k1, name: "Swift", typeRaw: "product", salience: 5, order: 0)
+        context.insert(e1)
+
+        let article2 = makeArticle(url: "b", title: "Swift 6 機能", essence: "Swift 6 機能", embedding: nil, in: context)
+        let k2 = article2.extractedKnowledge!
+        let e2 = KnowledgeEntity(knowledge: k2, name: "Swift", typeRaw: "product", salience: 4, order: 0)
+        context.insert(e2)
+
+        let swiftNode = GraphNode(name: "Swift", categoryRaw: "テクノロジー", salience: 5, mentionCount: 2)
+        context.insert(swiftNode)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "Swift について。",
+            citedArticleIDs: [article1.id.uuidString, article2.id.uuidString]
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            graphTraversal: GraphTraversalService()
+        )
+        let session = try service.createSession()
+        _ = try await service.send(question: "Swift 6 リリース 機能", in: session)
+
+        let lastPrompt = mockSession.lastChatAnswerPrompt ?? ""
+        guard let entityStart = lastPrompt.range(of: "## 関連エンティティ") else {
+            Issue.record("関連エンティティ section not found")
+            return
+        }
+        let section = String(lastPrompt[entityStart.lowerBound...])
+        // entity section 内で "- Swift" prefix は 1 度のみ (dedupe)
+        let occurrences = section.components(separatedBy: "- Swift").count - 1
+        #expect(occurrences == 1)
+    }
+
+    // MARK: - 14. send で空質問 → throws
 
     @Test func testSendThrowsOnEmptyQuestion() async throws {
         let container = try makeContainer()

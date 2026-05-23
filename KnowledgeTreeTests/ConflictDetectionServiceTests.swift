@@ -249,4 +249,103 @@ struct ConflictDetectionServiceTests {
         let proposals = try context.fetch(FetchDescriptor<ConflictProposal>())
         #expect(proposals.count == 1)
     }
+
+    // MARK: - 8. spec 041: graph triple 衝突 → ConflictProposal 作成 (graphEdgeID 付き)
+
+    @Test func testDetectGraphConflictsCreatesProposalForDuplicateLabel() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // Article + categoryRaw を持つ Tag
+        let article = makeArticle(
+            title: "Apple 新 CEO",
+            savedAt: Date.now,
+            essence: "Apple の新しい CEO は X 氏",
+            entityNames: ["Apple"],
+            in: context
+        )
+        let techTag = KnowledgeTree.Tag(name: "Apple")
+        techTag.categoryRaw = "テクノロジー"
+        context.insert(techTag)
+        article.tags.append(techTag)
+
+        // GraphNode: Apple + Tim Cook + X 氏
+        let apple = GraphNode(name: "Apple", categoryRaw: "テクノロジー", salience: 5, mentionCount: 2)
+        let tim = GraphNode(name: "Tim Cook", categoryRaw: "テクノロジー", salience: 4, mentionCount: 1)
+        let xPerson = GraphNode(name: "X 氏", categoryRaw: "テクノロジー", salience: 3, mentionCount: 1)
+        context.insert(apple)
+        context.insert(tim)
+        context.insert(xPerson)
+
+        // Apple -CEO of-> Tim Cook (古い、updatedAt 過去)
+        let oldEdge = GraphEdge(
+            source: apple, target: tim,
+            label: "CEO of", confidence: 0.9,
+            categoryRaw: "テクノロジー",
+            updatedAt: Date.now.addingTimeInterval(-86400)
+        )
+        // Apple -CEO of-> X 氏 (新、updatedAt 現在)
+        let newEdge = GraphEdge(
+            source: apple, target: xPerson,
+            label: "CEO of", confidence: 0.9,
+            categoryRaw: "テクノロジー",
+            updatedAt: Date.now
+        )
+        context.insert(oldEdge)
+        context.insert(newEdge)
+        try context.save()
+
+        let service = ConflictDetectionService(
+            context: context,
+            session: MockLanguageModelSession(),
+            availability: MockAvailabilityChecker()
+        )
+
+        service.detectGraphConflicts(article: article)
+
+        let proposals = try context.fetch(FetchDescriptor<ConflictProposal>())
+        #expect(proposals.count == 1)
+        #expect(proposals.first?.graphEdgeID == newEdge.id)
+        #expect(proposals.first?.entityName == "Apple")
+        #expect(proposals.first?.newFact.contains("X 氏") == true)
+        #expect(proposals.first?.oldFact.contains("Tim Cook") == true)
+    }
+
+    // MARK: - 9. spec 041: 同 edgeID 重複 → 2 度目は skip
+
+    @Test func testDetectGraphConflictsIgnoresDuplicateEdgeID() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = makeArticle(
+            title: "test", savedAt: Date.now, essence: nil,
+            entityNames: ["Apple"], in: context
+        )
+        let tag = KnowledgeTree.Tag(name: "Apple")
+        tag.categoryRaw = "テクノロジー"
+        context.insert(tag)
+        article.tags.append(tag)
+
+        let apple = GraphNode(name: "Apple", categoryRaw: "テクノロジー")
+        let n1 = GraphNode(name: "N1", categoryRaw: "テクノロジー")
+        let n2 = GraphNode(name: "N2", categoryRaw: "テクノロジー")
+        context.insert(apple); context.insert(n1); context.insert(n2)
+        let edge1 = GraphEdge(source: apple, target: n1, label: "L", confidence: 0.9, categoryRaw: "テクノロジー", updatedAt: Date.now.addingTimeInterval(-100))
+        let edge2 = GraphEdge(source: apple, target: n2, label: "L", confidence: 0.9, categoryRaw: "テクノロジー", updatedAt: Date.now)
+        context.insert(edge1); context.insert(edge2)
+        try context.save()
+
+        let service = ConflictDetectionService(
+            context: context,
+            session: MockLanguageModelSession(),
+            availability: MockAvailabilityChecker()
+        )
+
+        service.detectGraphConflicts(article: article)
+        service.detectGraphConflicts(article: article)
+
+        // 2 度呼んでも proposal は 1 件のみ
+        let proposals = try context.fetch(FetchDescriptor<ConflictProposal>())
+        #expect(proposals.count == 1)
+    }
 }

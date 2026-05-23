@@ -11,6 +11,7 @@
 
 import Foundation
 import FoundationModels
+import Translation
 
 // MARK: - Generable Output Types (transient、生成スキーマ)
 
@@ -100,6 +101,29 @@ struct RecentDigestOutput: Codable {
     let paragraphs: [String]
 }
 
+// MARK: - spec 040: Knowledge Graph triple 抽出用 Generable Output
+
+@Generable
+struct GraphTripleOutput: Codable {
+    @Guide(description: "記事から抽出した事実関係の triple リスト。最大 10 件、確信度 0.5 未満は除外。同じ subject-predicate-object の組合せは 1 つにまとめる。")
+    let triples: [GraphTripleItem]
+}
+
+@Generable
+struct GraphTripleItem: Codable {
+    @Guide(description: "主語となる entity (人物・場所・モノ・概念)。記事に明示されているものに限る、30 字以内。例: 『Apple』『Tim Cook』『Swift 6』")
+    let subject: String
+
+    @Guide(description: "関係性を表す短い動詞句 (release / lead / succeed / criticize / create / belong to 等)、30 字以内。日本語可。記事の文脈から確実に読み取れるものに限る。")
+    let predicate: String
+
+    @Guide(description: "目的語となる entity (人物・場所・モノ・概念)、30 字以内。記事に明示されているもの。")
+    let object: String
+
+    @Guide(description: "この triple の確信度 0.0-1.0。記事に明確に書かれていれば 0.8 以上、推測が必要なら 0.5-0.7、推測の域を出ないなら 0.0-0.5。0.5 未満は出力しない。")
+    let confidence: Double
+}
+
 // MARK: - spec 036: 動的トピック命名用 Generable Output
 
 @Generable
@@ -123,6 +147,24 @@ struct ConflictDetectionOutput: Codable {
 
     @Guide(description: "古い記事側の事実 (1 文、50 字以内)。hasConflict=false なら空文字。")
     let oldFact: String
+}
+
+// MARK: - spec 042: ConceptPage 自動合成用 Generable Output
+
+@Generable
+struct ConceptSynthesisOutput: Codable {
+    @Guide(description: "200〜400 字の日本語、断定調、原文にあることのみ。")
+    let summary: String
+
+    @Guide(description: "最大 7 件、各 50-150 字の日本語、複数記事を横断して見える発見。")
+    let crossSourceInsights: [String]
+}
+
+/// hierarchical chunked パスで使う中間 chunk 要約 (3+ 関連記事時)。
+@Generable
+struct ConceptSummaryChunk: Codable {
+    @Guide(description: "100-200 字日本語、断定調、原文のみ。")
+    let chunkSummary: String
 }
 
 // MARK: - spec 021: AI Chat (RAG) 用 Generable Output
@@ -166,6 +208,22 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 036: 動的トピック命名
     func generateTopicName(prompt: String) async throws -> TopicNameOutput
+
+    /// spec 040: Knowledge Graph triple 抽出
+    func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput
+
+    /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
+    func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput
+
+    /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
+    func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk
+
+    /// spec 042: 英語等の本文を日本語に翻訳する。
+    /// 実装は Apple Translation framework (iOS 18+ offline)。
+    /// Foundation Models は非日本語入力を `unsupportedLanguageOrLocale` で拒否するため、
+    /// 入口で別エンジンで翻訳してから既存 generateKnowledge に流す。
+    /// 翻訳エラー / 未インストール言語ペアは throws (caller で raw fallback)。
+    func translate(text: String) async throws -> String
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -235,6 +293,52 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
             prompt
         }
         return response.content
+    }
+
+    /// spec 040: Knowledge Graph triple 抽出
+    func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: GraphTripleOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
+    func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ConceptSynthesisOutput.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
+    func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: ConceptSummaryChunk.self
+        ) {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 042: 英語 → 日本語の翻訳 (Apple Translation framework、iOS 26+ offline)。
+    /// `installedSource:` は事前に Settings > General > Language で日本語/英語ペアが
+    /// ダウンロードされている前提。未インストール / 失敗時は throws → caller が raw fallback。
+    /// Foundation Models は非日本語入力を unsupportedLanguageOrLocale で拒否するため、
+    /// 翻訳経路だけは別エンジンを使う。
+    func translate(text: String) async throws -> String {
+        let source = Locale.Language(identifier: "en")
+        let target = Locale.Language(identifier: "ja")
+        let session = TranslationSession(installedSource: source, target: target)
+        let response = try await session.translate(text)
+        return response.targetText
     }
 }
 

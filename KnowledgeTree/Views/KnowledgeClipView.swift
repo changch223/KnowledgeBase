@@ -15,6 +15,22 @@ import SwiftData
 struct KnowledgeClipView: View {
     @Query(sort: \KnowledgeDigest.cardIndex) private var allDigests: [KnowledgeDigest]
     @Query private var allArticles: [Article]
+    /// spec 042: 関連記事 1+ 件の ConceptPage を fetch、updatedAt desc。
+    /// isFollowing 優先ソートは body 内で in-memory sort (SortDescriptor は Bool 非対応)。
+    @Query(
+        filter: #Predicate<ConceptPage> { !$0.relatedArticles.isEmpty },
+        sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)],
+        animation: .default
+    )
+    private var allConceptPagesRaw: [ConceptPage]
+
+    /// isFollowing 優先 + updatedAt desc の最終順序。
+    private var allConceptPages: [ConceptPage] {
+        allConceptPagesRaw.sorted { lhs, rhs in
+            if lhs.isFollowing != rhs.isFollowing { return lhs.isFollowing }
+            return lhs.updatedAt > rhs.updatedAt
+        }
+    }
     @Environment(ServiceContainer.self) private var services
     @Environment(ProcessingMonitor.self) private var monitor
     @State private var period: TimeFilter = .all
@@ -34,6 +50,10 @@ struct KnowledgeClipView: View {
                     }
                     // spec 037: 事実更新の提案
                     FactConflictsSection()
+                    // spec 042: あなたが追っている人物・モノ (ConceptPage)
+                    conceptPagesSection
+                    // spec 041: AI が見つけた graph 仮説 (isUncertain edge レビュー)
+                    GraphProposalsSection()
                     // spec 036: 動的トピック (候補 + 採用済)
                     DynamicTopicsSection()
                     timeFilterChips
@@ -52,6 +72,14 @@ struct KnowledgeClipView: View {
             }
             .navigationDestination(for: Article.self) { article in
                 ArticleDetailView(article: article)
+            }
+            // spec 042: ConceptPage 詳細遷移 (ID 経由で安全に fetch)
+            .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
+                ConceptPageDetailLoader(destinationID: dest.id)
+            }
+            // spec 042: 「+N すべて見る」遷移先
+            .navigationDestination(for: ConceptPageListDestination.self) { _ in
+                ConceptPageListView()
             }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()
@@ -237,4 +265,102 @@ enum TimeFilter: String, CaseIterable, Sendable {
 
 struct CategoryDigestDetailDestination: Hashable {
     let category: Category
+}
+
+// MARK: - spec 042: ConceptPage section view + ID loader + 全 list
+
+extension KnowledgeClipView {
+    /// 「あなたが追っている人物・モノ」セクション。空なら非表示。
+    /// 上位 5 件 + 6 件目以降は「+N すべて見る」リンク。
+    @ViewBuilder
+    fileprivate var conceptPagesSection: some View {
+        if !allConceptPages.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                Text("ConceptPage.sectionTitle")
+                    .font(.title3.bold())
+                    .padding(.horizontal, DS.Spacing.xxl)
+                ForEach(allConceptPages.prefix(5), id: \.id) { page in
+                    NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
+                        ConceptPageCard(conceptPage: page)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, DS.Spacing.xxl)
+                }
+                if allConceptPages.count > 5 {
+                    NavigationLink(value: ConceptPageListDestination()) {
+                        Text(String(format: String(localized: "ConceptPage.showAll"), allConceptPages.count - 5))
+                            .font(.caption)
+                            .foregroundStyle(DS.Color.actionBlue)
+                    }
+                    .padding(.horizontal, DS.Spacing.xxl)
+                }
+            }
+            .accessibilityIdentifier("clip.conceptPagesSection")
+        }
+    }
+}
+
+/// ConceptPageDetailDestination の id から ConceptPage を fetch して DetailView を表示する loader。
+/// **@Query で reactive 観測**: merge/delete で page が消えた瞬間に `page == nil` になり、
+/// auto-dismiss で navigation stack を pop。これで DetailView の @Bindable conceptPage が
+/// 削除済 @Model を参照し続けて crash する問題を防ぐ (2026-05-23 fix)。
+struct ConceptPageDetailLoader: View {
+    let destinationID: UUID
+    @Environment(\.dismiss) private var dismiss
+    @Query private var matchingPages: [ConceptPage]
+
+    init(destinationID: UUID) {
+        self.destinationID = destinationID
+        let id = destinationID
+        _matchingPages = Query(filter: #Predicate<ConceptPage> { $0.id == id })
+    }
+
+    var body: some View {
+        Group {
+            if let page = matchingPages.first {
+                ConceptPageDetailView(conceptPage: page)
+            } else {
+                // page 消失 (delete/merge) → auto-pop で list に戻る
+                Color.clear
+                    .onAppear { dismiss() }
+            }
+        }
+    }
+}
+
+/// 「+N すべて見る」遷移先の全 ConceptPage 一覧画面 (LazyVStack)。
+struct ConceptPageListView: View {
+    @Query(
+        filter: #Predicate<ConceptPage> { !$0.relatedArticles.isEmpty },
+        sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
+    )
+    private var allPagesRaw: [ConceptPage]
+
+    private var allPages: [ConceptPage] {
+        allPagesRaw.sorted { lhs, rhs in
+            if lhs.isFollowing != rhs.isFollowing { return lhs.isFollowing }
+            return lhs.updatedAt > rhs.updatedAt
+        }
+    }
+
+    init() {}
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: DS.Spacing.xxl) {
+                ForEach(allPages, id: \.id) { page in
+                    NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
+                        ConceptPageCard(conceptPage: page)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, DS.Spacing.xxl)
+                }
+            }
+            .padding(.vertical, DS.Spacing.xxl)
+        }
+        .scrollIndicators(.hidden)
+        .navigationTitle("ConceptPage.list.navigationTitle")
+        .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("conceptPageList_root")
+    }
 }

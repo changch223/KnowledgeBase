@@ -87,6 +87,74 @@ struct KnowledgeExtractorTests {
         #expect(prompt.contains("# 抽出ルール"))
         #expect(prompt.contains("# 元記事本文"))
     }
+
+    // MARK: - spec 042: 翻訳前処理
+
+    /// 日本語入力 → 翻訳 call は呼ばれない、既存挙動を維持
+    @Test func extractSkipsTranslationForJapanese() async throws {
+        let session = MockLanguageModelSession()
+        session.nextResult = .success(.fixture())
+        let extractor = KnowledgeExtractor(session: session)
+
+        let japaneseText = """
+        Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
+        既存の async/await モデルをさらに堅牢化しました。開発者は migration mode を使って
+        段階的に対応できます。
+        """
+        _ = try await extractor.extract(extractedText: japaneseText)
+
+        #expect(session.translationCallCount == 0)
+        #expect(session.callCount == 1)
+        // 抽出 prompt に元の日本語本文がそのまま入っている
+        #expect(session.lastPrompt?.contains("Swift 6 のリリースについて") == true)
+    }
+
+    /// 英語入力 → 翻訳 call が呼ばれ、訳出テキストで抽出される
+    @Test func extractInvokesTranslationForEnglish() async throws {
+        let session = MockLanguageModelSession()
+        session.nextResult = .success(.fixture())
+        session.nextTranslationResult = .success(
+            "Apple は WWDC で新しい Foundation Models フレームワークを発表しました。" +
+            "このフレームワークは on-device 言語モデルを公開し、開発者が SwiftUI アプリに" +
+            "structured output と RAG 機能を追加できるようになります。"
+        )
+        let extractor = KnowledgeExtractor(session: session)
+
+        let englishText = """
+        Apple announced a new framework called Foundation Models at WWDC. The on-device
+        language model exposes structured output via the @Generable macro, enabling
+        developers to add RAG features to their SwiftUI apps without external servers.
+        """
+        _ = try await extractor.extract(extractedText: englishText)
+
+        #expect(session.translationCallCount == 1)
+        #expect(session.lastTranslationText?.contains("announced a new framework") == true)
+        // 抽出 prompt は翻訳後の日本語テキストを含む
+        #expect(session.lastPrompt?.contains("Foundation Models フレームワーク") == true)
+        // 元の英文は抽出 prompt に流れない
+        #expect(session.lastPrompt?.contains("announced a new framework") == false)
+    }
+
+    /// 翻訳 throws → 英語のまま抽出 (silent fallback)
+    @Test func extractFallsBackToRawTextWhenTranslationFails() async throws {
+        let session = MockLanguageModelSession()
+        session.nextResult = .success(.fixture())
+        session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+        let extractor = KnowledgeExtractor(session: session)
+
+        let englishText = """
+        Apple announced a new framework called Foundation Models at WWDC. The on-device
+        language model exposes structured output via the @Generable macro, enabling
+        developers to add RAG features without external servers.
+        """
+        _ = try await extractor.extract(extractedText: englishText)
+
+        // 翻訳は試みた
+        #expect(session.translationCallCount == 1)
+        // 失敗したので抽出は元の英文で進む (throw しない)
+        #expect(session.callCount == 1)
+        #expect(session.lastPrompt?.contains("announced a new framework") == true)
+    }
 }
 
 // MARK: - Mock
@@ -123,6 +191,30 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var nextTopicNameResult: Result<TopicNameOutput, Error> = .success(TopicNameOutput(name: "新トピック"))
     var topicNameCallCount = 0
     var lastTopicNamePrompt: String?
+
+    /// spec 040: GraphTriples 用 mock 出力 (デフォルトは空)
+    var nextGraphTriplesResult: Result<GraphTripleOutput, Error> = .success(GraphTripleOutput(triples: []))
+    var graphTriplesCallCount = 0
+    var lastGraphTriplesPrompt: String?
+
+    /// spec 042: Translation 用 mock 出力 (デフォルトは空文字列)
+    var nextTranslationResult: Result<String, Error> = .success("")
+    var translationCallCount = 0
+    var lastTranslationText: String?
+
+    /// spec 042: ConceptSynthesis 用 mock 出力 (デフォルトは empty summary + empty insights)
+    var nextConceptSynthesisResult: Result<ConceptSynthesisOutput, Error> = .success(
+        ConceptSynthesisOutput(summary: "", crossSourceInsights: [])
+    )
+    var conceptSynthesisCallCount = 0
+    var lastConceptSynthesisPrompt: String?
+
+    /// spec 042: ConceptSummaryChunk 用 mock 出力 (hierarchical パス用)
+    var nextConceptSummaryChunkResult: Result<ConceptSummaryChunk, Error> = .success(
+        ConceptSummaryChunk(chunkSummary: "")
+    )
+    var conceptSummaryChunkCallCount = 0
+    var lastConceptSummaryChunkPrompt: String?
 
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
@@ -173,6 +265,42 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         topicNameCallCount += 1
         lastTopicNamePrompt = prompt
         switch nextTopicNameResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput {
+        graphTriplesCallCount += 1
+        lastGraphTriplesPrompt = prompt
+        switch nextGraphTriplesResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func translate(text: String) async throws -> String {
+        translationCallCount += 1
+        lastTranslationText = text
+        switch nextTranslationResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
+        conceptSynthesisCallCount += 1
+        lastConceptSynthesisPrompt = prompt
+        switch nextConceptSynthesisResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk {
+        conceptSummaryChunkCallCount += 1
+        lastConceptSummaryChunkPrompt = prompt
+        switch nextConceptSummaryChunkResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

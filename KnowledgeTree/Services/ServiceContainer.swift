@@ -34,4 +34,18 @@ final class ServiceContainer {
     var conflictDetectionService: ConflictDetectionServiceProtocol?
     /// spec 036: 動的トピック clustering service
     var topicClusteringService: TopicClusteringServiceProtocol?
+    /// spec 040: Knowledge Graph 抽出 service (記事保存 hook で fire-and-forget)
+    var graphExtractionService: GraphExtractionServiceProtocol?
+    /// spec 040: Knowledge Graph traversal service (Digest / Chat prompt 拡張で使用)
+    var graphTraversalService: GraphTraversalServiceProtocol?
+    /// spec 041: Knowledge Graph 編集 store (rename / merge / delete)
+    var graphNodeStore: GraphNodeStore?
+    /// spec 041: AI 提案 (isUncertain edge) のレビュー service
+    var graphProposalReviewService: GraphProposalReviewServiceProtocol?
+    /// spec 042: Apple Translation framework の en→ja セットアップ状態管理
+    var translationAvailability: TranslationAvailabilityProtocol?
+    /// spec 042: ConceptPage 自動生成 / 再合成 service (Foundation + Fallback の 2 経路)
+    var conceptSynthesisService: ConceptSynthesisServiceProtocol?
+    /// spec 042: ConceptPage の編集 store (rename / merge / delete / setFollowing)、Phase 6 で実装
+    var conceptPageStore: ConceptPageStore?
 }
