@@ -167,4 +167,43 @@ enum SearchService {
             return lhs.conceptPage.updatedAt > rhs.conceptPage.updatedAt
         }
     }
+
+    // MARK: - spec 043: SavedAnswer hit (P3)
+
+    /// SavedAnswer 検索結果 (score 降順 + savedAt 降順 tiebreak)。
+    /// - question 部分一致: 50
+    /// - answer 部分一致: 20
+    /// - citedArticles の title 部分一致: 10
+    struct ScoredSavedAnswer: Identifiable {
+        var id: UUID { savedAnswer.id }
+        let savedAnswer: SavedAnswer
+        let score: Int
+    }
+
+    /// query が空白のみ → 空配列。score > 0 のみ返す。
+    static func searchSavedAnswers(query: String, in answers: [SavedAnswer]) -> [ScoredSavedAnswer] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+
+        var results: [ScoredSavedAnswer] = []
+        for ans in answers {
+            var score = 0
+            if ans.question.localizedStandardContains(q) {
+                score += 50
+            }
+            if ans.answer.localizedStandardContains(q) {
+                score += 20
+            }
+            if ans.citedArticles.contains(where: { $0.title.localizedStandardContains(q) }) {
+                score += 10
+            }
+            if score > 0 {
+                results.append(ScoredSavedAnswer(savedAnswer: ans, score: score))
+            }
+        }
+        return results.sorted { lhs, rhs in
+            if lhs.score != rhs.score { return lhs.score > rhs.score }
+            return lhs.savedAnswer.savedAt > rhs.savedAnswer.savedAt
+        }
+    }
 }

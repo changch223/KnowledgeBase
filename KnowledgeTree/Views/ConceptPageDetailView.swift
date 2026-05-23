@@ -77,6 +77,8 @@ struct ConceptPageDetailView: View {
                 summarySection
                 crossSourceInsightsSection
                 relatedArticlesSection
+                // spec 043: この概念についての質問と答え (SavedAnswer セクション)
+                SavedAnswerSection(conceptPageID: conceptPage.id)
                 relatedConceptsSection
             }
             .padding(.horizontal, DS.Spacing.xxl)

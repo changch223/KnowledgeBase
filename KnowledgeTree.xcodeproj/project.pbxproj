@@ -66,6 +66,7 @@
 		ABF8B2C3D4E5F6A7B8C9D0F0 /* KnowledgeTree/Models/GraphNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C386 /* KnowledgeTree/Models/GraphNode.swift */; };
 		ABF8B2C3D4E5F6A7B8C9D0F1 /* KnowledgeTree/Models/GraphEdge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C387 /* KnowledgeTree/Models/GraphEdge.swift */; };
 		ABF8B2C3D4E5F6A7B8C9D0F2 /* KnowledgeTree/Models/ConceptPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C388 /* KnowledgeTree/Models/ConceptPage.swift */; };
+		ABF8B2C3D4E5F6A7B8C9D0F3 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */; };
 		B691D7E1B0C6CEADA639BD7E /* KnowledgeExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED10A656104BD0A5554A675B /* KnowledgeExtractionService.swift */; };
 		B9ABDD2A94692428CB24885A /* KnowledgeTree/Models/Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */; };
 		BDA5AB60F9DB8361D24CEE5F /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
@@ -86,6 +87,7 @@
 		D81C5EB872CA418D5BA6F296 /* KnowledgeTree/Models/GraphNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C386 /* KnowledgeTree/Models/GraphNode.swift */; };
 		D81C5EB872CA418D5BA6F297 /* KnowledgeTree/Models/GraphEdge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C387 /* KnowledgeTree/Models/GraphEdge.swift */; };
 		D81C5EB872CA418D5BA6F298 /* KnowledgeTree/Models/ConceptPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C388 /* KnowledgeTree/Models/ConceptPage.swift */; };
+		D81C5EB872CA418D5BA6F299 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */; };
 		E4961590C99FD9632BFF6493 /* SwiftDataArticleKnowledgeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B562FD57F6FFB0AA8388867 /* SwiftDataArticleKnowledgeStoreTests.swift */; };
 		E649E7BB77669C7C118CFA82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF678812164B2C69F167D5D4 /* Foundation.framework */; };
 		E86A1207823C6B80A13FB243 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C84CEF7C93B35D5971931C /* AppGroup.swift */; };
@@ -166,6 +168,7 @@
 		4F9A7B23E61C8DA9F5A9C386 /* KnowledgeTree/Models/GraphNode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/GraphNode.swift; sourceTree = SOURCE_ROOT; };
 		4F9A7B23E61C8DA9F5A9C387 /* KnowledgeTree/Models/GraphEdge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/GraphEdge.swift; sourceTree = SOURCE_ROOT; };
 		4F9A7B23E61C8DA9F5A9C388 /* KnowledgeTree/Models/ConceptPage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/ConceptPage.swift; sourceTree = SOURCE_ROOT; };
+		4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/SavedAnswer.swift; sourceTree = SOURCE_ROOT; };
 		577ED5A52FA8118400EB3FE6 /* KnowledgeTree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KnowledgeTree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5B42FA8118500EB3FE6 /* KnowledgeTreeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -211,19 +214,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		57EC37E72FAAE47500B958B7 /* Exceptions for "KnowledgeTreeSafariExtension" folder in "KnowledgeTreeSafariExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */;
-		};
 		577ED5A82FA8118400EB3F00 /* Exceptions for "KnowledgeTree" folder in "KnowledgeTree" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = 577ED5A42FA8118400EB3FE6 /* KnowledgeTree */;
+		};
+		57EC37E72FAAE47500B958B7 /* Exceptions for "KnowledgeTreeSafariExtension" folder in "KnowledgeTreeSafariExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -326,6 +329,7 @@
 				4F9A7B23E61C8DA9F5A9C386 /* KnowledgeTree/Models/GraphNode.swift */,
 				4F9A7B23E61C8DA9F5A9C387 /* KnowledgeTree/Models/GraphEdge.swift */,
 				4F9A7B23E61C8DA9F5A9C388 /* KnowledgeTree/Models/ConceptPage.swift */,
+				4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */,
 				F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */,
 				B1C2D3E4F506A7B8C9D0E1F2 /* KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements */,
 			);
@@ -754,6 +758,7 @@
 				ABF8B2C3D4E5F6A7B8C9D0F0 /* KnowledgeTree/Models/GraphNode.swift in Sources */,
 				ABF8B2C3D4E5F6A7B8C9D0F1 /* KnowledgeTree/Models/GraphEdge.swift in Sources */,
 				ABF8B2C3D4E5F6A7B8C9D0F2 /* KnowledgeTree/Models/ConceptPage.swift in Sources */,
+				ABF8B2C3D4E5F6A7B8C9D0F3 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -782,6 +787,7 @@
 				D81C5EB872CA418D5BA6F296 /* KnowledgeTree/Models/GraphNode.swift in Sources */,
 				D81C5EB872CA418D5BA6F297 /* KnowledgeTree/Models/GraphEdge.swift in Sources */,
 				D81C5EB872CA418D5BA6F298 /* KnowledgeTree/Models/ConceptPage.swift in Sources */,
+				D81C5EB872CA418D5BA6F299 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

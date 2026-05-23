@@ -182,6 +182,13 @@ struct KnowledgeTreeApp: App {
             refreshTrigger: refreshTrigger
         )
 
+        // spec 043: SavedAnswer service (純粋ロジック層、AI 不要)
+        // knowledgeService と chatService 両方に inject されるため先に構築
+        let savedAnswerService: SavedAnswerServiceProtocol = DefaultSavedAnswerService(
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+
         // spec 004 + 009 + 010 + 012 + 018 + 021 + 037 + 042: 知識抽出 service
         // (auto-tag 用 tagStore + digest stale 化 + essence embedding 生成 hook + conflict 検出 hook + ConceptPage 自動生成 hook)
         let knowledgeStore = SwiftDataArticleKnowledgeStore(
@@ -204,7 +211,8 @@ struct KnowledgeTreeApp: App {
             embeddingService: embeddingService,
             conflictDetectionService: conflictDetectionService,
             graphExtractionService: graphExtractionService,
-            conceptSynthesisService: conceptSynthesisService
+            conceptSynthesisService: conceptSynthesisService,
+            savedAnswerService: savedAnswerService
         )
 
         // spec 003: 本文抽出 service (knowledge service を inject)
@@ -250,7 +258,8 @@ struct KnowledgeTreeApp: App {
             embeddingService: embeddingService,
             session: session,
             availability: availability,
-            graphTraversal: graphTraversalService
+            graphTraversal: graphTraversalService,
+            savedAnswerService: savedAnswerService
         )
 
         // spec 035: RecentDigestService + LastOpenedStore 構築
@@ -290,6 +299,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.translationAvailability = translationAvailability   // spec 042
         serviceContainer.conceptSynthesisService = conceptSynthesisService   // spec 042
         serviceContainer.conceptPageStore = conceptPageStore                 // spec 042
+        serviceContainer.savedAnswerService = savedAnswerService             // spec 043
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

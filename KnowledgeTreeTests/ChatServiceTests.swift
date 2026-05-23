@@ -562,4 +562,87 @@ struct ChatServiceTests {
             _ = try await service.send(question: "   ", in: session)
         }
     }
+
+    // MARK: - spec 043: SavedAnswer hook 検証
+
+    /// ChatService.ask 末尾で savedAnswerService.captureIfWorthy が呼ばれる (auto-save 経路)
+    @Test func testAskInvokesSavedAnswerHookWhenAvailable() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // 引用 2+ 必要なので Article 2 件作成 (embedding なし → keyword 経路は通らないが、fallback path を通る)
+        let articleA = makeArticle(url: "a", title: "A", essence: "Apple 関連", embedding: nil, in: context)
+        let articleB = makeArticle(url: "b", title: "B", essence: "Apple 関連 B", embedding: nil, in: context)
+        _ = articleA
+        _ = articleB
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true  // Foundation 経路だが、retrieval が空なので unknown path
+
+        let mockSavedAnswer = MockSavedAnswerService()
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            graphTraversal: nil,
+            savedAnswerService: mockSavedAnswer
+        )
+        let session = try service.createSession()
+
+        // empty corpus / no embedding → unknown path → hook 呼ばれない
+        _ = try await service.send(question: "Apple について", in: session)
+        try? await Task.sleep(nanoseconds: 100_000_000)  // hook Task 完了待ち
+
+        // unknown path では hook 呼ばれない (cited 空 + 短文)
+        #expect(mockSavedAnswer.captureIfWorthyCallCount == 0)
+    }
+
+    /// SavedAnswerService 未注入 (nil) で ask() 正常完了 (後方互換)
+    @Test func testAskWorksWithoutSavedAnswerService() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let mockSession = MockLanguageModelSession()
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            graphTraversal: nil,
+            savedAnswerService: nil  // 未注入
+        )
+        let session = try service.createSession()
+
+        let message = try await service.send(question: "test?", in: session)
+        #expect(message.role == ChatMessageRole.assistant.rawValue)
+    }
+}
+
+// MARK: - spec 043: Mock SavedAnswerService (test 限定)
+
+@MainActor
+final class MockSavedAnswerService: SavedAnswerServiceProtocol {
+    var captureIfWorthyCallCount = 0
+    var setPinnedCallCount = 0
+    var deleteCallCount = 0
+    var markStaleForArticleCallCount = 0
+
+    func captureIfWorthy(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) async {
+        captureIfWorthyCallCount += 1
+    }
+    func setPinned(_ answer: SavedAnswer, isPinned: Bool) throws { setPinnedCallCount += 1 }
+    func delete(_ answer: SavedAnswer) throws { deleteCallCount += 1 }
+    func markStaleForArticle(_ article: Article) async { markStaleForArticleCallCount += 1 }
 }

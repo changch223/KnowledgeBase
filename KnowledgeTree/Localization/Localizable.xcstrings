@@ -3307,6 +3307,248 @@
     },
     "関連記事 (%lld)" : {
 
+    },
+    "SavedAnswer.section.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存された答え"
+          }
+        }
+      }
+    },
+    "SavedAnswer.history.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存された答えの履歴"
+          }
+        }
+      }
+    },
+    "SavedAnswer.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ保存された答えはありません"
+          }
+        }
+      }
+    },
+    "SavedAnswer.empty.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI チャットで質問すると、引用が 2 件以上ある答えがここに自動保存されます"
+          }
+        }
+      }
+    },
+    "SavedAnswer.search.prompt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存された答えを検索"
+          }
+        }
+      }
+    },
+    "SavedAnswer.search.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索結果が見つかりません"
+          }
+        }
+      }
+    },
+    "SavedAnswer.search.empty.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のキーワードで検索してみてください"
+          }
+        }
+      }
+    },
+    "SavedAnswer.row.citedCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件引用"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.question.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "質問"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.answer.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "答え"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.citedArticles.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "引用された記事 (%lld)"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.relatedConcepts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連する概念ページ (%lld)"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.delete.confirmTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この答えを削除"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.delete.confirmMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "引用された記事は残ります。"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.auto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動保存"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.manual" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動保存"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.pin.toggle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ピン"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.delete.action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "SavedAnswer.detail.emptyCitedArticles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "引用記事は削除されました"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.savedAnswers.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この概念についての質問と答え (%lld)"
+          }
+        }
+      }
+    },
+    "ConceptPage.detail.savedAnswers.showAll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld すべて見る"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

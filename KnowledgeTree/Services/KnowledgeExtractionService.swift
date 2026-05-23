@@ -46,6 +46,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let graphExtractionService: GraphExtractionServiceProtocol?
     /// spec 042: knowledge 抽出 succeeded 後の ConceptPage 自動生成 / 更新用 (default nil で後方互換)
     private let conceptSynthesisService: ConceptSynthesisServiceProtocol?
+    /// spec 043: knowledge 抽出 succeeded 後の SavedAnswer isStale 連鎖用 (default nil で後方互換)
+    private weak var savedAnswerService: SavedAnswerServiceProtocol?
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -64,7 +66,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         embeddingService: EmbeddingService? = nil,
         conflictDetectionService: ConflictDetectionServiceProtocol? = nil,
         graphExtractionService: GraphExtractionServiceProtocol? = nil,
-        conceptSynthesisService: ConceptSynthesisServiceProtocol? = nil
+        conceptSynthesisService: ConceptSynthesisServiceProtocol? = nil,
+        savedAnswerService: SavedAnswerServiceProtocol? = nil
     ) {
         self.extractor = extractor
         self.store = store
@@ -82,6 +85,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.conflictDetectionService = conflictDetectionService
         self.graphExtractionService = graphExtractionService
         self.conceptSynthesisService = conceptSynthesisService
+        self.savedAnswerService = savedAnswerService
     }
 
     /// spec 042: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる ConceptPage 自動生成 hook。
@@ -92,6 +96,17 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         Task { [weak self] in
             _ = self
             await conceptSynthesisService.processNewArticle(article: article)
+        }
+    }
+
+    /// spec 043: knowledge 抽出 succeeded/partiallySucceeded 直後に呼ばれる SavedAnswer isStale 連鎖 hook。
+    /// 引用記事 → 関連 ConceptPage → SavedAnswer の isStale=true 連鎖 (WikiLint 用、UI 影響なし)。
+    /// fire-and-forget で非同期実行、savedAnswerService が nil なら no-op (後方互換)。
+    private func markSavedAnswersStaleIfPossible(article: Article) {
+        guard let savedAnswerService else { return }
+        Task { [weak self] in
+            _ = self
+            await savedAnswerService.markStaleForArticle(article)
         }
     }
 
@@ -249,6 +264,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
                     extractGraphIfPossible(article: article)
                     // spec 042: ConceptPage 自動生成 / 更新 hook (fire-and-forget)
                     synthesizeConceptIfPossible(article: article)
+                    // spec 043: SavedAnswer isStale 連鎖 hook (fire-and-forget、WikiLint 仕込み)
+                    markSavedAnswersStaleIfPossible(article: article)
                 }
             case .failure(let error):
                 let reason = String(describing: error)
@@ -421,6 +438,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             extractGraphIfPossible(article: article)
             // spec 042: ConceptPage 自動生成 / 更新 hook (chunked パス、fire-and-forget)
             synthesizeConceptIfPossible(article: article)
+            // spec 043: SavedAnswer isStale 連鎖 hook (chunked パス、fire-and-forget、WikiLint 仕込み)
+            markSavedAnswersStaleIfPossible(article: article)
         case .pending, .extracting, .skipped:
             break
         }

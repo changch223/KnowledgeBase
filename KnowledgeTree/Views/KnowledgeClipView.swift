@@ -81,6 +81,14 @@ struct KnowledgeClipView: View {
             .navigationDestination(for: ConceptPageListDestination.self) { _ in
                 ConceptPageListView()
             }
+            // spec 043: SavedAnswer 詳細遷移 (ID 経由で安全に fetch)
+            .navigationDestination(for: SavedAnswerDetailDestination.self) { dest in
+                SavedAnswerDetailLoader(destinationID: dest.id)
+            }
+            // spec 043: ConceptPage 関連 SavedAnswer の「+N すべて見る」遷移先 (MVP は履歴画面流用)
+            .navigationDestination(for: SavedAnswerListByConceptDestination.self) { _ in
+                SavedAnswerHistoryView()
+            }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()
             }
@@ -362,5 +370,34 @@ struct ConceptPageListView: View {
         .navigationTitle("ConceptPage.list.navigationTitle")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("conceptPageList_root")
+    }
+}
+
+// MARK: - spec 043: SavedAnswerDetailLoader
+
+/// SavedAnswerDetailDestination の id から SavedAnswer を fetch して DetailView を表示する loader。
+/// @Query で reactive 観測: merge/delete で SavedAnswer が消えた瞬間に `matchingAnswers` が空に、
+/// auto-dismiss で navigation stack を pop (spec 042 ConceptPageDetailLoader と同パターン)。
+struct SavedAnswerDetailLoader: View {
+    let destinationID: UUID
+    @Environment(\.dismiss) private var dismiss
+    @Query private var matchingAnswers: [SavedAnswer]
+
+    init(destinationID: UUID) {
+        self.destinationID = destinationID
+        let id = destinationID
+        _matchingAnswers = Query(filter: #Predicate<SavedAnswer> { $0.id == id })
+    }
+
+    var body: some View {
+        Group {
+            if let answer = matchingAnswers.first {
+                SavedAnswerDetailView(answer: answer)
+            } else {
+                // SavedAnswer 削除 → auto-pop で前画面に戻る
+                Color.clear
+                    .onAppear { dismiss() }
+            }
+        }
     }
 }
