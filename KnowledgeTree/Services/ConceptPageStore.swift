@@ -120,6 +120,18 @@ final class ConceptPageStore {
             }
         }
 
+        // spec 043: SavedAnswer.relatedConceptIDs の source.id → target.id 置換 (data integrity)
+        let savedAnswerDescriptor = FetchDescriptor<SavedAnswer>()
+        let allAnswers = (try? context.fetch(savedAnswerDescriptor)) ?? []
+        for answer in allAnswers where answer.relatedConceptIDs.contains(source.id) {
+            var ids = answer.relatedConceptIDs.filter { $0 != source.id }
+            if !ids.contains(target.id) {
+                ids.append(target.id)
+            }
+            answer.relatedConceptIDs = Array(ids.prefix(DefaultSavedAnswerService.maxRelatedConcepts))
+            answer.updatedAt = .now
+        }
+
         target.isStale = true
         target.updatedAt = .now
         context.delete(source)

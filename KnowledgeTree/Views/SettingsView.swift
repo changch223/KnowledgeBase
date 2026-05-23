@@ -89,6 +89,19 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.tag.entry")
             }
 
+            // spec 043: 保存された答えの履歴
+            Section {
+                NavigationLink(value: SavedAnswerHistoryDestination()) {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "quote.bubble")
+                            .foregroundStyle(DS.Color.actionBlue)
+                            .frame(width: 24)
+                        Text("SavedAnswer.history.title")
+                    }
+                }
+                .accessibilityIdentifier("settings.savedAnswerHistory.entry")
+            }
+
             // spec 021: AI チャット履歴削除
             Section {
                 Button(role: .destructive) {
@@ -114,6 +127,9 @@ struct SettingsView: View {
         .navigationDestination(for: TranslationSetupDestination.self) { _ in
             TranslationSetupView()
         }
+        .navigationDestination(for: SavedAnswerHistoryDestination.self) { _ in
+            SavedAnswerHistoryView()
+        }
         .alert(
             "chat.settings.deleteAllHistory.confirmTitle",
             isPresented: $showDeleteChatConfirm
@@ -131,6 +147,9 @@ struct SettingsView: View {
 
 /// AIBrainView 右上の歯車から SettingsView に push 遷移する Hashable destination。
 struct SettingsDestination: Hashable {}
+
+/// spec 043: SettingsView から SavedAnswerHistoryView に push 遷移する Hashable destination。
+struct SavedAnswerHistoryDestination: Hashable {}
 
 /// SettingsView から TagManagementView (spec 024) に push 遷移する Hashable destination。
 struct TagManagementDestination: Hashable {}

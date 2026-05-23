@@ -53,6 +53,8 @@ final class ChatService: ChatServiceProtocol {
     private let availability: AvailabilityChecker
     /// spec 040: graph traversal で関連 entity を context に追加 (optional、nil なら従来動作)
     private let graphTraversal: GraphTraversalServiceProtocol?
+    /// spec 043: AI 答え永続化時の SavedAnswer 自動保存用 (optional、nil で後方互換)
+    private weak var savedAnswerService: SavedAnswerServiceProtocol?
 
     /// 上位 k の retrieval 件数。
     private let topK: Int = 5
@@ -68,13 +70,15 @@ final class ChatService: ChatServiceProtocol {
         embeddingService: EmbeddingService,
         session: LanguageModelSessionProtocol,
         availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
-        graphTraversal: GraphTraversalServiceProtocol? = nil
+        graphTraversal: GraphTraversalServiceProtocol? = nil,
+        savedAnswerService: SavedAnswerServiceProtocol? = nil
     ) {
         self.context = context
         self.embeddingService = embeddingService
         self.session = session
         self.availability = availability
         self.graphTraversal = graphTraversal
+        self.savedAnswerService = savedAnswerService
     }
 
     // MARK: - send
@@ -156,6 +160,18 @@ final class ChatService: ChatServiceProtocol {
         context.insert(assistantMessage)
         session.lastMessageAt = .now
         try context.save()
+
+        // spec 043: 答えが条件を満たせば SavedAnswer 自動保存 (fire-and-forget、silent fail)
+        // persistAssistantUnknown / persistAssistantFallback 経由では呼ばない (cited 空 + 短文で Service 側 reject されるため、無駄な呼び出しを避ける)
+        let sessionID = session.id
+        Task { [weak self] in
+            await self?.savedAnswerService?.captureIfWorthy(
+                question: trimmed,
+                answer: cleanedAnswer,
+                citedArticleIDs: filteredCited,
+                sessionID: sessionID
+            )
+        }
 
         return assistantMessage
     }

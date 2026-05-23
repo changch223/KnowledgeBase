@@ -48,4 +48,6 @@ final class ServiceContainer {
     var conceptSynthesisService: ConceptSynthesisServiceProtocol?
     /// spec 042: ConceptPage の編集 store (rename / merge / delete / setFollowing)、Phase 6 で実装
     var conceptPageStore: ConceptPageStore?
+    /// spec 043: SavedAnswer 自動保存 + pin / delete / isStale 連鎖 service
+    var savedAnswerService: SavedAnswerServiceProtocol?
 }

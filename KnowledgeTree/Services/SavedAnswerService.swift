@@ -1,0 +1,192 @@
+//
+//  SavedAnswerService.swift
+//  KnowledgeTree
+//
+//  spec 043 — SavedAnswer の自動 / 手動 CRUD。
+//
+//  - Protocol SavedAnswerServiceProtocol — ChatService + KnowledgeExtractionService から呼ばれる
+//  - DefaultSavedAnswerService — AI 不要、純粋 SwiftData ロジック層
+//    - captureIfWorthy: AI Chat 答えが条件 (引用 2+ + answer 50+) を満たせば SavedAnswer 自動保存 + 関連 ConceptPage 紐付け
+//    - setPinned / delete: ユーザー編集
+//    - markStaleForArticle: 新記事 ingest → 関連 ConceptPage → SavedAnswer の isStale 連鎖 (WikiLint 仕込み)
+//
+//  Service は throw しない (captureIfWorthy / markStaleForArticle、silent fail + Logger)。calm UX (Constitution V) 原則。
+//
+
+import Foundation
+import SwiftData
+import os
+
+// MARK: - Protocol
+
+@MainActor
+protocol SavedAnswerServiceProtocol: AnyObject {
+    /// AI Chat 答えが条件 (citedArticleIDs.count >= 2 && answer.count >= 50 && 同 question 既存なし) を満たせば
+    /// SavedAnswer として永続化。silent fire-and-forget、例外を throw しない。
+    func captureIfWorthy(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) async
+
+    /// 手動 pin toggle (UI から throw 可能)。
+    func setPinned(_ answer: SavedAnswer, isPinned: Bool) throws
+
+    /// 削除 (UI から throw 可能)。citedArticles は @Relationship.nullify で Article 残る。
+    func delete(_ answer: SavedAnswer) throws
+
+    /// 新記事 ingest で関連 ConceptPage が更新されたとき、紐付く SavedAnswer の isStale=true 連鎖。
+    /// silent fire-and-forget、本 spec では UI 影響なし (WikiLint で別 spec)。
+    func markStaleForArticle(_ article: Article) async
+}
+
+// MARK: - Default 実装
+
+@MainActor
+final class DefaultSavedAnswerService: SavedAnswerServiceProtocol {
+    private let context: ModelContext
+    private let refreshTrigger: RefreshTrigger?
+    private let logger = Logger(subsystem: "app.KnowledgeTree", category: "saved-answer")
+
+    /// 答え本文の最小 char 数 (auto-save 判定の質的閾値)。
+    static let minAnswerChars: Int = 50
+    /// 引用件数の最小 (auto-save 判定の質的閾値)。
+    static let minCitedCount: Int = 2
+    /// relatedConceptIDs の最大件数。
+    static let maxRelatedConcepts: Int = 5
+
+    init(context: ModelContext, refreshTrigger: RefreshTrigger? = nil) {
+        self.context = context
+        self.refreshTrigger = refreshTrigger
+    }
+
+    // MARK: - captureIfWorthy
+
+    func captureIfWorthy(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) async {
+        let trimmedQ = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQ.isEmpty else { return }
+        guard citedArticleIDs.count >= Self.minCitedCount else {
+            return
+        }
+        guard answer.count >= Self.minAnswerChars else {
+            return
+        }
+
+        // 重複判定 (normalized question 完全一致、case sensitive)
+        let dupDescriptor = FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.question == trimmedQ }
+        )
+        let existing = (try? context.fetch(dupDescriptor)) ?? []
+        guard existing.isEmpty else {
+            logger.notice("duplicate question skipped: \(trimmedQ.prefix(40), privacy: .public)")
+            return
+        }
+
+        // 引用記事 fetch
+        let uuids = citedArticleIDs.compactMap { UUID(uuidString: $0) }
+        guard !uuids.isEmpty else { return }
+        let uuidSet = Set(uuids)
+        let articleDescriptor = FetchDescriptor<Article>(
+            predicate: #Predicate<Article> { uuidSet.contains($0.id) }
+        )
+        let citedArticles = (try? context.fetch(articleDescriptor)) ?? []
+        guard !citedArticles.isEmpty else {
+            logger.error("captureIfWorthy: no articles found for ids \(citedArticleIDs, privacy: .public)")
+            return
+        }
+
+        // 関連 ConceptPage を resolve (overlap 数 desc top 5)
+        let topConceptIDs = resolveTopConceptIDs(citedArticles: citedArticles)
+
+        // SavedAnswer 生成 + 永続化
+        let saved = SavedAnswer(
+            question: trimmedQ,
+            answer: answer,
+            citedArticles: citedArticles,
+            relatedConceptIDs: topConceptIDs,
+            chatSessionID: sessionID,
+            savedAutomatically: true
+        )
+        context.insert(saved)
+        do {
+            try context.save()
+            refreshTrigger?.bump()
+            logger.notice("captured: question=\(saved.questionPreview, privacy: .public) cited=\(citedArticles.count) concepts=\(topConceptIDs.count)")
+        } catch {
+            logger.error("captureIfWorthy save failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    // MARK: - setPinned
+
+    func setPinned(_ answer: SavedAnswer, isPinned: Bool) throws {
+        guard answer.isPinned != isPinned else { return }
+        answer.isPinned = isPinned
+        answer.updatedAt = .now
+        try context.save()
+        refreshTrigger?.bump()
+    }
+
+    // MARK: - delete
+
+    func delete(_ answer: SavedAnswer) throws {
+        context.delete(answer)
+        try context.save()
+        refreshTrigger?.bump()
+    }
+
+    // MARK: - markStaleForArticle
+
+    func markStaleForArticle(_ article: Article) async {
+        // 引用記事に関連する ConceptPage 集合を取得
+        let articleID = article.id
+        let allPages = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        let affectedPages = allPages.filter { page in
+            page.relatedArticles.contains(where: { $0.id == articleID })
+        }
+        guard !affectedPages.isEmpty else { return }
+        let pageIDs = Set(affectedPages.map(\.id))
+
+        // 該当 ConceptPage に紐付く SavedAnswer を fetch (in-memory filter)
+        let allAnswers = (try? context.fetch(FetchDescriptor<SavedAnswer>())) ?? []
+        let affected = allAnswers.filter { ans in
+            ans.relatedConceptIDs.contains(where: { pageIDs.contains($0) })
+        }
+        guard !affected.isEmpty else { return }
+
+        // isStale = true で更新
+        for ans in affected {
+            ans.isStale = true
+            ans.updatedAt = .now
+        }
+        do {
+            try context.save()
+            refreshTrigger?.bump()
+            logger.notice("markStale: \(affected.count) answers affected by article \(article.url, privacy: .public)")
+        } catch {
+            logger.error("markStaleForArticle save failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    // MARK: - Private
+
+    /// 引用記事から関連 ConceptPage を overlap 数 desc で top 5 解決。
+    private func resolveTopConceptIDs(citedArticles: [Article]) -> [UUID] {
+        let citedIDs = Set(citedArticles.map(\.id))
+        let allPages: [ConceptPage] = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        let scored: [(UUID, Int)] = allPages.compactMap { page in
+            let overlap = page.relatedArticles.filter { citedIDs.contains($0.id) }.count
+            return overlap > 0 ? (page.id, overlap) : nil
+        }
+        return scored
+            .sorted { $0.1 > $1.1 }
+            .prefix(Self.maxRelatedConcepts)
+            .map(\.0)
+    }
+}

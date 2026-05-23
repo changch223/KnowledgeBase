@@ -223,4 +223,60 @@ struct ConceptPageStoreTests {
         try store.setFollowing(page, isFollowing: false)
         #expect(page.isFollowing == false)
     }
+
+    // MARK: - 9. spec 043: merge 時に SavedAnswer.relatedConceptIDs の source→target 置換
+
+    @Test func testMergeReplacesSourceIDInSavedAnswerRelatedConceptIDs() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let source = makePage(name: "Apple Inc.", in: context)
+        let target = makePage(name: "Apple", in: context)
+
+        // Article fixture for SavedAnswer.citedArticles (空でも OK だが SavedAnswer 構築は valid な状態にしておく)
+        let article1 = Article(url: "a", title: "A")
+        let article2 = Article(url: "b", title: "B")
+        context.insert(article1)
+        context.insert(article2)
+
+        // SavedAnswer 1: relatedConceptIDs に source のみ含む → target.id に置換されるはず
+        let ans1 = SavedAnswer(
+            question: "Q1?",
+            answer: String(repeating: "あ", count: 80),
+            citedArticles: [article1, article2],
+            relatedConceptIDs: [source.id]
+        )
+        context.insert(ans1)
+
+        // SavedAnswer 2: relatedConceptIDs に source + 他 ID 含む → source は target に置換、他は維持
+        let other = UUID()
+        let ans2 = SavedAnswer(
+            question: "Q2?",
+            answer: String(repeating: "あ", count: 80),
+            citedArticles: [article1, article2],
+            relatedConceptIDs: [source.id, other]
+        )
+        context.insert(ans2)
+
+        // SavedAnswer 3: 既に target.id 含む + source.id も → 重複避ける
+        let ans3 = SavedAnswer(
+            question: "Q3?",
+            answer: String(repeating: "あ", count: 80),
+            citedArticles: [article1, article2],
+            relatedConceptIDs: [target.id, source.id]
+        )
+        context.insert(ans3)
+
+        try context.save()
+
+        let store = ConceptPageStore(context: context)
+        try store.merge(source: source, into: target)
+
+        // ans1: source → target に置換
+        #expect(ans1.relatedConceptIDs == [target.id])
+        // ans2: source → target、他はそのまま (順序は append 後)
+        #expect(Set(ans2.relatedConceptIDs) == Set([target.id, other]))
+        // ans3: source 削除、target は既存ですでに含む (重複なし)
+        #expect(ans3.relatedConceptIDs == [target.id])
+    }
 }

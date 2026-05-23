@@ -98,7 +98,8 @@ struct ChatTabView: View {
                 }
             }
             .navigationDestination(for: Article.self) { article in
-                ArticleDetailView(article: article)
+                // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない (入れ子防止)
+                ArticleDetailView(article: article, embedNavigationStack: false)
             }
             .alert(
                 Text("chat.message.error"),
