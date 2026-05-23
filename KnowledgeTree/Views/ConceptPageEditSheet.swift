@@ -12,6 +12,9 @@ import SwiftData
 struct ConceptPageEditSheet: View {
     let conceptPage: ConceptPage
     let store: ConceptPageStore
+    /// merge / delete で source page が消える時、親 view (ConceptPageDetailView) を pop する callback。
+    /// nil なら sheet dismiss のみ (rename と同じ挙動)。
+    var onSourceGone: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Query private var allPages: [ConceptPage]
@@ -153,7 +156,12 @@ struct ConceptPageEditSheet: View {
         guard let target = selectedMergeTarget else { return }
         do {
             try store.merge(source: conceptPage, into: target)
-            dismiss()
+            // source は削除済 → 親 detail view を pop (sheet も巻き添えで消える)
+            if let onSourceGone {
+                onSourceGone()
+            } else {
+                dismiss()
+            }
         } catch let error as ConceptPageStoreError {
             errorMessage = error.errorDescription
         } catch {
@@ -164,7 +172,12 @@ struct ConceptPageEditSheet: View {
     private func performDelete() {
         do {
             try store.delete(conceptPage)
-            dismiss()
+            // conceptPage は削除済 → 親 detail view を pop (sheet も巻き添えで消える)
+            if let onSourceGone {
+                onSourceGone()
+            } else {
+                dismiss()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -13,8 +13,22 @@ import SwiftData
 struct ConceptPageDetailView: View {
     @Bindable var conceptPage: ConceptPage
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Environment(ServiceContainer.self) private var services
     @State private var showEditSheet: Bool = false
+    /// 削除/merge で page が消えた瞬間に空配列になる reactive guard。
+    /// body 冒頭で `liveMatches.isEmpty` を見て短絡することで、@Bindable conceptPage の
+    /// プロパティ (crossSourceInsights / relatedArticles 等) を一切読まず crash 回避。
+    @Query private var liveMatches: [ConceptPage]
+
+    init(conceptPage: ConceptPage) {
+        self.conceptPage = conceptPage
+        let id = conceptPage.id
+        _liveMatches = Query(filter: #Predicate<ConceptPage> { $0.id == id })
+    }
+
+    /// page がまだ DB に存在しているか (削除 / merge で消えた直後は false)。
+    private var isAlive: Bool { !liveMatches.isEmpty }
 
     /// 「つながる人物・モノ」セクションで表示する他 ConceptPage を resolve。
     /// relatedConceptIDs 配列を fetch、最大 8 件まで。
@@ -45,6 +59,18 @@ struct ConceptPageDetailView: View {
     }
 
     var body: some View {
+        // page が削除/merge で消えた瞬間に短絡 → conceptPage プロパティ参照を一切させない (crash 防止)
+        // Loader 側の @Query auto-pop で navigation も pop されるので、ここは描画スキップだけで OK
+        if !isAlive {
+            Color.clear
+                .onAppear { dismiss() }
+        } else {
+            aliveBody
+        }
+    }
+
+    @ViewBuilder
+    private var aliveBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Spacing.section) {
                 headerSection
@@ -80,7 +106,15 @@ struct ConceptPageDetailView: View {
         }
         .sheet(isPresented: $showEditSheet) {
             if let store = services.conceptPageStore {
-                ConceptPageEditSheet(conceptPage: conceptPage, store: store)
+                ConceptPageEditSheet(
+                    conceptPage: conceptPage,
+                    store: store,
+                    onSourceGone: {
+                        // merge / delete で source page が消えた → sheet 閉じ
+                        // (DetailView の short-circuit + Loader auto-pop で navigation 戻る)
+                        showEditSheet = false
+                    }
+                )
             }
         }
         .accessibilityIdentifier("conceptPageDetail_root")

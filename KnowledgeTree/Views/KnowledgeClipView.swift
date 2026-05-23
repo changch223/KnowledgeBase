@@ -301,27 +301,30 @@ extension KnowledgeClipView {
 }
 
 /// ConceptPageDetailDestination の id から ConceptPage を fetch して DetailView を表示する loader。
+/// **@Query で reactive 観測**: merge/delete で page が消えた瞬間に `page == nil` になり、
+/// auto-dismiss で navigation stack を pop。これで DetailView の @Bindable conceptPage が
+/// 削除済 @Model を参照し続けて crash する問題を防ぐ (2026-05-23 fix)。
 struct ConceptPageDetailLoader: View {
-    @Environment(\.modelContext) private var context
     let destinationID: UUID
+    @Environment(\.dismiss) private var dismiss
+    @Query private var matchingPages: [ConceptPage]
 
-    var body: some View {
-        if let page = fetchPage() {
-            ConceptPageDetailView(conceptPage: page)
-        } else {
-            ContentUnavailableView(
-                "概念ページが見つかりません",
-                systemImage: "questionmark.circle"
-            )
-        }
+    init(destinationID: UUID) {
+        self.destinationID = destinationID
+        let id = destinationID
+        _matchingPages = Query(filter: #Predicate<ConceptPage> { $0.id == id })
     }
 
-    private func fetchPage() -> ConceptPage? {
-        let id = destinationID
-        let descriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate<ConceptPage> { $0.id == id }
-        )
-        return (try? context.fetch(descriptor))?.first
+    var body: some View {
+        Group {
+            if let page = matchingPages.first {
+                ConceptPageDetailView(conceptPage: page)
+            } else {
+                // page 消失 (delete/merge) → auto-pop で list に戻る
+                Color.clear
+                    .onAppear { dismiss() }
+            }
+        }
     }
 }
 
