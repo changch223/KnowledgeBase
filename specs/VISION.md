@@ -1,155 +1,244 @@
-# 知積 (KnowledgeTree) — Product Vision
+# iKnow (旧 知積 / KnowledgeTree) — Product Vision
 
-**Last updated**: 2026-05-08
-**Status**: 確定 (本セッションのユーザー対話で固められた)
-
----
-
-## ❯ 一文ビジョン
-
-> **読んだ知識を AI が自動で体系化・更新し、必要な時だけ開けば最新の自分が見える、優しい第二の脳。**
+**Last updated**: 2026-05-23
+**Status**: v2.0 (dream-product spec ベースで全面改訂)
+**Bundle ID**: 継承 (旧 知積 と同一 App Store ID 維持)
 
 ---
 
-## ❯ 解決する問題 (Pain)
+## ❯ 一文ビジョン (canonical)
 
-ユーザーの実体験:
+> **日常で触れたあらゆる情報をアプリに共有して、その情報は AI が読み解き・繋ぎ・要約しながら、活用されないままの眠っている知識を自動で蓄積でき、自分唯一のものとして所用し、iPhone の Apple Intelligence をさらに進化させ差別化できる『新たな AI』として あなたに使えるようになる。必要に応じて knowledge を Gemini / ChatGPT などに共有して、さらに進化できる AI になる。秘書のように大事な情報を整理して要点を提示し、スピーディーに情報キャッチアップでき、必要に応じて自分の理解として腹落ちするまで会話で深堀りできるアプリ。**
 
-- サイトを見て **見て終わる**、Bookmark して終わる、ずっとタブを開いたまま読まずに終わる
-- 読んだ内容が **バラバラで全体像が見えない**、体系化されない
-- 既存ツール (Pocket / Notion / Apple メモ等) は試したが「**全部使いにくい**」から続かない
+### 短縮版 (1 文)
 
-つまり、知積が解決するのは **「読んだ知識のカオス」**。
+> 「日常で触れた情報を AI が体系化し、秘書のように要点を、家庭教師のように深堀りを、完全 on-device で提供する『Apple Intelligence をあなた専用に進化させた』アプリ」
 
 ---
 
-## ❯ ターゲット
+## ❯ 中核哲学
 
-| | |
-|---|---|
-| 主 | 自分自身 (作者) — エンジニア / 学習意欲が高い人 |
-| 副 | **完全な非エンジニアでも使える** シンプルさを目指す |
+すべての設計判断は、Andrej Karpathy のこの一文に集約される:
 
----
+> "**You can outsource your thinking, but you cannot outsource your understanding.**"
+> (思考は外部化できても、理解は外部化できない。)
 
-## ❯ 6 つの設計原則
+### 一般人向け翻訳: 「秘書 + 家庭教師」が 1 つになった AI
 
-| # | 原則 | 意味 | アンチテーゼ |
-|---|---|---|---|
-| 1 | **AI 自動 + ユーザー確認** | 魔法だが透明。AI が提案 → ユーザーが採用/却下 | (Notion: 自分で構造作る) |
-| 2 | **使用頻度: 週 1-2 回で OK** | 習慣強要しない、開けば変化が見える | (X: 毎日開かせる罠) |
-| 3 | **calm UX** | 通知ゼロ / バッジゼロ / 罪悪感を生まない | (X: 不安喚起 UI) |
-| 4 | **ローカルファースト** | on-device AI、外部送信ゼロ | (Cloud LLM API 依存) |
-| 5 | **ソース追跡** | AI 出力には元記事 ID 引用必須、ハルシネーション抑止 | (ChatGPT: 一般知識から推測) |
-| 6 | **やさしい日本語** | 技術用語を排除、非エンジニアでも使える | (Obsidian: graph / vault 等の専門用語) |
-
----
-
-## ❯ 知積の「魂」(ユーザー定義)
-
-3 つすべて:
-
-- **第二の脳** (Tiago Forte 風)
-- **知識の貯金箱** (積み立てて利息で増える)
-- **頼れる助手** (聞けば答えてくれる)
-
----
-
-## ❯ 差別化軸
-
-| 競合 | 差別化 |
-|---|---|
-| **Pocket / Instapaper** | 保存だけじゃない、AI が読んで体系化する |
-| **Notion** | 自分で構造を作らない、AI に任せる |
-| **Readwise** | 単発ハイライトじゃない、トピック横断で進化する |
-| **ChatGPT** | 自分の蓄積した記憶 (固有知識) に対話できる |
-| **Obsidian** | グラフ / vault の専門用語なし、ローカルファースト + AI |
-
----
-
-## ❯ 4 タブ構成 (確定)
-
-| # | タブ | 役割 |
+| ロール | 担当 | 実装 |
 |---|---|---|
-| 1 | **ライブラリ** | 全件記事一覧 (地味でいい、検索 / 削除起点) |
-| 2 | **知識 Clip** ⭐ | **本タブが主役**。最上部「最近のあなた」+ 動的トピック + 既存 Category Digest + 事実更新提案 |
-| 3 | **AI ブレイン** | Stats / Insights / Categories |
-| 4 | **AI チャット** | 必要な時だけ対話 (週 1-2 回でも有用) |
+| **秘書** (Outsource Thinking) | 「あれ何だっけ」「これまとめて」 | News Clip 風カード + 秘書 chat |
+| **家庭教師** (Understanding) | 「これって何で?」「腹落ちしたい」 | 学習カード + 「✓ わかった/🤔 もっと」+ 深堀り chat |
 
-起動時 default selection は **知識 Clip タブ** (実装検討中)。
+→ **「思考は委ねていい、ただし理解は委ねさせない」設計を貫く**。
 
 ---
 
-## ❯ 4 つの本質機能 (次の 3 ヶ月の柱)
+## ❯ Apple Intelligence を進化させる「あなた専用 AI」という位置づけ
 
-### 🎯 機能 X: 「最近のあなた」差分ダイジェスト
-**spec 035** で実装。前回開いた時 〜 now の保存記事を AI が **3 段落統合要約** で表示。
+### Base = Apple Intelligence (Foundation Models)
 
-### 🎯 機能 Y: 動的トピック自動発見
-**spec 036** で実装。「AI PM」のような **ユーザー固有のトピック** を AI が自動発見、ユーザー確認後に体系化。
+- iPhone 標準搭載、追加 API 課金ゼロ、完全 on-device
 
-### 🎯 機能 Z: 時系列事実上書き提案
-**spec 037** で実装。「店 open → 店潰れた」のような **矛盾事実** を AI が検出、ユーザー確認後に上書き。
+### 差別化 = ユーザー固有の context
 
-### 🎯 機能 W: 用語のやさしさ整理
-**spec 038** で実装。技術用語 (KeyFact / entity / Category) を **やさしい日本語** に。
+- 一般的な ChatGPT / Gemini は「世界の知識」だけ
+- 本アプリは「**あなたが触れた情報の context**」を AI に継続注入
+- → **あなただけの過去・興味を理解する AI** になる
 
 ---
 
-## ❯ 朝のシーン (理想体験)
-
-ユーザーが知積を開いた瞬間:
+## ❯ 2 つの中核ループ + Compound Moment
 
 ```
-┌────────────────────────────────────┐
-│ お帰りなさい、N 件追加されました   │
-│                                    │
-│ 📜 最近のあなた                    │ ← spec 035 (機能 X)
-│   AI 統合 3 段落要約               │
-│   (前回 〜 now の差分)             │
-│                                    │
-│ 🔍 新しいトピック候補              │ ← spec 036 (機能 Y)
-│   AI が見つけた興味分野            │
-│   [ 採用 ] [ 却下 ]                │
-│                                    │
-│ ⚠️ 事実更新の提案                   │ ← spec 037 (機能 Z)
-│   「『〇〇店』が閉店、前回 X 月の   │
-│    『〇〇 open』と矛盾」            │
-│   [ 上書き ] [ 両方残す ] [ 却下 ] │
-│                                    │
-│ 📚 既存 Category 別ダイジェスト    │ ← spec 018 (既存)
-│                                    │
-│ [すべての記事を見る →]             │
-└────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Loop 1: 秘書ループ (Outsource Thinking) │
+│ 共有 → 抽出 → 蓄積 → 提示 → 引用       │
+└─────────────────────────────────────────┘
+                  ↕ Compound moment
+┌─────────────────────────────────────────┐
+│ Loop 2: 家庭教師ループ (Understanding)   │
+│ surface → 興味 → 深堀り → 腹落ち → file │
+└─────────────────────────────────────────┘
+                  ↕ Compound moment
+        wiki が育つ flywheel
+```
+
+### Compound moment 4 条件
+
+1. 秘書 chat 答えに引用 ≥ 2 件 → SavedAnswer 自動保存 + 関連概念ページ更新
+2. 家庭教師深堀り会話の終わり → 新 insight が概念ページに append
+3. 「✓ わかった」タップ → userUnderstanding スコア + 関連 1-hop 波及
+4. 新記事 ingest → 既存概念ページ stale → BGTask で再合成
+
+---
+
+## ❯ 設計原則 (11 個)
+
+### 普遍原則 7 つ (Karpathy / SAGE / cortex 由来)
+
+1. **Knowledge compounds** — RAG 使い捨てではなく、永続成長する成果物
+2. **説明文 = 検索精度の本体** — AI が書く要約が embedding 入力
+3. **bookkeeping は LLM が全部やる** — 人間は読む / 問う / 考える
+4. **Runbook pattern** — 答え / カードに「次のアクション」内蔵
+5. **自己進化** — ingest → 更新 → query → file → 次の問い、ループ
+6. **ハルシネーション位置を意識的に設計** — LLM 介在は抽出時のみ、検索 / 表示 / 編集は決定論的
+7. **AI が書く前提の設計** — 人が書く前提では維持不能、AI 主体で初めて成立
+
+### 本アプリ固有原則 4 つ
+
+A. **完全 on-device** — Foundation Models のみ、クラウド API 一切なし
+B. **Calm UX** — 通知ゼロ / バッジゼロ / streak ゼロ
+C. **受動 + 能動の両モード共存** — Widget で受動、Chat で能動
+D. **一般 iPhone ユーザーが今日から使える** — CLI / Markdown 不要
+
+---
+
+## ❯ ターゲット (7 ペルソナ)
+
+| # | 仮名 | 属性 |
+|---|---|---|
+| 1 | タブ太郎 | 35 歳 IT 系、タブ 80+ 開きっぱなし |
+| 2 | 学さん | 22-23 歳、学生 / 資格勉強中 |
+| 3 | 作る花子 | 40 歳 ライター / 研究者 |
+| 4 | 好奇さん | 50 歳 趣味で歴史 / 科学探求 |
+| 5 | 育子さん | 33 歳 子育て中、時間細切れ |
+| 6 | 七六さん | 67 歳 シニア、字小さい NG |
+| 7 | 営みさん | 45 歳 経営者 / リーダー、業界動向キャッチ |
+
+→ **一般 iPhone ユーザー全般** (年齢 / 職業不問)。
+
+---
+
+## ❯ 4 タブ構成 (iKnow)
+
+```
+1. 学習        (起動 default、新規)   ← 家庭教師ループ
+2. AI チャット                         ← 秘書ループ (能動 query)
+3. 知識 Clip                           ← 受動 surface + Wiki ブラウズ + 気づきの種
+4. ライブラリ                           ← Raw 層 (保存記事 + 検索)
++ Widget (タブ外、ambient surface)
 ```
 
 ---
 
-## ❯ 削らない / 削るかも判断
+## ❯ V1 機能 (10 spec、4-5 ヶ月想定)
 
-ユーザー回答 (2026-05-08): **「全部いる、一旦そのまま」**
+| spec | 内容 | 規模 |
+|---|---|---|
+| spec 045 | ConceptPage @Model + Service + UI ★ | 大 |
+| spec 046 | SavedAnswer + Chat filing | 小 |
+| spec 047 | WikiLint 拡張 (← ConflictDetection 拡張統合) | 中 |
+| spec 048 | EntityCommunity (← TopicClustering 発展) | 中 |
+| spec 049 | Understanding Chat (Main、新タブ) ★ 最大 | 大 |
+| spec 050 | 写真 / AI 会話入力 (OCR + 構造判定) | 中 |
+| spec 051 | Widget (3 サイズ) | 中 |
+| spec 052 | Export (zip + markdown) | 小 |
+| spec 053 | タブ再編 + AI ブレイン廃止 | 中 |
+| spec 054 | iKnow リブランディング (icon + xcstrings + App Store) | 小 |
 
-ただし、機能 X-Z 実装後に再評価:
-
-- AI ブレインタブ PowerGauge / Stats Row → 「最近のあなた」と機能重複の可能性
-- KnowledgeMap (force-directed graph) → spec 011 で実装、spec 015 で alias 残し、廃止候補
-- RecentActivity (最近のタグ変化 / 新しい繋がり) → 「最近のあなた」と機能重複
-
-→ spec 035-037 出荷後、運用 1-2 ヶ月後に再評価する。
+詳細は `docs/migration-plan/04-implementation-roadmap.md`。
 
 ---
 
-## ❯ 明示的な非ゴール
+## ❯ 入力源
 
-- **クラウド同期** (Constitution I 整合の設計が必要、長期 spec)
-- **マルチユーザー / 共有** (完全プライベート、Constitution I)
-- **外部 LLM API** (OpenAI / Gemini 等、Constitution I)
-- **通知 / バッジ / トースト** (Constitution V、不安喚起 UI 禁止)
-- **Force-directed グラフ可視化** (spec 011 で MVP 範囲外、将来再検討)
-- **macOS 対応** (Constitution IV、長期 spec)
+| 入力源 | V1 | V2 | V3+ |
+|---|---|---|---|
+| Web 記事 (Share Sheet) | ✅ | | |
+| PDF (Share Sheet) | ✅ | | |
+| Safari Web Extension | ✅ | | |
+| 写真 / スクリーンショット (OCR) | ✅ | | |
+| AI 会話スクショ (ChatGPT/Gemini/Claude) | ✅ | | |
+| プレーンテキスト | ✅ | | |
+| Web search (BYOK) | | ✅ | |
+| Reading List / Pocket 一括 import | | ✅ | |
+| YouTube transcript | | ✅ | |
+| ポッドキャスト音声 | | | ✅ |
+| メール / メッセージ転送 | | | ✅ |
+
+---
+
+## ❯ 出力 / Export
+
+- zip 全体 export (V1)
+- Markdown 個別 export (V1)
+- iOS Share Sheet 経由共有 (V1)
+- Obsidian 互換 vault (V2)
+
+→ **export は user 主体**、アプリは外部送信ゼロ。
+
+---
+
+## ❯ 既存ツール対比 (差別化軸)
+
+| 既存ツール | 足りないこと |
+|---|---|
+| ChatGPT / Claude / Gemini | 「あなたが読んだもの」が context にならない |
+| NotebookLM | 蓄積が compound しない、RAG 都度検索 |
+| Pocket / Reading List | 貯めるだけ、繋がりも要約も自動化なし |
+| Apple Notes / Bear / Notion | 整理が人間任せ |
+| Obsidian + LLM | CLI / Markdown 必須、デスクトップ必須、一般人ハードル高 |
+| Anki / 学習アプリ | 「貯める」が別アプリ、生活との接点なし |
+| iOS Apple Intelligence (base) | あなた固有 context を持たない、ジェネリック |
+
+→ **「読んだあらゆる情報を貯めて、AI が体系化し、必要な時に質問でき、理解したいときには深堀りもでき、Apple Intelligence をあなた専用に進化、完全 on-device、一般人向け iPhone アプリ」は存在しない**。
+
+---
+
+## ❯ 成功の定義 (5 項目)
+
+| 条件 | 中身 |
+|---|---|
+| **眠っている知識の活性化** | タブ・Pocket・Bookmark が活きてくる、「読まずに忘れていた」が「読まなくても要点が頭に入る」に |
+| **「あなた専用 AI」感** | 「他の人の AI と自分の AI が違う」と感じる |
+| **維持コスト ≈ 0** | 「保存するだけ」で知識が育つ、「整理しなきゃ」ストレスが消える |
+| **理解の増幅** | 「読んだものを自分のものにする」体験、深堀り会話で腹落ち |
+| **既存に無いカテゴリの製品** | 「AI が wiki を作って育てて教えてくれる、一般人向け全部入りモバイル知識ベース」として認知 |
+
+---
+
+## ❯ 明示的な非ゴール (V1)
+
+- アプリ内から自動でクラウド LLM API を呼ぶ (永久になし)
+- マルチユーザー / 共有 / コラボ (V?)
+- 課金 / サブスク / 広告 (V?)
+- アナリティクス SDK / 3rd party クラッシュレポート
+- ゲーミフィケーション / streak / バッジ / レベル
+- push 通知 default ON (opt-in OFF default のみ)
+- 「正解 / 不正解」テスト UI
+- 自動 ingest (RSS / web crawler 等)
+- 「整理して」を user に要求する UI
+- Android / Web / Mac / iPad (V1)、Mac/iPad は V3+
+
+詳細は `docs/dream-product/08-non-goals.md`。
+
+---
+
+## ❯ 関連ドキュメント
+
+| ドキュメント | 役割 |
+|---|---|
+| `docs/concept-review/karpathy-llm-wiki/01-07.md` | Karpathy / SAGE / Tableau AKG / cortex 外部研究 (思想基盤) |
+| `docs/dream-product/00-10.md` | Zero-base dream product spec (11 ファイル、3360 行) |
+| `docs/migration-plan/00-07.md` | 現知積 → iKnow 移行ロードマップ (7 ファイル、1250 行) |
+| `specs/001-044/` | 現知積 spec 群 (継続活用 + 改修 + 一部廃止) |
+| `specs/045-054/` (今後作成) | iKnow V1 新規 spec |
 
 ---
 
 ## ❯ 改訂履歴
 
-- 2026-05-08: 初版確定 (本セッションのユーザー対話で 7 質問 + 5 質問 + 5 質問の計 17 質問で integrated)
+| 日付 | 改訂内容 |
+|---|---|
+| 2026-05-08 | 初版 (知積 v1、6 設計原則、4 タブ、機能 X/Y/Z/W) |
+| **2026-05-23** | **v2.0 全面改訂** (iKnow にリブランディング、11 設計原則、2 ループ + Compound moment、V1 spec 045-054、dream-product spec ベース) |
+
+### v1 → v2 の主な変化
+
+- 一文ビジョン: 「読んだ知識を AI が体系化」→ 「Apple Intelligence をあなた専用に進化させる秘書 + 家庭教師」
+- 設計原則: 6 → 11 (Karpathy / SAGE / cortex 由来 7 + 固有 4)
+- タブ構成: 4 タブ維持、ただし起動 default = 学習 (新規)、AI ブレイン → 知識 Clip 統合
+- 機能スコープ: X/Y/Z/W (spec 035-038) → V1 spec 045-054 (10 新規)
+- アプリ名: 知積 (KnowledgeTree) → iKnow (Bundle ID 継承)
+- ターゲット: エンジニア中心 → 一般 iPhone ユーザー (7 ペルソナ拡張)
