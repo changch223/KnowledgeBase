@@ -69,6 +69,9 @@ final class ChatService: ChatServiceProtocol {
     /// test では false にして既存 RAG 経路テストを継続実行可能。
     private let agentLoopEnabled: Bool
 
+    /// spec 057: 連続 clarification の最大 round 数 (これ以上は forceFinalAnswer)。
+    private let maxClarificationRounds: Int = 3
+
     init(
         context: ModelContext,
         embeddingService: EmbeddingService,
@@ -110,29 +113,37 @@ final class ChatService: ChatServiceProtocol {
         }
         session.lastMessageAt = .now
 
-        // spec 057: Agentic Chat — Agent loop で intent 判定 (MVP は 1 round、後で max 3 round に拡張可能)
+        // spec 057: Agentic Chat — Agent loop で intent 判定
         // - Apple Intelligence 利用可 + agentLoopEnabled なら AgentAction 取得 → switch 分岐
         // - 不可 / agent loop error / agentLoopEnabled=false → 既存 RAG 経路に fallback
-        if agentLoopEnabled, availability.isAvailable, let agentAction = await tryGenerateAgentAction(question: trimmed, contextMessages: contextMessages) {
-            switch agentAction {
-            case .immediate(let answer):
-                // 即答: Foundation Models 一般知識、検索なし、引用なし
-                let filtered = HedgePhraseFilter.replace(answer)
-                return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
+        // - max 3 round 連続 clarification 後は forceFinalAnswer flag で askClarification 抑制
+        if agentLoopEnabled, availability.isAvailable {
+            let consecutiveClarifications = Self.countConsecutiveClarifications(in: session)
+            let shouldForceFinal = consecutiveClarifications >= maxClarificationRounds
 
-            case .askClarification(let q, let suggestions):
-                // 聞き返し: chip 3 つ + 質問本文を 1 assistant message として永続化
-                return try persistAssistant(text: q, citedIDs: [], suggestions: Array(suggestions.prefix(3)), in: session)
+            if let agentAction = await tryGenerateAgentAction(question: trimmed, contextMessages: contextMessages, forceFinalAnswer: shouldForceFinal) {
+                switch agentAction {
+                case .immediate(let answer):
+                    let filtered = HedgePhraseFilter.replace(answer)
+                    return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
 
-            case .searchArticles(let searchQuery):
-                // 記事検索: 既存 RAG 経路を実行、ただし question を search query に置換
-                return try await executeRAG(originalQuestion: trimmed, searchQuestion: searchQuery, contextMessages: contextMessages, in: session)
+                case .askClarification(let q, let suggestions):
+                    if shouldForceFinal {
+                        // max round 到達後の clarification は強制的に「最善努力 immediate」化
+                        let fallback = await tryGenerateFallbackAnswer(question: trimmed) ?? "私の理解では、もう少し具体的な質問をいただけると、お手伝いできるかもしれません。"
+                        let filtered = HedgePhraseFilter.replace(fallback)
+                        return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
+                    }
+                    return try persistAssistant(text: q, citedIDs: [], suggestions: Array(suggestions.prefix(3)), in: session)
 
-            case .finalAnswer(let text, let ids):
-                // 最終答え: LLM が事前に統合済 (rare、通常は searchArticles 経由で RAG 実行が先)
-                let filtered = HedgePhraseFilter.replace(text)
-                let citedStrings = ids.map { $0.uuidString }
-                return try persistAssistant(text: filtered, citedIDs: citedStrings, suggestions: [], in: session)
+                case .searchArticles(let searchQuery):
+                    return try await executeRAG(originalQuestion: trimmed, searchQuestion: searchQuery, contextMessages: contextMessages, in: session)
+
+                case .finalAnswer(let text, let ids):
+                    let filtered = HedgePhraseFilter.replace(text)
+                    let citedStrings = ids.map { $0.uuidString }
+                    return try persistAssistant(text: filtered, citedIDs: citedStrings, suggestions: [], in: session)
+                }
             }
         }
 
@@ -140,11 +151,32 @@ final class ChatService: ChatServiceProtocol {
         return try await executeRAG(originalQuestion: trimmed, searchQuestion: trimmed, contextMessages: contextMessages, in: session)
     }
 
+    /// session 内で「直近 user message 以前の連続 clarification (assistant + clarificationSuggestions 非空) 数」を数える。
+    /// 例: [user1, asst_clar, user2, asst_clar, user3, asst_clar, **NEW user**]
+    ///     → consecutiveClarifications = 3 (user3 以前の連続 clarification 3 件)
+    /// spec 057: max 3 round clarification の判定用。
+    static func countConsecutiveClarifications(in session: ChatSession) -> Int {
+        let sorted = (session.messages ?? []).sorted { $0.timestamp < $1.timestamp }
+        // 後ろから走査、user message に当たるまで連続 clarification をカウント
+        var count = 0
+        for msg in sorted.reversed() {
+            if msg.role == ChatMessageRole.assistant.rawValue, !msg.clarificationSuggestions.isEmpty {
+                count += 1
+            } else if msg.role == ChatMessageRole.assistant.rawValue {
+                // 非 clarification な assistant message → streak break
+                break
+            }
+            // user message は skip (streak 継続判定の境界)
+        }
+        return count
+    }
+
     // MARK: - spec 057: Agent loop helpers
 
     /// Agent loop の最初の 1 round で AgentAction を取得。エラー時 nil (caller が fallback 経路)。
-    private func tryGenerateAgentAction(question: String, contextMessages: [ChatMessage]) async -> AgentAction? {
-        let prompt = Self.buildAgentPrompt(question: question, contextMessages: contextMessages)
+    /// - Parameter forceFinalAnswer: max 3 round 到達時に true、prompt に「askClarification 禁止」 instruction を追加
+    private func tryGenerateAgentAction(question: String, contextMessages: [ChatMessage], forceFinalAnswer: Bool = false) async -> AgentAction? {
+        let prompt = Self.buildAgentPrompt(question: question, contextMessages: contextMessages, forceFinalAnswer: forceFinalAnswer)
         do {
             return try await session.generateAgentAction(prompt: prompt)
         } catch {
@@ -154,13 +186,22 @@ final class ChatService: ChatServiceProtocol {
     }
 
     /// Agent loop で使う prompt 生成。
-    private static func buildAgentPrompt(question: String, contextMessages: [ChatMessage]) -> String {
+    /// - Parameter forceFinalAnswer: true なら「もう聞き返し不可、必ず answer を返す」 instruction を追加。
+    static func buildAgentPrompt(question: String, contextMessages: [ChatMessage], forceFinalAnswer: Bool = false) -> String {
         let recent = contextMessages.suffix(4)
         let contextLines = recent.map { msg in
             let role = msg.role == ChatMessageRole.user.rawValue ? "ユーザー" : "アシスタント"
             let snippet = String(msg.text.prefix(200))
             return "\(role): \(snippet)"
         }.joined(separator: "\n")
+
+        let forceClause = forceFinalAnswer ? """
+
+        ## 最重要 (forceFinalAnswer)
+        既に 3 回 clarification を行いました。**askClarification は使わない**でください。
+        現時点の情報で最善努力答えを生成してください (immediate or finalAnswer)。
+        情報不足なら「私の理解では」「あくまで概要として」等の hedge を使って、それでも何かしらの答えを返してください。
+        """ : ""
 
         return """
         あなたは iKnow の AI アシスタント。ユーザーの質問に対して、4 つの行動から 1 つを選ぶ:
@@ -175,7 +216,7 @@ final class ChatService: ChatServiceProtocol {
         - 情報不足なら「私の理解では」「一般的には」「あくまで概要として」等の hedge を使う
         - askClarification の suggestions は厳密に 3 つ、各 30 字以内
         - 「保存した記事」「あの記事」「私の」等のキーワードがあれば searchArticles を選ぶ
-
+        \(forceClause)
         \(contextLines.isEmpty ? "" : "## 直前の会話\n\(contextLines)\n")
         ## 質問
         \(question)
