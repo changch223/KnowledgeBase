@@ -15,12 +15,21 @@ struct SavedAnswerHistoryView: View {
     @Query(sort: [SortDescriptor(\SavedAnswer.savedAt, order: .reverse)])
     private var allAnswers: [SavedAnswer]
     @State private var searchText: String = ""
+    /// spec 045: isStale 絞り込み state (chip タップで toggle)
+    @State private var showStaleOnly: Bool = false
 
     init() {}
 
+    /// spec 045: isStale な SavedAnswer の件数 (chip 表示判定)
+    private var staleCount: Int {
+        allAnswers.filter(\.isStale).count
+    }
+
     /// isPinned 優先 + savedAt desc (in-memory) → 検索時は SearchService.searchSavedAnswers (T020)
+    /// spec 045: showStaleOnly が true なら isStale=true のみフィルター
     private var displayedAnswers: [SavedAnswer] {
-        let baseSort = allAnswers.sorted { lhs, rhs in
+        let staleFiltered = showStaleOnly ? allAnswers.filter(\.isStale) : allAnswers
+        let baseSort = staleFiltered.sorted { lhs, rhs in
             if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
             return lhs.savedAt > rhs.savedAt
         }
@@ -29,9 +38,41 @@ struct SavedAnswerHistoryView: View {
         return SearchService.searchSavedAnswers(query: trimmed, in: baseSort).map(\.savedAnswer)
     }
 
+    /// spec 045: isStale 絞り込み chip (件数 0 で非表示、calm UX)
+    @ViewBuilder
+    private var staleFilterChip: some View {
+        if staleCount > 0 {
+            HStack {
+                Button {
+                    withAnimation { showStaleOnly.toggle() }
+                } label: {
+                    HStack(spacing: DS.Spacing.xs) {
+                        Image(systemName: "clock.badge.exclamationmark")
+                        Text(String(format: String(localized: "⚠️ 更新が必要 (%lld)"), staleCount))
+                            .font(.caption)
+                    }
+                    .padding(.horizontal, DS.Spacing.md)
+                    .padding(.vertical, DS.Spacing.sm)
+                    .background(showStaleOnly ? Color.orange.opacity(0.25) : Color.orange.opacity(0.10))
+                    .foregroundStyle(.orange)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(showStaleOnly ? Color.orange : .clear, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("chip.stale.filter")
+                Spacer()
+            }
+            .padding(.horizontal, DS.Spacing.xxl)
+            .padding(.top, DS.Spacing.md)
+        }
+    }
+
     var body: some View {
         Group {
-            if displayedAnswers.isEmpty {
+            if displayedAnswers.isEmpty && !showStaleOnly {
                 ContentUnavailableView(
                     searchText.isEmpty
                         ? LocalizedStringKey("SavedAnswer.empty.title")
@@ -44,18 +85,27 @@ struct SavedAnswerHistoryView: View {
                 .accessibilityIdentifier("savedAnswerHistory_empty")
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(displayedAnswers, id: \.id) { answer in
-                            NavigationLink(value: SavedAnswerDetailDestination(id: answer.id)) {
-                                SavedAnswerRow(answer: answer)
-                                    .padding(.horizontal, DS.Spacing.xxl)
+                    VStack(spacing: 0) {
+                        staleFilterChip
+                        LazyVStack(spacing: 0) {
+                            if displayedAnswers.isEmpty && showStaleOnly {
+                                Text("古い答えはアクションメニューから削除できます")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                    .padding(DS.Spacing.xxl)
                             }
-                            .buttonStyle(.plain)
-                            Divider()
-                                .padding(.leading, DS.Spacing.xxl)
+                            ForEach(displayedAnswers, id: \.id) { answer in
+                                NavigationLink(value: SavedAnswerDetailDestination(id: answer.id)) {
+                                    SavedAnswerRow(answer: answer)
+                                        .padding(.horizontal, DS.Spacing.xxl)
+                                }
+                                .buttonStyle(.plain)
+                                Divider()
+                                    .padding(.leading, DS.Spacing.xxl)
+                            }
                         }
+                        .padding(.vertical, DS.Spacing.md)
                     }
-                    .padding(.vertical, DS.Spacing.md)
                 }
                 .scrollIndicators(.hidden)
             }

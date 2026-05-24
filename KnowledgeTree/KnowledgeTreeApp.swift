@@ -19,7 +19,9 @@ import SwiftUI
 import SwiftData
 
 /// spec 035: TabView selection 識別子。
+/// spec 044: `.learning` を追加 (起動 default、4 タブ構成の 1 番目)。
 enum AppTab: Hashable {
+    case learning       // spec 044: 家庭教師ループ入口 (起動 default、1 番目)
     case library
     case knowledgeClip
     case aibrain
@@ -31,8 +33,10 @@ struct KnowledgeTreeApp: App {
     @State private var processingMonitor = ProcessingMonitor()
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
-    /// spec 035: 起動時 default は知識 Clip タブ (「最近のあなた」を最初に見せる)
-    @State private var selectedTab: AppTab = .knowledgeClip
+    /// spec 044: 起動時 default は学習タブ (家庭教師ループ入口)。
+    /// spec 035 で `.knowledgeClip` を default にしていた既存ユーザーも、
+    /// UserDefaults `spec044_learningTabMigrated` キーで 1 回限り強制 `.learning`。
+    @State private var selectedTab: AppTab = .learning
 
     @MainActor
     init() {
@@ -41,6 +45,13 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.registerHandler()
         // spec 042: ConceptPage 再合成 BGTask handler の register (chunked extraction とは別 identifier)
         BackgroundExtractionScheduler.shared.registerConceptResynthesisHandler()
+        // spec 044: tab default を `.learning` に migrate (1 回限り、既存ユーザー対応)
+        let migrationKey = "spec044_learningTabMigrated"
+        if !UserDefaults.standard.bool(forKey: migrationKey) {
+            // 初回 spec 044 起動: tab default は struct init で `.learning` になっているのでそのまま、
+            // 以降の session は前回選択タブを尊重する (本 spec で複雑な persistence を入れない)
+            UserDefaults.standard.set(true, forKey: migrationKey)
+        }
     }
 
     var sharedModelContainer: ModelContainer = {
@@ -63,6 +74,14 @@ struct KnowledgeTreeApp: App {
     var body: some Scene {
         WindowGroup {
             TabView(selection: $selectedTab) {
+                // spec 044: 学習タブ (1 番目、起動 default)
+                UnderstandingTabView()
+                    .tabItem {
+                        Label("学習", systemImage: "book.fill")
+                    }
+                    .tag(AppTab.learning)
+                    .accessibilityIdentifier("tab.learning")
+
                 ArticleListView()
                     .tabItem {
                         Label("library.tab.title", systemImage: "books.vertical")
@@ -99,6 +118,12 @@ struct KnowledgeTreeApp: App {
             .environment(serviceContainer)
             .task {
                 await bootstrap()
+            }
+            // spec 045: 「再生成」trigger を検知して AI チャットタブに自動切替
+            .onChange(of: serviceContainer.pendingRegenerateRequest) { _, new in
+                if new != nil {
+                    selectedTab = .chat
+                }
             }
         }
         .modelContainer(sharedModelContainer)
@@ -279,6 +304,25 @@ struct KnowledgeTreeApp: App {
         // spec 042: ConceptPage 編集 store (rename / merge / delete / setFollowing)
         let conceptPageStore = ConceptPageStore(context: context, refreshTrigger: refreshTrigger)
 
+        // spec 044: 学習タブ用 service 群 (surface / tracker / deep dive chat)
+        let understandingSurfaceService: UnderstandingCardSurfaceServiceProtocol = DefaultUnderstandingCardSurfaceService(context: context)
+        let understandingTrackerService: UnderstandingTrackerServiceProtocol = DefaultUnderstandingTrackerService(
+            context: context,
+            refreshTrigger: refreshTrigger
+        )
+        // spec 044 brushup: DeepDiveChatService (Foundation Models 直接呼び、ChatService の RAG 経路を回避)
+        let deepDiveChatService: DeepDiveChatServiceProtocol = DefaultDeepDiveChatService(
+            context: context,
+            session: session,
+            availability: availability,
+            tracker: understandingTrackerService
+        )
+        // 互換: 旧 DeepDiveChatStarter (内部で ChatService.send を呼ぶ古い経路、UI は使わない)
+        let deepDiveChatStarter: DeepDiveChatStarterProtocol = DefaultDeepDiveChatStarter(
+            chatService: chatService,
+            tracker: understandingTrackerService
+        )
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -300,6 +344,10 @@ struct KnowledgeTreeApp: App {
         serviceContainer.conceptSynthesisService = conceptSynthesisService   // spec 042
         serviceContainer.conceptPageStore = conceptPageStore                 // spec 042
         serviceContainer.savedAnswerService = savedAnswerService             // spec 043
+        serviceContainer.understandingCardSurfaceService = understandingSurfaceService  // spec 044
+        serviceContainer.understandingTrackerService = understandingTrackerService      // spec 044
+        serviceContainer.deepDiveChatStarter = deepDiveChatStarter                      // spec 044 (旧、互換)
+        serviceContainer.deepDiveChatService = deepDiveChatService                      // spec 044 brushup
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

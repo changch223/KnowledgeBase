@@ -598,7 +598,9 @@ struct ChatServiceTests {
         try? await Task.sleep(nanoseconds: 100_000_000)  // hook Task 完了待ち
 
         // unknown path では hook 呼ばれない (cited 空 + 短文)
+        // spec 045: ChatService 経路は captureIfWorthyOrReplaceStale に切替
         #expect(mockSavedAnswer.captureIfWorthyCallCount == 0)
+        #expect(mockSavedAnswer.captureIfWorthyOrReplaceStaleCallCount == 0)
     }
 
     /// SavedAnswerService 未注入 (nil) で ask() 正常完了 (後方互換)
@@ -633,6 +635,10 @@ final class MockSavedAnswerService: SavedAnswerServiceProtocol {
     var setPinnedCallCount = 0
     var deleteCallCount = 0
     var markStaleForArticleCallCount = 0
+    /// spec 045
+    var markFreshCallCount = 0
+    /// spec 045
+    var captureIfWorthyOrReplaceStaleCallCount = 0
 
     func captureIfWorthy(
         question: String,
@@ -645,4 +651,13 @@ final class MockSavedAnswerService: SavedAnswerServiceProtocol {
     func setPinned(_ answer: SavedAnswer, isPinned: Bool) throws { setPinnedCallCount += 1 }
     func delete(_ answer: SavedAnswer) throws { deleteCallCount += 1 }
     func markStaleForArticle(_ article: Article) async { markStaleForArticleCallCount += 1 }
+    func markFresh(_ answer: SavedAnswer) throws { markFreshCallCount += 1 }
+    func captureIfWorthyOrReplaceStale(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) async {
+        captureIfWorthyOrReplaceStaleCallCount += 1
+    }
 }

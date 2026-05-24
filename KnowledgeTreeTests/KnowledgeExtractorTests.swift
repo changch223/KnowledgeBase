@@ -216,6 +216,11 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var conceptSummaryChunkCallCount = 0
     var lastConceptSummaryChunkPrompt: String?
 
+    /// spec 044: 学習タブ家庭教師用 mock 応答
+    var nextTutorReplyResult: Result<String, Error> = .success("これは家庭教師 mock 応答です。")
+    var tutorReplyCallCount = 0
+    var lastTutorReplyPrompt: String?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -301,6 +306,15 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         conceptSummaryChunkCallCount += 1
         lastConceptSummaryChunkPrompt = prompt
         switch nextConceptSummaryChunkResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateTutorReply(prompt: String) async throws -> String {
+        tutorReplyCallCount += 1
+        lastTutorReplyPrompt = prompt
+        switch nextTutorReplyResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

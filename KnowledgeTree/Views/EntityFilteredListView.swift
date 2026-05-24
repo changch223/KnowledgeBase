@@ -68,6 +68,14 @@ private struct EntityFilteredListContent: View {
                         }
                         .accessibilityIdentifier("articleDeleteAction")
                     }
+                    // spec 030: contextMenu (長押し) を併記、LazyVStack 系 view と UX 統一
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            delete(article)
+                        } label: {
+                            Label("list.deleteAction", systemImage: "trash")
+                        }
+                    }
                 }
             }
         }

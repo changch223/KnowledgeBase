@@ -60,6 +60,10 @@ struct AIBrainView: View {
                         AIBrainStatsRow()
                             .padding(.horizontal, DS.Spacing.xxl)
 
+                        // spec 044 P3: 学習統計 (0 件で非表示、SC-010)
+                        UnderstandingStatsSection()
+                            .padding(.horizontal, DS.Spacing.xxl)
+
                         AIInsightCard(tags: allTags)
                             .padding(.horizontal, DS.Spacing.xxl)
 

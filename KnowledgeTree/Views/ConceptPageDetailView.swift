@@ -97,6 +97,14 @@ struct ConceptPageDetailView: View {
                 .accessibilityIdentifier("conceptPageDetail_pinToggle")
                 .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
             }
+            // spec 044: ConceptPage 詳細から DeepDiveChat へ最短導線
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(value: UnderstandingCard.fromConceptPage(conceptPage)) {
+                    Image(systemName: "book.fill")
+                }
+                .accessibilityIdentifier("button.learn")
+                .accessibilityLabel(Text("この概念を学習する"))
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showEditSheet = true
@@ -105,6 +113,9 @@ struct ConceptPageDetailView: View {
                 }
                 .accessibilityIdentifier("conceptPageDetail_editButton")
             }
+        }
+        .navigationDestination(for: UnderstandingCard.self) { card in
+            DeepDiveChatView(card: card)
         }
         .sheet(isPresented: $showEditSheet) {
             if let store = services.conceptPageStore {

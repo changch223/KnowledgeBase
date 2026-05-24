@@ -39,6 +39,7 @@ enum SharedSchema {
             GraphEdge.self,                        // spec 040
             ConceptPage.self,                      // spec 042
             SavedAnswer.self,                      // spec 043
+            UnderstandingInteraction.self,         // spec 044
         ])
     }
 

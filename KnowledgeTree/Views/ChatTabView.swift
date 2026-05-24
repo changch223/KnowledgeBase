@@ -101,6 +101,10 @@ struct ChatTabView: View {
                 // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない (入れ子防止)
                 ArticleDetailView(article: article, embedNavigationStack: false)
             }
+            // spec 047: chat 答えの関連 ConceptPage chips からの遷移先
+            .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
+                ConceptPageDetailLoader(destinationID: dest.id)
+            }
             .alert(
                 Text("chat.message.error"),
                 isPresented: Binding(
@@ -136,6 +140,31 @@ struct ChatTabView: View {
             .presentationDragIndicator(.visible)
         }
         .accessibilityIdentifier("chat.tab.root")
+        // spec 045: SavedAnswer の「再生成」trigger を消費
+        // - 新 ChatSession を作る + question を pin + 自動 send
+        // - ChatService の hook 経由で captureIfWorthyOrReplaceStale が走り、新 SavedAnswer auto-save
+        .onChange(of: serviceContainer.pendingRegenerateRequest) { _, new in
+            guard let req = new, let chatService = serviceContainer.chatService else { return }
+            Task { @MainActor in
+                do {
+                    let newSession = try chatService.createSession()
+                    pinnedSessionID = newSession.id
+                    serviceContainer.pendingRegenerateRequest = nil
+                    isThinking = true
+                    let assistantMsg = try await chatService.send(
+                        question: req.question,
+                        in: newSession,
+                        contextMessages: []
+                    )
+                    isThinking = false
+                    await streamDisplayMessage(message: assistantMsg)
+                } catch {
+                    isThinking = false
+                    errorMessage = String(describing: error)
+                    serviceContainer.pendingRegenerateRequest = nil
+                }
+            }
+        }
     }
 
     // MARK: - Subviews

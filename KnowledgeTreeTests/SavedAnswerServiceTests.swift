@@ -342,4 +342,131 @@ struct SavedAnswerServiceTests {
         await service.markStaleForArticle(unrelated)
         #expect(answer2.isStale == false)
     }
+
+    // MARK: - spec 045: markFresh
+
+    @Test func testMarkFreshUnsetsIsStale() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let answer = SavedAnswer(
+            question: "Q?",
+            answer: String(repeating: "あ", count: 80),
+            isStale: true
+        )
+        context.insert(answer)
+        try context.save()
+        #expect(answer.isStale == true)
+
+        let service = DefaultSavedAnswerService(context: context)
+        try service.markFresh(answer)
+        #expect(answer.isStale == false)
+    }
+
+    @Test func testMarkFreshIsNoOpWhenAlreadyFresh() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let answer = SavedAnswer(
+            question: "Q?",
+            answer: String(repeating: "あ", count: 80),
+            isStale: false
+        )
+        context.insert(answer)
+        try context.save()
+        let originalUpdatedAt = answer.updatedAt
+
+        let service = DefaultSavedAnswerService(context: context)
+        try service.markFresh(answer)
+        // no-op (元々 fresh) → updatedAt 不変
+        #expect(answer.updatedAt == originalUpdatedAt)
+    }
+
+    // MARK: - spec 045: captureIfWorthyOrReplaceStale
+
+    @Test func testCaptureOrReplaceInsertsNewWhenOnlyStaleExists() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let articleA = makeArticle(url: "a", title: "A", in: context)
+        let articleB = makeArticle(url: "b", title: "B", in: context)
+        try context.save()
+
+        // 既存の isStale=true SavedAnswer
+        let staleOld = SavedAnswer(
+            question: "再生成テスト?",
+            answer: String(repeating: "old", count: 30),
+            citedArticles: [articleA],
+            isStale: true
+        )
+        context.insert(staleOld)
+        try context.save()
+
+        let service = DefaultSavedAnswerService(context: context)
+        await service.captureIfWorthyOrReplaceStale(
+            question: "再生成テスト?",
+            answer: String(repeating: "new", count: 30),
+            citedArticleIDs: [articleA.id.uuidString, articleB.id.uuidString],
+            sessionID: nil
+        )
+
+        let all = try context.fetch(FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.question == "再生成テスト?" }
+        ))
+        #expect(all.count == 2)  // 古 (stale) + 新 (fresh) 両方残る
+        #expect(all.contains { $0.isStale == true })   // 古は残る
+        #expect(all.contains { $0.isStale == false })  // 新は fresh
+    }
+
+    @Test func testCaptureOrReplaceSkipsWhenFreshExists() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let articleA = makeArticle(url: "a", title: "A", in: context)
+        let articleB = makeArticle(url: "b", title: "B", in: context)
+        try context.save()
+
+        // 既存の fresh SavedAnswer
+        let fresh = SavedAnswer(
+            question: "重複テスト?",
+            answer: String(repeating: "fresh", count: 30),
+            citedArticles: [articleA],
+            isStale: false
+        )
+        context.insert(fresh)
+        try context.save()
+
+        let service = DefaultSavedAnswerService(context: context)
+        await service.captureIfWorthyOrReplaceStale(
+            question: "重複テスト?",
+            answer: String(repeating: "x", count: 60),
+            citedArticleIDs: [articleA.id.uuidString, articleB.id.uuidString],
+            sessionID: nil
+        )
+
+        let all = try context.fetch(FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.question == "重複テスト?" }
+        ))
+        #expect(all.count == 1)  // 重複作られない
+    }
+
+    @Test func testCaptureOrReplaceWorksAsNormalCaptureWhenNoDup() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let articleA = makeArticle(url: "a", title: "A", in: context)
+        let articleB = makeArticle(url: "b", title: "B", in: context)
+        try context.save()
+
+        let service = DefaultSavedAnswerService(context: context)
+        await service.captureIfWorthyOrReplaceStale(
+            question: "新規 question?",
+            answer: String(repeating: "x", count: 60),
+            citedArticleIDs: [articleA.id.uuidString, articleB.id.uuidString],
+            sessionID: nil
+        )
+
+        let all = try context.fetch(FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.question == "新規 question?" }
+        ))
+        #expect(all.count == 1)
+        #expect(all[0].isStale == false)
+    }
 }

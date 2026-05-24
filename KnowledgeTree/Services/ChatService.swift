@@ -161,11 +161,14 @@ final class ChatService: ChatServiceProtocol {
         session.lastMessageAt = .now
         try context.save()
 
-        // spec 043: 答えが条件を満たせば SavedAnswer 自動保存 (fire-and-forget、silent fail)
-        // persistAssistantUnknown / persistAssistantFallback 経由では呼ばない (cited 空 + 短文で Service 側 reject されるため、無駄な呼び出しを避ける)
+        // spec 043 + spec 045: 答えが条件を満たせば SavedAnswer 自動保存 (fire-and-forget、silent fail)
+        // spec 045 で captureIfWorthyOrReplaceStale に切替:
+        //   - fresh duplicate あり → skip (従来通り)
+        //   - 同 question で isStale=true な古いのみ → 古いを残して新規 insert (再生成 path 自動対応)
+        //   - 重複なし → 通常 insert
         let sessionID = session.id
         Task { [weak self] in
-            await self?.savedAnswerService?.captureIfWorthy(
+            await self?.savedAnswerService?.captureIfWorthyOrReplaceStale(
                 question: trimmed,
                 answer: cleanedAnswer,
                 citedArticleIDs: filteredCited,
