@@ -7,5 +7,9 @@
 		<string>app.KnowledgeTree.chunkedKnowledgeExtraction</string>
 		<string>app.KnowledgeTree.conceptResynthesis</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

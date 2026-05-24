@@ -16,11 +16,11 @@ import SwiftData
 @Model
 final class KnowledgeDigest {
     var id: UUID = UUID()
-    var categoryRaw: String              // CategorySeed.allSeeds.name
-    var cardIndex: Int                   // 0 (単独) / 0,1,2 (マルチカード)
-    var summary: String                  // AI 統合要約 (~150 字)
-    var topKeyFacts: [String]            // 統合 KeyFact (3 個)
-    var topEntityNames: [String]         // 関連エンティティ (3 個)
+    var categoryRaw: String = ""              // spec 051: CloudKit default
+    var cardIndex: Int = 0                    // spec 051: CloudKit default (0=単独)
+    var summary: String = ""                  // spec 051: CloudKit default
+    var topKeyFacts: [String] = []            // spec 051: CloudKit default
+    var topEntityNames: [String] = []         // spec 051: CloudKit default
     var generatedAt: Date = Date.now
     var isStale: Bool = false
 

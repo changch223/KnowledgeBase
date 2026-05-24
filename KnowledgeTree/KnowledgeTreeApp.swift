@@ -52,6 +52,13 @@ struct KnowledgeTreeApp: App {
             // 以降の session は前回選択タブを尊重する (本 spec で複雑な persistence を入れない)
             UserDefaults.standard.set(true, forKey: migrationKey)
         }
+        // spec 051 Phase A → V2.5 deferred: iCloud sync は未完成 (Array<X>? refactor 200+ touch points 残)。
+        // spike 中に toggle を ON にしたユーザー (UserDefaults `icloud_sync_enabled = true`) を強制 false。
+        // V2.5 で完成版を release する時に新規 toggle UI で再 opt-in してもらう。
+        if UserDefaults.standard.bool(forKey: SharedSchema.iCloudSyncFlagKey) {
+            UserDefaults.standard.set(false, forKey: SharedSchema.iCloudSyncFlagKey)
+            NSLog("spec 051 cleanup: forced icloud_sync_enabled=false (V2.5 で完成版 release 予定)")
+        }
     }
 
     var sharedModelContainer: ModelContainer = {

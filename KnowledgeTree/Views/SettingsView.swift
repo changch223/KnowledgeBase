@@ -17,72 +17,41 @@ struct SettingsView: View {
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
     /// spec 041: ナレッジグラフ表示 toggle (default OFF、Phase B でユーザー判断)
     @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
-    /// spec 051 Phase A: iCloud sync 有効化 toggle (default OFF、opt-in)。
-    /// 切替後はアプリ再起動が必要 (ModelContainer は launch 時に 1 度だけ構築)。
-    @AppStorage(SharedSchema.iCloudSyncFlagKey) private var iCloudSyncEnabled: Bool = false
-
     @Environment(ServiceContainer.self) private var serviceContainer
     @State private var showDeleteChatConfirm: Bool = false
-    /// spec 051 Phase A: iCloud sync ON 確認 alert
-    @State private var showICloudEnableConfirm: Bool = false
-    /// spec 051 Phase A: iCloud sync OFF 確認 alert
-    @State private var showICloudDisableConfirm: Bool = false
-    /// spec 051 Phase A: toggle 切替後の「再起動が必要」banner
-    @State private var showRestartBanner: Bool = false
 
     var body: some View {
         Form {
-            // spec 051 Phase A: iCloud sync toggle (opt-in、再起動必要)
+            // spec 051 Phase A 部分実装 (V2.5 で完成予定):
+            // 19 model schema は CloudKit 互換に prep 済 (`@Attribute(.unique)` 削除 + defaults)、
+            // ただし全 Array @Relationship を `[X]?` Optional 化する大規模 refactor (200+ touch points) が
+            // V1.0 timeline 圧迫のため V2.5 へ deferred。toggle は disabled placeholder で展示のみ。
             Section {
-                // 再起動が必要な状態 (toggle 切替後、まだ再起動してない)
-                if showRestartBanner {
-                    HStack(spacing: DS.Spacing.lg) {
-                        Image(systemName: "arrow.clockwise.circle.fill")
-                            .foregroundStyle(.orange)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("アプリを再起動してください")
-                                .font(.callout.weight(.medium))
-                            Text("iCloud 同期の設定変更を反映するため、アプリを完全に終了してから再度開いてください")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                HStack(spacing: DS.Spacing.lg) {
+                    Image(systemName: "icloud")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("iCloud で同期")
+                            .foregroundStyle(.secondary)
+                        Text("V2.5 で対応予定 — 複数の端末で同じ知識ベースを共有")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .accessibilityIdentifier("settings.icloud.restartBanner")
+                    Spacer()
+                    Text("近日対応")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, DS.Spacing.md)
+                        .padding(.vertical, DS.Spacing.xs)
+                        .background(Color.secondary.opacity(0.15))
+                        .foregroundStyle(.secondary)
+                        .clipShape(Capsule())
                 }
-                Toggle(isOn: Binding(
-                    get: { iCloudSyncEnabled },
-                    set: { newValue in
-                        if newValue {
-                            // ON 確認 (initial)
-                            showICloudEnableConfirm = true
-                        } else {
-                            // OFF 確認
-                            showICloudDisableConfirm = true
-                        }
-                    }
-                )) {
-                    HStack(spacing: DS.Spacing.lg) {
-                        Image(systemName: "icloud")
-                            .foregroundStyle(iCloudSyncEnabled ? DS.Color.actionBlue : .secondary)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("iCloud で同期")
-                            Text(iCloudSyncEnabled
-                                ? "同一 Apple ID の他端末と双方向同期"
-                                : "OFF: この端末内のみに保存")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .accessibilityIdentifier("settings.icloud.toggle")
+                .accessibilityIdentifier("settings.icloud.placeholder")
             } header: {
                 Text("同期")
             } footer: {
-                Text(iCloudSyncEnabled
-                    ? "OS 設定 → ユーザー名 → iCloud が ON になっている必要があります。同期データはあなたの iCloud private database 内のみ、他人に公開されません。"
-                    : "OFF にすると、新規保存はこの端末のみに保存されます。既に iCloud にアップロード済みのデータは残ります。")
+                Text("現在は全てこの端末内に保存されます。iCloud 同期は次のメジャーアップデートで予定しています。")
             }
 
             // spec 041: ナレッジグラフ表示 toggle
@@ -202,26 +171,6 @@ struct SettingsView: View {
             Button("settings.safariSetup.confirmAutoSave.cancel", role: .cancel) { }
         } message: {
             Text("chat.settings.deleteAllHistory.confirmMessage")
-        }
-        // spec 051 Phase A: iCloud sync ON 確認
-        .alert("iCloud で同期を開始しますか?", isPresented: $showICloudEnableConfirm) {
-            Button("開始") {
-                iCloudSyncEnabled = true
-                showRestartBanner = true
-            }
-            Button("キャンセル", role: .cancel) { }
-        } message: {
-            Text("現在の知識ベースを iCloud に同期します。設定変更を反映するためアプリの再起動が必要です。初回 sync は数分かかります。")
-        }
-        // spec 051 Phase A: iCloud sync OFF 確認
-        .alert("iCloud 同期を停止しますか?", isPresented: $showICloudDisableConfirm) {
-            Button("停止", role: .destructive) {
-                iCloudSyncEnabled = false
-                showRestartBanner = true
-            }
-            Button("キャンセル", role: .cancel) { }
-        } message: {
-            Text("新規保存はこの端末のみに保存されます。iCloud 上のデータは残ります (再 ON で復元可能)。設定変更を反映するためアプリの再起動が必要です。")
         }
         .accessibilityIdentifier("settings.root")
     }
