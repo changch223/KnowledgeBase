@@ -50,6 +50,8 @@ struct KnowledgeClipView: View {
                     }
                     // spec 037: 事実更新の提案
                     FactConflictsSection()
+                    // spec 046: 確認が必要な答え (isStale な SavedAnswer)
+                    StaleSavedAnswersSection()
                     // spec 042: あなたが追っている人物・モノ (ConceptPage)
                     conceptPagesSection
                     // spec 041: AI が見つけた graph 仮説 (isUncertain edge レビュー)
@@ -88,6 +90,10 @@ struct KnowledgeClipView: View {
             }
             // spec 043: ConceptPage 関連 SavedAnswer の「+N すべて見る」遷移先 (MVP は履歴画面流用)
             .navigationDestination(for: SavedAnswerListByConceptDestination.self) { _ in
+                SavedAnswerHistoryView()
+            }
+            // spec 046: StaleSavedAnswersSection の「+N すべて見る」遷移先
+            .navigationDestination(for: SavedAnswerHistoryDestination.self) { _ in
                 SavedAnswerHistoryView()
             }
             .refreshable {

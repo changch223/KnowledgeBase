@@ -18,6 +18,14 @@ struct SavedAnswerRow: View {
                     .foregroundStyle(DS.Color.actionBlue)
                     .accessibilityHidden(true)
             }
+            // spec 045: isStale 視覚マーク (orange 🕒)
+            if answer.isStale {
+                Image(systemName: "clock.badge.exclamationmark")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier("savedAnswer.stale.icon")
+                    .accessibilityLabel(Text("更新が必要"))
+            }
             VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                 Text(answer.questionPreview)
                     .font(.body)
@@ -32,6 +40,17 @@ struct SavedAnswerRow: View {
                     Text(SavedAtFormatter.format(answer.savedAt))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    // spec 045: isStale chip (text)
+                    if answer.isStale {
+                        Text("更新が必要")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, DS.Spacing.sm)
+                            .padding(.vertical, DS.Spacing.xxs)
+                            .background(Color.orange.opacity(0.15))
+                            .clipShape(Capsule())
+                            .accessibilityIdentifier("savedAnswer.stale.chip")
+                    }
                 }
             }
             Spacer(minLength: 0)

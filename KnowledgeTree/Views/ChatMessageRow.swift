@@ -76,6 +76,8 @@ struct ChatMessageRow: View {
 
             if !message.citedArticleIDs.isEmpty {
                 CitedArticlesSection(articleIDs: message.citedArticleIDs)
+                // spec 047: 引用記事から関連 ConceptPage chips を導出
+                RelatedConceptsChips(articleIDs: message.citedArticleIDs)
             }
         }
         .padding(DS.Spacing.lg)
@@ -179,6 +181,58 @@ private struct CitedArticlesSection: View {
                     .foregroundStyle(.secondary)
             }
             .accessibilityIdentifier("chat.message.citedSection")
+        }
+    }
+}
+
+// MARK: - spec 047: RelatedConceptsChips
+
+/// 引用記事から関連 ConceptPage を overlap top 3 で chip 表示。
+/// 0 件で `EmptyView()` (calm UX)、タップで `ConceptPageDetailDestination` 遷移。
+private struct RelatedConceptsChips: View {
+    let articleIDs: [String]
+    @Query private var allConceptPages: [ConceptPage]
+
+    /// overlap 数 desc で top 3 (overlap > 0 のみ)
+    private var topRelated: [(page: ConceptPage, overlap: Int)] {
+        let citedIDSet = Set(articleIDs.compactMap(UUID.init(uuidString:)))
+        guard !citedIDSet.isEmpty else { return [] }
+        let scored = allConceptPages.compactMap { page -> (ConceptPage, Int)? in
+            let overlap = page.relatedArticles.filter { citedIDSet.contains($0.id) }.count
+            return overlap > 0 ? (page, overlap) : nil
+        }
+        return scored
+            .sorted { $0.1 > $1.1 }
+            .prefix(3)
+            .map { ($0.0, $0.1) }
+    }
+
+    var body: some View {
+        let top = topRelated
+        if top.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                Text(String(format: String(localized: "関連する概念 (%lld)"), top.count))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FlowingTagsLayout(spacing: DS.Spacing.sm) {
+                    ForEach(top, id: \.page.id) { entry in
+                        NavigationLink(value: ConceptPageDetailDestination(id: entry.page.id)) {
+                            Text(entry.page.name)
+                                .font(.caption)
+                                .padding(.horizontal, DS.Spacing.md)
+                                .padding(.vertical, DS.Spacing.xs)
+                                .background(DS.Color.tagFill, in: Capsule())
+                                .foregroundStyle(.primary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("chat.message.relatedConcept.\(entry.page.id.uuidString)")
+                        .accessibilityLabel(Text("\(entry.page.name) 概念"))
+                    }
+                }
+            }
+            .padding(.top, DS.Spacing.xs)
         }
     }
 }

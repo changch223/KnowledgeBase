@@ -50,4 +50,22 @@ final class ServiceContainer {
     var conceptPageStore: ConceptPageStore?
     /// spec 043: SavedAnswer 自動保存 + pin / delete / isStale 連鎖 service
     var savedAnswerService: SavedAnswerServiceProtocol?
+    /// spec 044: 学習タブの surface 候補生成 (5-tier scoring)
+    var understandingCardSurfaceService: UnderstandingCardSurfaceServiceProtocol?
+    /// spec 044: 学習行動の永続化 + ConceptPage.userUnderstanding +1 + 1-hop graph 波及
+    var understandingTrackerService: UnderstandingTrackerServiceProtocol?
+    /// spec 044: 学習カードから deep dive chat を起動する wrapper (ChatService 流用、旧経路)
+    /// 注: spec 044 brushup で DeepDiveChatService に置き換え済。互換のため optional 残置するが
+    /// 新コードは `deepDiveChatService` を使うこと。
+    var deepDiveChatStarter: DeepDiveChatStarterProtocol?
+    /// spec 044 brushup: 家庭教師モード専用 chat service (Foundation Models 直接呼び、retrieval なし)
+    var deepDiveChatService: DeepDiveChatServiceProtocol?
+    /// spec 045: SavedAnswer の「再生成」trigger。SavedAnswerDetailView がセット → KnowledgeTreeApp が観測して AI チャットタブに切替 + ChatTabView が消費して新 ChatSession + question 自動送信。
+    var pendingRegenerateRequest: PendingRegenerateRequest?
+}
+
+/// spec 045: 「再生成」trigger payload。
+struct PendingRegenerateRequest: Equatable {
+    let question: String
+    let originalAnswerID: UUID
 }

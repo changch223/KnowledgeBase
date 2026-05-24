@@ -59,6 +59,10 @@ struct SavedAnswerDetailView: View {
     private var aliveBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Spacing.section) {
+                // spec 045: isStale notice banner (上端、目立つが calm)
+                if answer.isStale {
+                    staleNoticeBanner
+                }
                 headerSection
                 questionSection
                 answerSection
@@ -73,6 +77,19 @@ struct SavedAnswerDetailView: View {
         .navigationTitle("SavedAnswer.section.title")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // spec 045: isStale 時のみ「再生成」Button (orange)
+            if answer.isStale {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        triggerRegenerate()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundStyle(.orange)
+                    }
+                    .accessibilityIdentifier("button.regenerate")
+                    .accessibilityLabel(Text("再生成"))
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Toggle(isOn: pinBinding) {
                     Image(systemName: answer.isPinned ? "pin.fill" : "pin")
@@ -81,13 +98,27 @@ struct SavedAnswerDetailView: View {
                 .accessibilityIdentifier("savedAnswerDetail_pinToggle")
                 .accessibilityLabel(String(localized: "SavedAnswer.detail.pin.toggle"))
             }
+            // spec 045: ellipsis menu (更新済としてマーク + 削除)
             ToolbarItem(placement: .topBarTrailing) {
-                Button(role: .destructive) {
-                    showDeleteConfirm = true
+                Menu {
+                    if answer.isStale {
+                        Button {
+                            try? services.savedAnswerService?.markFresh(answer)
+                        } label: {
+                            Label("更新済としてマーク", systemImage: "checkmark.circle")
+                        }
+                        .accessibilityIdentifier("button.markFresh")
+                    }
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("SavedAnswer.detail.delete.action", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("savedAnswerDetail_deleteButton")
                 } label: {
-                    Image(systemName: "trash")
+                    Image(systemName: "ellipsis.circle")
                 }
-                .accessibilityIdentifier("savedAnswerDetail_deleteButton")
+                .accessibilityIdentifier("savedAnswerDetail_menu")
             }
         }
         .alert("SavedAnswer.detail.delete.confirmTitle", isPresented: $showDeleteConfirm) {
@@ -100,6 +131,37 @@ struct SavedAnswerDetailView: View {
             Text("SavedAnswer.detail.delete.confirmMessage")
         }
         .accessibilityIdentifier("savedAnswerDetail_root")
+    }
+
+    // MARK: - spec 045 helpers
+
+    private var staleNoticeBanner: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            HStack(spacing: DS.Spacing.sm) {
+                Image(systemName: "clock.badge.exclamationmark")
+                    .foregroundStyle(.orange)
+                Text("更新が必要")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+            Text("この答えは保存後に関連記事が追加されています。再生成で最新の AI 答えを得られます。")
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(DS.Spacing.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card))
+        .accessibilityIdentifier("savedAnswer.stale.notice")
+        .accessibilityElement(children: .combine)
+    }
+
+    private func triggerRegenerate() {
+        services.pendingRegenerateRequest = PendingRegenerateRequest(
+            question: answer.question,
+            originalAnswerID: answer.id
+        )
     }
 
     // MARK: - Sections

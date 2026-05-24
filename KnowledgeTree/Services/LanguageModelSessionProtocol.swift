@@ -224,6 +224,11 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// 入口で別エンジンで翻訳してから既存 generateKnowledge に流す。
     /// 翻訳エラー / 未インストール言語ペアは throws (caller で raw fallback)。
     func translate(text: String) async throws -> String
+
+    /// spec 044: 学習タブ用「家庭教師」自由形 chat 応答。
+    /// Generable 制約なし、plain string 返却。prompt 内に instructions + concept context + 会話履歴 + user 入力を全て展開する。
+    /// retrieval なし (ChatService の RAG 経路を経由しない、low-similarity 早期 return を避けるため)。
+    func generateTutorReply(prompt: String) async throws -> String
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -339,6 +344,16 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
         let session = TranslationSession(installedSource: source, target: target)
         let response = try await session.translate(text)
         return response.targetText
+    }
+
+    /// spec 044: 学習タブ用「家庭教師」自由形 chat 応答 (plain string、Generable 制約なし)。
+    /// LanguageModelSession の `respond { prompt }` を直接呼び、`.content` (String) を返却。
+    func generateTutorReply(prompt: String) async throws -> String {
+        let session = LanguageModelSession()
+        let response = try await session.respond {
+            prompt
+        }
+        return response.content
     }
 }
 

@@ -39,6 +39,19 @@ protocol SavedAnswerServiceProtocol: AnyObject {
     /// 新記事 ingest で関連 ConceptPage が更新されたとき、紐付く SavedAnswer の isStale=true 連鎖。
     /// silent fire-and-forget、本 spec では UI 影響なし (WikiLint で別 spec)。
     func markStaleForArticle(_ article: Article) async
+
+    /// spec 045: ユーザーが「更新済としてマーク」した時に isStale=false に手動更新。
+    func markFresh(_ answer: SavedAnswer) throws
+
+    /// spec 045: 「再生成」フロー用。captureIfWorthy と同じ前提チェックだが、
+    /// 同 normalizedQuestion で `isStale=true` な既存 SavedAnswer がある場合は
+    /// **古いを残しつつ新 SavedAnswer を追加** (履歴保護)。それ以外は通常 captureIfWorthy と同経路。
+    func captureIfWorthyOrReplaceStale(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) async
 }
 
 // MARK: - Default 実装
@@ -171,6 +184,77 @@ final class DefaultSavedAnswerService: SavedAnswerServiceProtocol {
             logger.notice("markStale: \(affected.count) answers affected by article \(article.url, privacy: .public)")
         } catch {
             logger.error("markStaleForArticle save failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    // MARK: - markFresh (spec 045)
+
+    func markFresh(_ answer: SavedAnswer) throws {
+        guard answer.isStale else { return }
+        answer.isStale = false
+        answer.updatedAt = .now
+        try context.save()
+        refreshTrigger?.bump()
+    }
+
+    // MARK: - captureIfWorthyOrReplaceStale (spec 045)
+
+    func captureIfWorthyOrReplaceStale(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) async {
+        let trimmedQ = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQ.isEmpty else { return }
+        guard citedArticleIDs.count >= Self.minCitedCount else { return }
+        guard answer.count >= Self.minAnswerChars else { return }
+
+        // 重複判定: 同 question の既存 SavedAnswer を fetch
+        let dupDescriptor = FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.question == trimmedQ }
+        )
+        let existing = (try? context.fetch(dupDescriptor)) ?? []
+        let staleOnes = existing.filter(\.isStale)
+        let freshOnes = existing.filter { !$0.isStale }
+
+        // 既に fresh な (isStale=false) SavedAnswer があれば skip (通常 captureIfWorthy 同等)
+        if !freshOnes.isEmpty {
+            logger.notice("captureIfWorthyOrReplaceStale: fresh duplicate exists, skipped: \(trimmedQ.prefix(40), privacy: .public)")
+            return
+        }
+
+        // 引用記事 fetch
+        let uuids = citedArticleIDs.compactMap { UUID(uuidString: $0) }
+        guard !uuids.isEmpty else { return }
+        let uuidSet = Set(uuids)
+        let articleDescriptor = FetchDescriptor<Article>(
+            predicate: #Predicate<Article> { uuidSet.contains($0.id) }
+        )
+        let citedArticles = (try? context.fetch(articleDescriptor)) ?? []
+        guard !citedArticles.isEmpty else { return }
+
+        // 新 SavedAnswer を insert (isStale=false)、古 stale ones は残す (FR-009)
+        let relatedConceptIDs = resolveTopConceptIDs(citedArticles: citedArticles)
+        let newAnswer = SavedAnswer(
+            question: trimmedQ,
+            answer: answer,
+            citedArticles: citedArticles,
+            relatedConceptIDs: relatedConceptIDs,
+            chatSessionID: sessionID,
+            isPinned: false,
+            isStale: false,
+            savedAt: .now,
+            updatedAt: .now,
+            savedAutomatically: true
+        )
+        context.insert(newAnswer)
+        do {
+            try context.save()
+            refreshTrigger?.bump()
+            logger.notice("captureIfWorthyOrReplaceStale: new answer inserted, \(staleOnes.count) stale ones preserved: \(trimmedQ.prefix(40), privacy: .public)")
+        } catch {
+            logger.error("captureIfWorthyOrReplaceStale save failed: \(String(describing: error), privacy: .public)")
         }
     }
 
