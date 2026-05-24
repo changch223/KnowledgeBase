@@ -20,7 +20,12 @@ struct UnderstandingCardListView: View {
                 if isLoading && cards.isEmpty {
                     ProgressView().padding(.top, DS.Spacing.xxxl)
                 } else if cards.isEmpty {
-                    UnderstandingEmptyState().padding(.top, DS.Spacing.xxxl)
+                    ContentUnavailableView(
+                        "interestingNext.empty.title",
+                        systemImage: "lightbulb",
+                        description: Text("interestingNext.empty.body")
+                    )
+                    .padding(.top, DS.Spacing.xxxl)
                 } else {
                     ForEach(cards) { card in
                         NavigationLink(value: card) {

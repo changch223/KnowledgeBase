@@ -151,13 +151,7 @@
     "• %@" : {
 
     },
-    "→" : {
-
-    },
     "+%lld" : {
-
-    },
-    "+%lld すべて見る" : {
 
     },
     "+%lld 件のタグ ▼" : {
@@ -181,8 +175,126 @@
     "🤔 もっと" : {
 
     },
-    "AI が見つけた仮説" : {
-
+    "actionItems.empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて最新の状態です ✓"
+          }
+        }
+      }
+    },
+    "actionItems.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新が必要な項目はありません"
+          }
+        }
+      }
+    },
+    "actionItems.section.factConflicts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "事実の更新提案"
+          }
+        }
+      }
+    },
+    "actionItems.section.staleSavedAnswers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認が必要な答え"
+          }
+        }
+      }
+    },
+    "actionItems.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新が必要"
+          }
+        }
+      }
+    },
+    "addArticle.duplicate.open" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開く"
+          }
+        }
+      }
+    },
+    "addArticle.duplicate.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既に保存済です"
+          }
+        }
+      }
+    },
+    "addArticle.error.invalidURL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有効な URL を入力してください"
+          }
+        }
+      }
+    },
+    "addArticle.error.saveFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存に失敗しました"
+          }
+        }
+      }
+    },
+    "addArticle.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を追加"
+          }
+        }
+      }
+    },
+    "addArticle.url.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL を入力"
+          }
+        }
+      }
     },
     "AI パワー: %lld 記事、%lld 知識、%lld キーファクト" : {
       "extractionState" : "manual",
@@ -329,6 +441,17 @@
         }
       }
     },
+    "avatar.menu.accessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロフィール、設定を開く"
+          }
+        }
+      }
+    },
     "category.detail.empty.description" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -369,6 +492,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "+%lld 件のタグ ▼"
+          }
+        }
+      }
+    },
+    "chat.empty.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "💬 何でも聞いて"
           }
         }
       }
@@ -636,6 +770,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新しいチャット"
+          }
+        }
+      }
+    },
+    "chat.suggested.fallback.aboutApp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iKnow について教えて"
+          }
+        }
+      }
+    },
+    "chat.suggested.fallback.howToUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使い方を教えて"
+          }
+        }
+      }
+    },
+    "chat.suggested.fallback.whatsNew" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近何が新しい?"
+          }
+        }
+      }
+    },
+    "chat.suggested.recentSummary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近保存した記事の要点は?"
+          }
+        }
+      }
+    },
+    "chat.suggested.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "💡 候補"
           }
         }
       }
@@ -1052,6 +1241,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 件の記事"
+          }
+        }
+      }
+    },
+    "common.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "common.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "common.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
           }
         }
       }
@@ -1643,6 +1865,39 @@
     "entity.filtered.title %@" : {
 
     },
+    "fab.accessibility.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加"
+          }
+        }
+      }
+    },
+    "following.relatedArticles %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 記事"
+          }
+        }
+      }
+    },
+    "following.staleHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい記事で情報が更新"
+          }
+        }
+      }
+    },
     "From" : {
 
     },
@@ -1693,6 +1948,39 @@
     },
     "iKnow に保存" : {
 
+    },
+    "interestingNext.empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学ぶカードが揃うのを待っています"
+          }
+        }
+      }
+    },
+    "interestingNext.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理中…"
+          }
+        }
+      }
+    },
+    "interestingNext.label.topicDashboard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野まとめ"
+          }
+        }
+      }
     },
     "knowledge.aiGeneratedLabel" : {
       "extractionState" : "manual",
@@ -1877,6 +2165,281 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要約"
+          }
+        }
+      }
+    },
+    "knowledgeClip.actionItems.needsUpdate %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ 更新が必要 (%lld)"
+          }
+        }
+      }
+    },
+    "knowledgeClip.empty.following" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだフォロー中の概念はありません"
+          }
+        }
+      }
+    },
+    "knowledgeClip.empty.following.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "気になる人物やモノを「学習する」とここに集まります"
+          }
+        }
+      }
+    },
+    "knowledgeClip.empty.interestingNext" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理中…"
+          }
+        }
+      }
+    },
+    "knowledgeClip.empty.interestingNext.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう少し記事を保存すると、ここに整理されます"
+          }
+        }
+      }
+    },
+    "knowledgeClip.empty.recentArticles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の記事はまだありません"
+          }
+        }
+      }
+    },
+    "knowledgeClip.empty.recentArticles.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を共有して保存してみよう ✨"
+          }
+        }
+      }
+    },
+    "knowledgeClip.moreLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もっと見る ›"
+          }
+        }
+      }
+    },
+    "knowledgeClip.recentArticles.moreCount %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回からの新規 %lld 件"
+          }
+        }
+      }
+    },
+    "knowledgeClip.section.following" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追っている人物・モノ"
+          }
+        }
+      }
+    },
+    "knowledgeClip.section.interestingNext" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続きが気になるもの"
+          }
+        }
+      }
+    },
+    "knowledgeClip.section.recentArticles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の記事"
+          }
+        }
+      }
+    },
+    "knowledgeClip.v3.tooltip.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "知識 Clip / ライブラリ / AI チャット の 3 つにまとめました"
+          }
+        }
+      }
+    },
+    "knowledgeClip.v3.tooltip.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "わかりました"
+          }
+        }
+      }
+    },
+    "knowledgeClip.v3.tooltip.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タブが新しくなりました ✨"
+          }
+        }
+      }
+    },
+    "knowledgeGraph.empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を保存してエンティティが抽出されると、ここに表示されます"
+          }
+        }
+      }
+    },
+    "knowledgeGraph.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ知識グラフがありません"
+          }
+        }
+      }
+    },
+    "knowledgeGraph.fullScreen.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knowledge Graph"
+          }
+        }
+      }
+    },
+    "library.dateGroup.earlier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "それ以前"
+          }
+        }
+      }
+    },
+    "library.dateGroup.thisMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今月"
+          }
+        }
+      }
+    },
+    "library.dateGroup.thisWeek" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週"
+          }
+        }
+      }
+    },
+    "library.dateGroup.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日"
+          }
+        }
+      }
+    },
+    "library.dateGroup.yesterday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨日"
+          }
+        }
+      }
+    },
+    "library.filter.categories" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野で絞る"
+          }
+        }
+      }
+    },
+    "library.filter.tags" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグで絞る"
           }
         }
       }
@@ -3470,9 +4033,6 @@
         }
       }
     },
-    "まだ学ぶカードがありません。記事を保存したり AI チャットで質問してみましょう" : {
-
-    },
     "まだ記事がありません。Safari から記事を保存しよう！" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3497,9 +4057,6 @@
 
     },
     "ラベル (例: 開発, 所属, 発表)" : {
-
-    },
-    "ラベル変更" : {
 
     },
     "不具合の報告 / 要望" : {
@@ -3602,9 +4159,6 @@
     "削除しますか？" : {
 
     },
-    "却下" : {
-
-    },
     "古い答えはアクションメニューから削除できます" : {
 
     },
@@ -3618,9 +4172,6 @@
 
     },
     "学ぶカード一覧" : {
-
-    },
-    "学習" : {
 
     },
     "学習統計" : {
@@ -3639,9 +4190,6 @@
 
     },
     "情報" : {
-
-    },
-    "採用" : {
 
     },
     "新しい知識" : {
@@ -3689,12 +4237,6 @@
 
     },
     "確信度" : {
-
-    },
-    "確信度 %@%%" : {
-
-    },
-    "確認が必要な答え (%lld)" : {
 
     },
     "空のままにすると「共起」(label なし) 扱いになります。" : {
@@ -3759,9 +4301,6 @@
 
     },
     "関連エンティティ数" : {
-
-    },
-    "関連する新しい記事が保存されたため、これらの答えは古くなっている可能性があります。" : {
 
     },
     "関連する概念 (%lld)" : {

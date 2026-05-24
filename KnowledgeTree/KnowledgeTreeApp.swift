@@ -19,12 +19,11 @@ import SwiftUI
 import SwiftData
 
 /// spec 035: TabView selection 識別子。
-/// spec 044: `.learning` を追加 (起動 default、4 タブ構成の 1 番目)。
+/// spec 056: V3.0 redesign で 3 タブに削減 (知識 Clip / ライブラリ / AI チャット)。
+/// 学習タブ / AI ブレインタブ / Settings root tab は削除、機能は新動線で完全保持。
 enum AppTab: Hashable {
-    case learning       // spec 044: 家庭教師ループ入口 (起動 default、1 番目)
+    case knowledgeClip  // spec 056: 起動 default、Today タブ
     case library
-    case knowledgeClip
-    case aibrain
     case chat
 }
 
@@ -33,10 +32,9 @@ struct KnowledgeTreeApp: App {
     @State private var processingMonitor = ProcessingMonitor()
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
-    /// spec 044: 起動時 default は学習タブ (家庭教師ループ入口)。
-    /// spec 035 で `.knowledgeClip` を default にしていた既存ユーザーも、
-    /// UserDefaults `spec044_learningTabMigrated` キーで 1 回限り強制 `.learning`。
-    @State private var selectedTab: AppTab = .learning
+    /// spec 056: 起動 default は知識 Clip (Today タブ)、毎回起動で強制 `.knowledgeClip`
+    /// (LastOpenedStore.lastTab は無視、新習慣定着のため)。
+    @State private var selectedTab: AppTab = .knowledgeClip
     /// spec 049: 初回起動時の onboarding 表示。
     @State private var showOnboarding: Bool = !OnboardingFlagStore.shared.hasCompleted
 
@@ -47,13 +45,8 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.registerHandler()
         // spec 042: ConceptPage 再合成 BGTask handler の register (chunked extraction とは別 identifier)
         BackgroundExtractionScheduler.shared.registerConceptResynthesisHandler()
-        // spec 044: tab default を `.learning` に migrate (1 回限り、既存ユーザー対応)
-        let migrationKey = "spec044_learningTabMigrated"
-        if !UserDefaults.standard.bool(forKey: migrationKey) {
-            // 初回 spec 044 起動: tab default は struct init で `.learning` になっているのでそのまま、
-            // 以降の session は前回選択タブを尊重する (本 spec で複雑な persistence を入れない)
-            UserDefaults.standard.set(true, forKey: migrationKey)
-        }
+        // spec 056: V3.0 redesign で起動 default は知識 Clip に固定 (毎回 reset)。
+        // 旧 spec 044 / spec 035 の tab migration flag は不要 (default を struct init で強制)。
         // spec 051 Phase A 完成: iCloud toggle が有効 (forced reset 削除)。
     }
 
@@ -86,13 +79,13 @@ struct KnowledgeTreeApp: App {
     var body: some Scene {
         WindowGroup {
             TabView(selection: $selectedTab) {
-                // spec 044: 学習タブ (1 番目、起動 default)
-                UnderstandingTabView()
+                // spec 056: 3 タブ構成 V3.0 (起動 default = 知識 Clip)
+                KnowledgeClipView()
                     .tabItem {
-                        Label("学習", systemImage: "book.fill")
+                        Label("clip.tab.title", systemImage: "lightbulb.fill")
                     }
-                    .tag(AppTab.learning)
-                    .accessibilityIdentifier("tab.learning")
+                    .tag(AppTab.knowledgeClip)
+                    .accessibilityIdentifier("tab.knowledgeClip")
 
                 ArticleListView()
                     .tabItem {
@@ -101,23 +94,6 @@ struct KnowledgeTreeApp: App {
                     .tag(AppTab.library)
                     .accessibilityIdentifier("tab.library")
 
-                // spec 018: 知識 Clip タブ (3rd タブ、Library と AI ブレインの間)
-                // spec 035: 起動時 default selection
-                KnowledgeClipView()
-                    .tabItem {
-                        Label("clip.tab.title", systemImage: "lightbulb.fill")
-                    }
-                    .tag(AppTab.knowledgeClip)
-                    .accessibilityIdentifier("tab.knowledgeClip")
-
-                AIBrainView()
-                    .tabItem {
-                        Label("aibrain.tab.title", systemImage: "brain")
-                    }
-                    .tag(AppTab.aibrain)
-                    .accessibilityIdentifier("tab.aibrain")
-
-                // spec 021: AI チャット (4th タブ)
                 ChatTabView()
                     .tabItem {
                         Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
@@ -149,22 +125,21 @@ struct KnowledgeTreeApp: App {
         .modelContainer(sharedModelContainer)
     }
 
-    /// spec 052: Widget deep link を解析 → 学習タブに切替 + ServiceContainer に card ID をセット。
-    /// UnderstandingTabView が `.onChange` で観測して DeepDiveChatView を push する。
-    /// URL format: `iknow://learning/card/{uuid}`
+    /// spec 052 + spec 056: Widget deep link を解析 → 知識 Clip タブに切替 + ServiceContainer に card ID をセット。
+    /// spec 056 V3.0: 学習タブが廃止されたため、知識 Clip タブの「続きが気になる」セクション経由で
+    /// DeepDiveChatView 遷移を行う (KnowledgeClipView が pendingDeepLinkCardID を観測して navigate)。
+    /// URL format: `iknow://learning/card/{uuid}` (旧 path 互換)
     @MainActor
     private func handleDeepLink(url: URL) {
         guard url.scheme == "iknow" else { return }
-        // path components: ["/", "learning", "card", "{uuid}"]
         let components = url.pathComponents.filter { $0 != "/" }
-        // host = "learning"、components = ["card", "uuid"] のはず
         guard url.host == "learning",
               components.count >= 2,
               components[0] == "card",
               let uuid = UUID(uuidString: components[1]) else {
             return
         }
-        selectedTab = .learning
+        selectedTab = .knowledgeClip
         serviceContainer.pendingDeepLinkCardID = uuid
     }
 
@@ -388,6 +363,9 @@ struct KnowledgeTreeApp: App {
         serviceContainer.deepDiveChatStarter = deepDiveChatStarter                      // spec 044 (旧、互換)
         serviceContainer.deepDiveChatService = deepDiveChatService                      // spec 044 brushup
         serviceContainer.availabilityChecker = availability                             // spec 048 (UI banner 表示用)
+        // spec 056: V3.0 redesign 用の新 service 2 つ
+        serviceContainer.recentArticlesService = DefaultRecentArticlesService()
+        serviceContainer.suggestedPromptGenerator = DefaultSuggestedPromptGenerator()
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
