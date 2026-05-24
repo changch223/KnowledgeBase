@@ -65,6 +65,10 @@ final class ServiceContainer {
     /// spec 048: Apple Intelligence 可用性 (banner 表示判定用)。
     /// bootstrap 完了後に set される。nil ならまだ初期化中 = banner も非表示。
     var availabilityChecker: AvailabilityChecker?
+    /// spec 052: Widget deep link `iknow://learning/card/{uuid}` 経由で起動された時の対象 card ID。
+    /// KnowledgeTreeApp.onOpenURL がセット → selectedTab=.learning に切替 →
+    /// UnderstandingTabView が観測して DeepDiveChatView を push → consume して nil に戻す。
+    var pendingDeepLinkCardID: UUID?
 }
 
 /// spec 045: 「再生成」trigger payload。

@@ -31,6 +31,9 @@
 		50431436D9C80107D6A727E7 /* SwiftDataArticleBodyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B000B33C3242BBD6F87F234 /* SwiftDataArticleBodyStoreTests.swift */; };
 		5221A1DC1608D16C34EE9657 /* LanguageModelSessionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A346FF311A9009A6E2625E /* LanguageModelSessionProtocol.swift */; };
 		543C735136533D3DA05EF09B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C7DAD938E42AD2348CBDCB25 /* Localizable.xcstrings */; };
+		57D1488B2FC2A74E00E101FE /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57D1488A2FC2A74E00E101FE /* WidgetKit.framework */; };
+		57D1488D2FC2A74E00E101FE /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57D1488C2FC2A74E00E101FE /* SwiftUI.framework */; };
+		57D1489E2FC2A75000E101FE /* iKnowWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 57D148892FC2A74E00E101FE /* iKnowWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		57EC37E62FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5D7819A59A205721B458C074 /* EnrichmentStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB42EA8727F0B7A33E4346F9 /* EnrichmentStatusBadge.swift */; };
 		62930BEAB8C65E831132C3A0 /* ArticleEnrichmentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FFD46C1B8D9C6D97E83F1F /* ArticleEnrichmentService.swift */; };
@@ -113,6 +116,13 @@
 			remoteGlobalIDString = 577ED5A42FA8118400EB3FE6;
 			remoteInfo = KnowledgeTree;
 		};
+		57D1489C2FC2A75000E101FE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 577ED59D2FA8118400EB3FE6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 57D148882FC2A74E00E101FE;
+			remoteInfo = iKnowWidgetExtension;
+		};
 		57EC37E42FAAE47500B958B7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 577ED59D2FA8118400EB3FE6 /* Project object */;
@@ -136,6 +146,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				57D1489E2FC2A75000E101FE /* iKnowWidgetExtension.appex in Embed App Extensions */,
 				2EC3441CEFBEF8DF1FB70526 /* KnowledgeTreeShareExtension.appex in Embed App Extensions */,
 				57EC37E62FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex in Embed App Extensions */,
 			);
@@ -175,6 +186,10 @@
 		577ED5A52FA8118400EB3FE6 /* KnowledgeTree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KnowledgeTree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5B42FA8118500EB3FE6 /* KnowledgeTreeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		57D148892FC2A74E00E101FE /* iKnowWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = iKnowWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		57D1488A2FC2A74E00E101FE /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		57D1488C2FC2A74E00E101FE /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		57D148A32FC2A7BA00E101FE /* iKnowWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iKnowWidgetExtension.entitlements; sourceTree = "<group>"; };
 		57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KnowledgeTreeSafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A76D763DA21F392E28BC29E /* ThumbnailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailView.swift; sourceTree = "<group>"; };
 		65C204DC081527C3310E6D86 /* MetadataParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataParserTests.swift; sourceTree = "<group>"; };
@@ -224,6 +239,39 @@
 			);
 			target = 577ED5A42FA8118400EB3FE6 /* KnowledgeTree */;
 		};
+		57D148A22FC2A75000E101FE /* Exceptions for "iKnowWidget" folder in "iKnowWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 57D148882FC2A74E00E101FE /* iKnowWidgetExtension */;
+		};
+		57D148AB2FC2AA7300E101FE /* Exceptions for "KnowledgeTree" folder in "iKnowWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppGroup.swift,
+				Models/Article.swift,
+				Models/ArticleBody.swift,
+				Models/ArticleEnrichment.swift,
+				Models/BackgroundExtractionQueueEntry.swift,
+				Models/ChatMessage.swift,
+				Models/ChatSession.swift,
+				Models/ConceptPage.swift,
+				Models/ConflictProposal.swift,
+				Models/ExtractedKnowledge.swift,
+				Models/GraphEdge.swift,
+				Models/GraphNode.swift,
+				Models/KnowledgeChunkProgress.swift,
+				Models/KnowledgeDigest.swift,
+				Models/SavedAnswer.swift,
+				Models/Tag.swift,
+				Models/UnderstandingInteraction.swift,
+				Models/UserTopic.swift,
+				Services/UnderstandingCardSurfaceService.swift,
+				SharedSchema.swift,
+			);
+			target = 57D148882FC2A74E00E101FE /* iKnowWidgetExtension */;
+		};
 		57EC37E72FAAE47500B958B7 /* Exceptions for "KnowledgeTreeSafariExtension" folder in "KnowledgeTreeSafariExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -238,6 +286,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				577ED5A82FA8118400EB3F00 /* Exceptions for "KnowledgeTree" folder in "KnowledgeTree" target */,
+				57D148AB2FC2AA7300E101FE /* Exceptions for "KnowledgeTree" folder in "iKnowWidgetExtension" target */,
 			);
 			path = KnowledgeTree;
 			sourceTree = "<group>";
@@ -250,6 +299,14 @@
 		577ED5C12FA8118500EB3FE6 /* KnowledgeTreeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KnowledgeTreeUITests;
+			sourceTree = "<group>";
+		};
+		57D1488E2FC2A74E00E101FE /* iKnowWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				57D148A22FC2A75000E101FE /* Exceptions for "iKnowWidget" folder in "iKnowWidgetExtension" target */,
+			);
+			path = iKnowWidget;
 			sourceTree = "<group>";
 		};
 		57EC37CF2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */ = {
@@ -285,6 +342,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		57D148862FC2A74E00E101FE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				57D1488D2FC2A74E00E101FE /* SwiftUI.framework in Frameworks */,
+				57D1488B2FC2A74E00E101FE /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -343,10 +409,12 @@
 		577ED59C2FA8118400EB3FE6 = {
 			isa = PBXGroup;
 			children = (
+				57D148A32FC2A7BA00E101FE /* iKnowWidgetExtension.entitlements */,
 				577ED5A72FA8118400EB3FE6 /* KnowledgeTree */,
 				577ED5B72FA8118500EB3FE6 /* KnowledgeTreeTests */,
 				577ED5C12FA8118500EB3FE6 /* KnowledgeTreeUITests */,
 				57EC37CF2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */,
+				57D1488E2FC2A74E00E101FE /* iKnowWidget */,
 				577ED5A62FA8118400EB3FE6 /* Products */,
 				8301B79A5576D1153C20CBE9 /* KnowledgeTree */,
 				605FC29A7AD8538933D53A06 /* KnowledgeTreeTests */,
@@ -365,6 +433,7 @@
 				577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */,
 				96EEDA0FCDD359F239CB79BC /* KnowledgeTreeShareExtension.appex */,
 				57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */,
+				57D148892FC2A74E00E101FE /* iKnowWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -449,6 +518,8 @@
 			isa = PBXGroup;
 			children = (
 				E47C099FCB75C530ED2B910A /* iOS */,
+				57D1488A2FC2A74E00E101FE /* WidgetKit.framework */,
+				57D1488C2FC2A74E00E101FE /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -498,6 +569,7 @@
 			dependencies = (
 				2F545A534210EA5C81EEA1E9 /* PBXTargetDependency */,
 				57EC37E52FAAE47500B958B7 /* PBXTargetDependency */,
+				57D1489D2FC2A75000E101FE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				577ED5A72FA8118400EB3FE6 /* KnowledgeTree */,
@@ -549,6 +621,28 @@
 			productReference = 577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		57D148882FC2A74E00E101FE /* iKnowWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 57D148A12FC2A75000E101FE /* Build configuration list for PBXNativeTarget "iKnowWidgetExtension" */;
+			buildPhases = (
+				57D148852FC2A74E00E101FE /* Sources */,
+				57D148862FC2A74E00E101FE /* Frameworks */,
+				57D148872FC2A74E00E101FE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				57D1488E2FC2A74E00E101FE /* iKnowWidget */,
+			);
+			name = iKnowWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = iKnowWidgetExtension;
+			productReference = 57D148892FC2A74E00E101FE /* iKnowWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 57EC37E82FAAE47500B958B7 /* Build configuration list for PBXNativeTarget "KnowledgeTreeSafariExtension" */;
@@ -595,7 +689,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					577ED5A42FA8118400EB3FE6 = {
@@ -608,6 +702,9 @@
 					577ED5BD2FA8118500EB3FE6 = {
 						CreatedOnToolsVersion = 26.4.1;
 						TestTargetID = 577ED5A42FA8118400EB3FE6;
+					};
+					57D148882FC2A74E00E101FE = {
+						CreatedOnToolsVersion = 26.5;
 					};
 					57EC37CD2FAAE47500B958B7 = {
 						CreatedOnToolsVersion = 26.4.1;
@@ -633,6 +730,7 @@
 				577ED5BD2FA8118500EB3FE6 /* KnowledgeTreeUITests */,
 				E824C4CEBD52695DCFE6EA5B /* KnowledgeTreeShareExtension */,
 				57EC37CD2FAAE47500B958B7 /* KnowledgeTreeSafariExtension */,
+				57D148882FC2A74E00E101FE /* iKnowWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -662,6 +760,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		577ED5BC2FA8118500EB3FE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		57D148872FC2A74E00E101FE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -740,6 +845,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		57D148852FC2A74E00E101FE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		57EC37CA2FAAE47500B958B7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -815,6 +927,11 @@
 			isa = PBXTargetDependency;
 			target = 577ED5A42FA8118400EB3FE6 /* KnowledgeTree */;
 			targetProxy = 577ED5BF2FA8118500EB3FE6 /* PBXContainerItemProxy */;
+		};
+		57D1489D2FC2A75000E101FE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 57D148882FC2A74E00E101FE /* iKnowWidgetExtension */;
+			targetProxy = 57D1489C2FC2A75000E101FE /* PBXContainerItemProxy */;
 		};
 		57EC37E52FAAE47500B958B7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1128,6 +1245,73 @@
 			};
 			name = Release;
 		};
+		57D1489F2FC2A75000E101FE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = iKnowWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MY8WU4892D;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = iKnowWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = iKnowWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = CHIA.KnowledgeTree.iKnowWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		57D148A02FC2A75000E101FE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = iKnowWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MY8WU4892D;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = iKnowWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = iKnowWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = CHIA.KnowledgeTree.iKnowWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		57EC37E92FAAE47500B958B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1293,6 +1477,15 @@
 			buildConfigurations = (
 				577ED5CF2FA8118500EB3FE6 /* Debug */,
 				577ED5D02FA8118500EB3FE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		57D148A12FC2A75000E101FE /* Build configuration list for PBXNativeTarget "iKnowWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				57D1489F2FC2A75000E101FE /* Debug */,
+				57D148A02FC2A75000E101FE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
