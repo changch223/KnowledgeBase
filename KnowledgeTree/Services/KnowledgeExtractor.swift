@@ -33,10 +33,11 @@ struct KnowledgeExtractor {
     private static let logger = Logger(subsystem: "app.KnowledgeTree", category: "extractor")
 
     /// 単発パス (本文 ≤ defaultMaxBodyChars) で使う上限。
-    /// spec 006 で 1,200 → 1,000 に変更し、超過時は chunked パスに振り分ける。
-    /// 1,000 chars × 1.7 token/char ≒ 1,700 token + prompt overhead ~500 token = 2,200 token、
-    /// margin 約 1,900 token (4,096 - 2,200)。
-    static let defaultMaxBodyChars = 1_000
+    /// spec 006 で 1,200 → 1,000、spec 051 spike で 1,000 → 600 に変更。
+    /// Foundation Models 4096 token 制限のうち @Generable schema serialization (~1500 tokens) +
+    /// FM internal overhead (~1500 tokens) で実質 user 入力余地は ~1000 tokens のみ。
+    /// 600 Japanese chars ≈ 900 tokens、margin 確保。
+    static let defaultMaxBodyChars = 600
 
     func extract(
         extractedText: String,

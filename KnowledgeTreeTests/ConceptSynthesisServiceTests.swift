@@ -260,8 +260,8 @@ struct ConceptSynthesisServiceTests {
 
         await service.resynthesize(page)
 
-        // 8 記事 / chunk_size 2 = 4 chunk → 4 回 chunk 呼び出し + 1 回 meta 合成
-        #expect(session.conceptSummaryChunkCallCount == 4)
+        // spec 051 spike: chunk_size 2 → 1。8 記事 / 1 = 8 chunk → 8 回 chunk 呼び出し + 1 回 meta 合成
+        #expect(session.conceptSummaryChunkCallCount == 8)
         #expect(session.conceptSynthesisCallCount == 1)
         #expect(page.summary == "meta 統合 summary")
     }
