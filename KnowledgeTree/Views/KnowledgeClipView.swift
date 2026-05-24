@@ -25,6 +25,8 @@ struct KnowledgeClipView: View {
     @State private var sinceForRecent: Date?
     /// spec 056: FAB tap で URL 入力 sheet
     @State private var showAddArticle: Bool = false
+    /// spec 056 polish: V2.5 → V3.0 初回起動 1 回限りの tooltip 表示
+    @State private var showV3Tooltip: Bool = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -96,6 +98,21 @@ struct KnowledgeClipView: View {
         .accessibilityIdentifier("tab.knowledgeClip")
         .task {
             captureRecentSinceAndTouch()
+            checkV3MigrationTooltip()
+        }
+        // spec 056 polish: V3 migration tooltip (初回起動 1 回限り)
+        .overlay(alignment: .top) {
+            if showV3Tooltip {
+                V3MigrationTooltip {
+                    UserDefaults.standard.set(true, forKey: "spec056_v3_migrated")
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        showV3Tooltip = false
+                    }
+                }
+                .padding(.horizontal, DS.Spacing.xxl)
+                .padding(.top, DS.Spacing.md)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         // spec 052 + 056: Widget deep link 受信時の card push 遷移
         .onChange(of: services.pendingDeepLinkCardID) { _, newID in
@@ -105,6 +122,16 @@ struct KnowledgeClipView: View {
                     path.append(card)
                 }
                 services.pendingDeepLinkCardID = nil
+            }
+        }
+    }
+
+    /// spec 056 polish: V3 migration tooltip の表示判定 (初回起動 1 回限り)。
+    private func checkV3MigrationTooltip() {
+        let key = "spec056_v3_migrated"
+        if !UserDefaults.standard.bool(forKey: key) {
+            withAnimation(.easeIn(duration: 0.4).delay(0.5)) {
+                showV3Tooltip = true
             }
         }
     }
@@ -235,5 +262,47 @@ struct SavedAnswerDetailLoader: View {
                     .onAppear { dismiss() }
             }
         }
+    }
+}
+
+// MARK: - spec 056 polish: V3 migration tooltip
+
+/// V2.5 → V3.0 アップデート時の初回起動で 1 回だけ表示する「タブが新しくなりました」 tooltip。
+/// UserDefaults `spec056_v3_migrated` flag で永続的に dismiss を記録。
+private struct V3MigrationTooltip: View {
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            HStack(alignment: .top, spacing: DS.Spacing.md) {
+                Image(systemName: "sparkles")
+                    .font(.title3)
+                    .foregroundStyle(.yellow)
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    Text("knowledgeClip.v3.tooltip.title")
+                        .font(.headline)
+                    Text("knowledgeClip.v3.tooltip.body")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Button {
+                    onDismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                }
+                .accessibilityIdentifier("v3Tooltip.dismiss")
+                .accessibilityLabel(Text("knowledgeClip.v3.tooltip.ok"))
+            }
+        }
+        .padding(DS.Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: DS.Radius.card)
+                .fill(DS.Color.surfaceSecondary)
+                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+        )
+        .accessibilityIdentifier("v3Tooltip")
     }
 }
