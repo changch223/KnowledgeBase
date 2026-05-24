@@ -246,6 +246,32 @@
 			);
 			target = 57D148882FC2A74E00E101FE /* iKnowWidgetExtension */;
 		};
+		57D148AB2FC2AA7300E101FE /* Exceptions for "KnowledgeTree" folder in "iKnowWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppGroup.swift,
+				Models/Article.swift,
+				Models/ArticleBody.swift,
+				Models/ArticleEnrichment.swift,
+				Models/BackgroundExtractionQueueEntry.swift,
+				Models/ChatMessage.swift,
+				Models/ChatSession.swift,
+				Models/ConceptPage.swift,
+				Models/ConflictProposal.swift,
+				Models/ExtractedKnowledge.swift,
+				Models/GraphEdge.swift,
+				Models/GraphNode.swift,
+				Models/KnowledgeChunkProgress.swift,
+				Models/KnowledgeDigest.swift,
+				Models/SavedAnswer.swift,
+				Models/Tag.swift,
+				Models/UnderstandingInteraction.swift,
+				Models/UserTopic.swift,
+				Services/UnderstandingCardSurfaceService.swift,
+				SharedSchema.swift,
+			);
+			target = 57D148882FC2A74E00E101FE /* iKnowWidgetExtension */;
+		};
 		57EC37E72FAAE47500B958B7 /* Exceptions for "KnowledgeTreeSafariExtension" folder in "KnowledgeTreeSafariExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -260,6 +286,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				577ED5A82FA8118400EB3F00 /* Exceptions for "KnowledgeTree" folder in "KnowledgeTree" target */,
+				57D148AB2FC2AA7300E101FE /* Exceptions for "KnowledgeTree" folder in "iKnowWidgetExtension" target */,
 			);
 			path = KnowledgeTree;
 			sourceTree = "<group>";

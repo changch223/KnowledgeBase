@@ -143,8 +143,31 @@ struct KnowledgeTreeApp: App {
             .fullScreenCover(isPresented: $showOnboarding) {
                 OnboardingView(isPresented: $showOnboarding)
             }
+            // spec 052: Widget deep link `iknow://learning/card/{uuid}`
+            .onOpenURL { url in
+                handleDeepLink(url: url)
+            }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    /// spec 052: Widget deep link を解析 → 学習タブに切替 + ServiceContainer に card ID をセット。
+    /// UnderstandingTabView が `.onChange` で観測して DeepDiveChatView を push する。
+    /// URL format: `iknow://learning/card/{uuid}`
+    @MainActor
+    private func handleDeepLink(url: URL) {
+        guard url.scheme == "iknow" else { return }
+        // path components: ["/", "learning", "card", "{uuid}"]
+        let components = url.pathComponents.filter { $0 != "/" }
+        // host = "learning"、components = ["card", "uuid"] のはず
+        guard url.host == "learning",
+              components.count >= 2,
+              components[0] == "card",
+              let uuid = UUID(uuidString: components[1]) else {
+            return
+        }
+        selectedTab = .learning
+        serviceContainer.pendingDeepLinkCardID = uuid
     }
 
     @MainActor

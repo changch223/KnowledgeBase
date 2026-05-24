@@ -12,20 +12,24 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct UnderstandingTabView: View {
     @Environment(ServiceContainer.self) private var services
     @Environment(RefreshTrigger.self) private var refreshTrigger
+    @Environment(\.modelContext) private var modelContext
 
     @State private var cards: [UnderstandingCard] = []
     @State private var allCount: Int = 0
     @State private var isLoading: Bool = false
     @State private var hasLoadedOnce: Bool = false
+    /// spec 052: NavigationStack の path、Widget deep link で programmatic push に使う。
+    @State private var path = NavigationPath()
 
     private let topLimit: Int = 5
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(spacing: DS.Spacing.xl) {
                     // spec 048: AI 機能が使えない端末 / 状態の説明 banner
@@ -56,7 +60,32 @@ struct UnderstandingTabView: View {
             .onChange(of: refreshTrigger.version) { _, _ in
                 Task { await refresh() }
             }
+            // spec 052: Widget deep link で pendingDeepLinkCardID がセットされたら
+            // 該当 ConceptPage / SavedAnswer を resolve → DeepDiveChatView を programmatic push。
+            .onChange(of: services.pendingDeepLinkCardID) { _, new in
+                guard let cardID = new else { return }
+                if let card = resolveCard(id: cardID) {
+                    path.append(card)
+                }
+                // consume (再 push 防止)
+                services.pendingDeepLinkCardID = nil
+            }
         }
+    }
+
+    /// spec 052: UUID から ConceptPage or SavedAnswer を fetch して UnderstandingCard に wrap。
+    private func resolveCard(id: UUID) -> UnderstandingCard? {
+        // ConceptPage を先に試す
+        let pageDesc = FetchDescriptor<ConceptPage>(predicate: #Predicate { $0.id == id })
+        if let page = (try? modelContext.fetch(pageDesc))?.first {
+            return UnderstandingCard.fromConceptPage(page)
+        }
+        // SavedAnswer を試す
+        let answerDesc = FetchDescriptor<SavedAnswer>(predicate: #Predicate { $0.id == id })
+        if let answer = (try? modelContext.fetch(answerDesc))?.first {
+            return UnderstandingCard.fromSavedAnswer(answer)
+        }
+        return nil
     }
 
     @ViewBuilder
