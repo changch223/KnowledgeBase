@@ -68,27 +68,17 @@ struct KnowledgeTreeApp: App {
         AppGroup.ensureContainerDirectoryExists()
 
         // spec 005: SharedSchema 経由で Share Extension と完全に同一定義を使う。
-        // spec 051 Phase A: iCloud sync toggle が ON なら CloudKit private DB と
-        // App Group を同時指定 (UserDefaults の `icloud_sync_enabled` を読む)。
-        // CloudKit が失敗 (entitlement 不足 / iCloud 未サインイン等) なら local-only に fallback。
+        // spec 051 V2.5 deferred: 現状の schema は CloudKit 互換性が不完全
+        // (全 Array @Relationship を `[X]?` Optional 化 + 6 件 inverse 追加 + 6 件 to-one optional 化
+        // が未完)。V2.5 で proper に CloudKit 対応するまで **無条件 local-only** で init。
+        // この closure は struct init() より先に実行されるため UserDefaults cleanup より早く動く、
+        // よって flag を読まずに local 固定とすることで余分な CloudKit error log を出さない。
         do {
             return try ModelContainer(
                 for: SharedSchema.all,
-                configurations: [SharedSchema.sharedConfiguration()]
+                configurations: [SharedSchema.sharedConfiguration(cloudKitEnabled: false)]
             )
         } catch {
-            // CloudKit 設定で失敗 → local-only fallback (アプリは動作維持、calm UX)
-            if SharedSchema.isCloudKitEnabledByUser {
-                NSLog("⚠️ CloudKit ModelContainer init failed, falling back to local-only: \(error)")
-                do {
-                    return try ModelContainer(
-                        for: SharedSchema.all,
-                        configurations: [SharedSchema.sharedConfiguration(cloudKitEnabled: false)]
-                    )
-                } catch {
-                    fatalError("Could not create local ModelContainer fallback: \(error)")
-                }
-            }
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
