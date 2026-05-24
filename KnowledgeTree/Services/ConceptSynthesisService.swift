@@ -92,15 +92,19 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
     }
 
     func resynthesizeAllStale() async {
-        let descriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.isStale == true },
-            sortBy: [SortDescriptor(\.updatedAt)]
+        // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
+        // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
+        let allDescriptor = FetchDescriptor<ConceptPage>(
+            predicate: #Predicate { $0.isStale == true }
         )
-        var bounded = descriptor
-        bounded.fetchLimit = 5
+        guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
 
-        guard let pages = try? context.fetch(bounded) else { return }
-        for page in pages {
+        let sorted = allStale.sorted { lhs, rhs in
+            let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            return lhsLatest > rhsLatest
+        }
+        for page in sorted.prefix(5) {
             await resynthesize(page)
         }
     }
@@ -246,15 +250,19 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     }
 
     func resynthesizeAllStale() async {
-        let descriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.isStale == true },
-            sortBy: [SortDescriptor(\.updatedAt)]
+        // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
+        // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
+        let allDescriptor = FetchDescriptor<ConceptPage>(
+            predicate: #Predicate { $0.isStale == true }
         )
-        var bounded = descriptor
-        bounded.fetchLimit = 5
+        guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
 
-        guard let pages = try? context.fetch(bounded) else { return }
-        for page in pages {
+        let sorted = allStale.sorted { lhs, rhs in
+            let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            return lhsLatest > rhsLatest
+        }
+        for page in sorted.prefix(5) {
             await resynthesize(page)
         }
     }

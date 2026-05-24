@@ -9,17 +9,29 @@ import SwiftUI
 import SwiftData
 
 struct TagListView: View {
-    @Query(sort: \Tag.name, order: .forward) private var tags: [Tag]
+    @Query private var tags: [Tag]
+
+    /// spec 058 polish: 記事数多い順 desc + tiebreak で名前昇順。
+    private var sortedTags: [Tag] {
+        tags.sorted { lhs, rhs in
+            let lhsCount = (lhs.articles ?? []).count
+            let rhsCount = (rhs.articles ?? []).count
+            if lhsCount != rhsCount {
+                return lhsCount > rhsCount
+            }
+            return lhs.name < rhs.name
+        }
+    }
 
     var body: some View {
         Group {
-            if tags.isEmpty {
+            if sortedTags.isEmpty {
                 ContentUnavailableView(
                     "tag.list.empty.title",
                     systemImage: "tag"
                 )
             } else {
-                List(tags) { tag in
+                List(sortedTags) { tag in
                     NavigationLink(value: TagFilteredDestination(tagName: tag.name)) {
                         HStack {
                             Image(systemName: "tag")

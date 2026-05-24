@@ -259,7 +259,7 @@ private struct DeepDiveMessageList: View {
                     if isThinking {
                         HStack(spacing: DS.Spacing.sm) {
                             ProgressView()
-                            Text("家庭教師が考えています…")
+                            Text("考えています…")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

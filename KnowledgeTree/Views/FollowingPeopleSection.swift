@@ -2,10 +2,9 @@
 //  FollowingPeopleSection.swift
 //  KnowledgeTree
 //
-//  spec 056 — 知識 Clip タブ 3 番目セクション「追っている人物・モノ」(Following)。
-//  - isFollowing == true な ConceptPage 上位 5 件 (updatedAt desc)
-//  - サブヘッダ位置に「⚠️ 更新が必要 (N)」badge (件数 0 で非表示)
-//    旧 FactConflictsSection + StaleSavedAnswersSection を統合
+//  spec 056 + spec 058 polish — 知識 Clip タブ「コンセプト」セクション。
+//  全 ConceptPage を「お気に入り優先 + 関連記事数多い順」で表示。
+//  Q1 ConceptPage 直接アクセスを実現 (知識 Clip → コンセプト card → 詳細画面)。
 //
 
 import SwiftUI
@@ -13,20 +12,29 @@ import SwiftData
 
 struct FollowingPeopleSection: View {
     @Query(
-        filter: #Predicate<ConceptPage> { $0.isFollowing == true },
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
     )
-    private var followingPages: [ConceptPage]
+    private var allPages: [ConceptPage]
 
+    /// お気に入り優先 + 関連記事数多い順、上位 5 件
     private var topPages: [ConceptPage] {
-        Array(followingPages.prefix(5))
+        let sorted = allPages.sorted { lhs, rhs in
+            if lhs.isFollowing != rhs.isFollowing {
+                return lhs.isFollowing  // お気に入り優先
+            }
+            let lhsCount = (lhs.relatedArticles ?? []).count
+            let rhsCount = (rhs.relatedArticles ?? []).count
+            if lhsCount != rhsCount {
+                return lhsCount > rhsCount  // 関連記事多い順
+            }
+            return lhs.updatedAt > rhs.updatedAt  // 同数なら updatedAt desc
+        }
+        return Array(sorted.prefix(5))
     }
 
-    private var totalCount: Int { followingPages.count }
+    private var totalCount: Int { allPages.count }
 
     var body: some View {
-        // spec 058 polish: 0 件なら section 全体を隠す (Apple Photos 風 calm UX)
-        // ユーザーが ConceptPage 詳細画面で明示的に「フォロー」した時のみ表示。
         if topPages.isEmpty {
             EmptyView()
         } else {
@@ -73,9 +81,16 @@ private struct FollowingConceptPageRow: View {
     var body: some View {
         HStack(spacing: DS.Spacing.md) {
             VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                Text(page.name)
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: DS.Spacing.xs) {
+                    if page.isFollowing {
+                        Image(systemName: "star.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.yellow)
+                    }
+                    Text(page.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
 
                 HStack(spacing: DS.Spacing.sm) {
                     UnderstandingDotsIndicator(value: page.userUnderstanding)

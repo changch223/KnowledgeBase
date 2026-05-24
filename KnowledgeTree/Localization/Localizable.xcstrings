@@ -7,8 +7,6 @@
     "・%@": {},
     "·": {},
     "(%lld)": {},
-    "(detail.tags ?? []).heading": {},
-    "(knowledge.entities ?? []).heading": {},
     "「%@」とこのノードの関係 (edge) を削除します。記事自体は残ります。": {},
     "「%@」を統合": {},
     "%@ ↔ %@": {
@@ -391,6 +389,39 @@
         }
       }
     },
+    "answer.actions.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー"
+          }
+        }
+      }
+    },
+    "answer.actions.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
+    "answer.actions.share": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有"
+          }
+        }
+      }
+    },
     "avatar.menu.accessibility": {
       "extractionState": "manual",
       "localizations": {
@@ -442,6 +473,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "+%lld 件のタグ ▼"
+          }
+        }
+      }
+    },
+    "category.row.articleCount %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記事 %lld 件"
+          }
+        }
+      }
+    },
+    "category.row.latestUpdate %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最終更新 %@"
           }
         }
       }
@@ -1083,7 +1136,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "知識 Clip"
+            "value": "iKnow"
           }
         }
       }
@@ -1260,7 +1313,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この記事から派生した概念ページ"
+            "value": "関連する概念"
           }
         }
       }
@@ -1326,7 +1379,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "今わかっていること"
+            "value": "概要"
           }
         }
       }
@@ -1548,6 +1601,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "統合元と統合先は別の概念ページを選んでください"
+          }
+        }
+      }
+    },
+    "conflict.pastViews.label %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前の情報 (%lld)"
           }
         }
       }
@@ -2100,13 +2164,24 @@
         }
       }
     },
+    "knowledgeClip.categories.allCount %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全 %lld 分野"
+          }
+        }
+      }
+    },
     "knowledgeClip.empty.following": {
       "extractionState": "manual",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "まだフォロー中の概念はありません"
+            "value": "まだお気に入りの概念がありません"
           }
         }
       }
@@ -2117,7 +2192,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "気になる人物やモノを「学習する」とここに集まります"
+            "value": "気になる人物やモノを「お気に入り」にすると、ここに集まります"
           }
         }
       }
@@ -2172,7 +2247,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "もっと見る ›"
+            "value": "すべて見る ›"
           }
         }
       }
@@ -2188,13 +2263,24 @@
         }
       }
     },
+    "knowledgeClip.section.categories": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カテゴリー"
+          }
+        }
+      }
+    },
     "knowledgeClip.section.following": {
       "extractionState": "manual",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "追っている人物・モノ"
+            "value": "コンセプト"
           }
         }
       }
@@ -2249,7 +2335,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "タブが新しくなりました ✨"
+            "value": "新しい iKnow へようこそ"
           }
         }
       }
@@ -2371,6 +2457,83 @@
           "stringUnit": {
             "state": "translated",
             "value": "ライブラリ"
+          }
+        }
+      }
+    },
+    "lintLog.action.deleteConceptPage": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除 (概念)"
+          }
+        }
+      }
+    },
+    "lintLog.action.deleteTag": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除 (タグ)"
+          }
+        }
+      }
+    },
+    "lintLog.action.linkConceptPage": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク追加"
+          }
+        }
+      }
+    },
+    "lintLog.action.merge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統合"
+          }
+        }
+      }
+    },
+    "lintLog.action.reclassifyTag": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分野再分類"
+          }
+        }
+      }
+    },
+    "lintLog.action.refreshSavedAnswer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "答え再生成"
+          }
+        }
+      }
+    },
+    "lintLog.action.unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作"
           }
         }
       }
@@ -2563,7 +2726,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ピン"
+            "value": "お気に入り"
           }
         }
       }
@@ -2927,6 +3090,105 @@
           "stringUnit": {
             "state": "translated",
             "value": "カテゴリー画面で entity と関係性のグラフを描画します。"
+          }
+        }
+      }
+    },
+    "settings.health.healthy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理対象はありません ✨"
+          }
+        }
+      }
+    },
+    "settings.health.section.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理"
+          }
+        }
+      }
+    },
+    "settings.health.targetCount %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理対象 %lld 件"
+          }
+        }
+      }
+    },
+    "settings.lintLog.empty.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週 1 自動整理が実行されると、ここに記録されます"
+          }
+        }
+      }
+    },
+    "settings.lintLog.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理ログはまだありません"
+          }
+        }
+      }
+    },
+    "settings.lintLog.section.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理ログ (直近 30 件)"
+          }
+        }
+      }
+    },
+    "settings.lintNow.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ整理する"
+          }
+        }
+      }
+    },
+    "settings.lintNow.result.summary %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の操作を実行しました"
+          }
+        }
+      }
+    },
+    "settings.lintNow.result.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理完了"
           }
         }
       }
@@ -4040,271 +4302,7 @@
     "関係を編集": {},
     "関連エンティティ数": {},
     "関連する概念 (%lld)": {},
-    "関連記事 (%lld)": {},
-    "answer.actions.save": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存"
-          }
-        }
-      }
-    },
-    "answer.actions.copy": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コピー"
-          }
-        }
-      }
-    },
-    "answer.actions.share": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共有"
-          }
-        }
-      }
-    },
-    "conflict.pastViews.label %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "過去の見解 (%lld)"
-          }
-        }
-      }
-    },
-    "settings.health.section.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理"
-          }
-        }
-      }
-    },
-    "settings.health.healthy": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理対象はありません ✨"
-          }
-        }
-      }
-    },
-    "settings.health.targetCount %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理対象 %lld 件"
-          }
-        }
-      }
-    },
-    "settings.lintNow.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今すぐ整理する"
-          }
-        }
-      }
-    },
-    "settings.lintNow.result.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理完了"
-          }
-        }
-      }
-    },
-    "settings.lintNow.result.summary %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 件の操作を実行しました"
-          }
-        }
-      }
-    },
-    "settings.lintLog.section.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理ログ (直近 30 件)"
-          }
-        }
-      }
-    },
-    "settings.lintLog.empty.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理ログはまだありません"
-          }
-        }
-      }
-    },
-    "settings.lintLog.empty.body": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "週 1 自動整理が実行されると、ここに記録されます"
-          }
-        }
-      }
-    },
-    "lintLog.action.merge": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "統合"
-          }
-        }
-      }
-    },
-    "lintLog.action.deleteConceptPage": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除 (概念)"
-          }
-        }
-      }
-    },
-    "lintLog.action.deleteTag": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除 (タグ)"
-          }
-        }
-      }
-    },
-    "lintLog.action.linkConceptPage": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リンク追加"
-          }
-        }
-      }
-    },
-    "lintLog.action.reclassifyTag": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分野再分類"
-          }
-        }
-      }
-    },
-    "lintLog.action.refreshSavedAnswer": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "答え再生成"
-          }
-        }
-      }
-    },
-    "lintLog.action.unknown": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作"
-          }
-        }
-      }
-    },
-    "knowledgeClip.section.categories": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分野ごとの活動"
-          }
-        }
-      }
-    },
-    "knowledgeClip.categories.allCount %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全 %lld 分野"
-          }
-        }
-      }
-    },
-    "category.row.articleCount %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 記事"
-          }
-        }
-      }
-    },
-    "category.row.latestUpdate %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最終更新 %@"
-          }
-        }
-      }
-    }
+    "関連記事 (%lld)": {}
   },
   "version": "1.0"
 }
