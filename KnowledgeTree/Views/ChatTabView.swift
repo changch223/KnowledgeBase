@@ -67,6 +67,12 @@ struct ChatTabView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // spec 048: AI 不可端末で「分かりません」連発を防ぐ説明 banner
+                if let reason = serviceContainer.availabilityChecker?.unavailabilityReason {
+                    AppleIntelligenceBanner(reason: reason, compact: true)
+                        .padding(.horizontal, DS.Spacing.xl)
+                        .padding(.top, DS.Spacing.md)
+                }
                 if currentSession != nil {
                     if currentSessionMessages.isEmpty && !isThinking {
                         emptyStateView

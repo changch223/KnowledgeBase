@@ -2,7 +2,7 @@
 //  SaveURLToKnowledgeTreeIntent.swift
 //  KnowledgeTree
 //
-//  spec 019 — iOS 16+ App Intent。「URL を 知積に保存」アクションを Shortcuts.app +
+//  spec 019 — iOS 16+ App Intent。「URL を iKnow に保存」アクションを Shortcuts.app +
 //  Spotlight + Siri から呼び出し可能にする。
 //
 //  - openAppWhenRun: false でバックグラウンド完了 (アプリを起動しない)
@@ -17,10 +17,10 @@ import AppIntents
 import Foundation
 
 struct SaveURLToKnowledgeTreeIntent: AppIntent {
-    static var title: LocalizedStringResource = "知積に保存"
+    static var title: LocalizedStringResource = "iKnow に保存"
 
     static var description: IntentDescription = IntentDescription(
-        "URL を 知積に保存します",
+        "URL を iKnow に保存します",
         categoryName: "コンテンツ"
     )
 

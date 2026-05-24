@@ -361,6 +361,49 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
 
 protocol AvailabilityChecker: Sendable {
     var isAvailable: Bool { get }
+    /// spec 048: ユーザー向けに「なぜ使えないか」を構造化して返す。available なら nil。
+    var unavailabilityReason: AppleIntelligenceUnavailabilityReason? { get }
+}
+
+extension AvailabilityChecker {
+    /// 後方互換 default 実装 (既存 mock が default だけ実装すれば nil 返却で動く)。
+    var unavailabilityReason: AppleIntelligenceUnavailabilityReason? {
+        isAvailable ? nil : .unknown
+    }
+}
+
+/// spec 048: Apple Intelligence が使えない理由 (UI banner 表示用)。
+enum AppleIntelligenceUnavailabilityReason: Equatable {
+    /// 端末非対応 (iPhone 15 Pro 未満、A17 Pro / M1 以降の iPad 以外)。
+    case deviceNotEligible
+    /// 設定で Apple Intelligence が OFF。
+    case appleIntelligenceNotEnabled
+    /// モデル DL 中 / 待機中。
+    case modelNotReady
+    /// その他 (region 不対応 / 不明)。
+    case unknown
+
+    var titleKey: String {
+        switch self {
+        case .deviceNotEligible:           return "AI 機能はこの端末では使えません"
+        case .appleIntelligenceNotEnabled: return "Apple Intelligence が OFF です"
+        case .modelNotReady:               return "AI モデルを準備中です"
+        case .unknown:                     return "AI 機能を利用できません"
+        }
+    }
+
+    var bodyKey: String {
+        switch self {
+        case .deviceNotEligible:
+            return "iPhone 15 Pro 以降、または M1 以降の iPad で AI 要約・AI チャット・家庭教師機能が使えます。記事の保存と閲覧は引き続きこの端末で行えます。"
+        case .appleIntelligenceNotEnabled:
+            return "設定 App → Apple Intelligence と Siri から ON にしてください。"
+        case .modelNotReady:
+            return "Apple Intelligence のモデルが端末にダウンロード中です。完了まで AI 機能は使えません (通常 数分〜数時間)。"
+        case .unknown:
+            return "iOS 設定や端末状態を確認してください。記事保存・閲覧は引き続き使えます。"
+        }
+    }
 }
 
 struct SystemLanguageModelAvailabilityChecker: AvailabilityChecker {
@@ -370,6 +413,26 @@ struct SystemLanguageModelAvailabilityChecker: AvailabilityChecker {
             return true
         default:
             return false
+        }
+    }
+
+    var unavailabilityReason: AppleIntelligenceUnavailabilityReason? {
+        switch SystemLanguageModel.default.availability {
+        case .available:
+            return nil
+        case .unavailable(let reason):
+            switch reason {
+            case .deviceNotEligible:
+                return .deviceNotEligible
+            case .appleIntelligenceNotEnabled:
+                return .appleIntelligenceNotEnabled
+            case .modelNotReady:
+                return .modelNotReady
+            @unknown default:
+                return .unknown
+            }
+        @unknown default:
+            return .unknown
         }
     }
 }

@@ -28,6 +28,10 @@ struct UnderstandingTabView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: DS.Spacing.xl) {
+                    // spec 048: AI 機能が使えない端末 / 状態の説明 banner
+                    if let reason = services.availabilityChecker?.unavailabilityReason {
+                        AppleIntelligenceBanner(reason: reason)
+                    }
                     contentBody
                 }
                 .padding(.horizontal, DS.Spacing.xxl)

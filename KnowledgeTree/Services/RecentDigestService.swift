@@ -95,7 +95,7 @@ final class RecentDigestService: RecentDigestServiceProtocol {
 
     static func buildPrompt(articles: [Article]) -> String {
         var prompt = """
-        あなたは知積 (KnowledgeTree) の AI アシスタントです。ユーザーが最近保存した以下の記事の要点を、自然な日本語の 3 段落に統合してください。
+        あなたは iKnow の AI アシスタントです。ユーザーが最近保存した以下の記事の要点を、自然な日本語の 3 段落に統合してください。
 
         ## ルール
         1. 各段落は 80-150 字程度。
