@@ -43,13 +43,36 @@ enum SharedSchema {
         ])
     }
 
+    /// spec 051 Phase A: iCloud sync 有効化フラグの UserDefaults key。
+    /// SettingsView の toggle で書き込み、KnowledgeTreeApp launch 時に読んで
+    /// `sharedConfiguration(cloudKitEnabled:)` を呼び分ける。
+    /// **トグル切替後はアプリ再起動が必要** (ModelContainer は launch 時に 1 度だけ構築)。
+    static let iCloudSyncFlagKey = "icloud_sync_enabled"
+
+    /// 現在のユーザー設定 (UserDefaults) を読んで iCloud sync が有効か返す。
+    static var isCloudKitEnabledByUser: Bool {
+        UserDefaults.standard.bool(forKey: iCloudSyncFlagKey)
+    }
+
     /// App Group container を使った共有 ModelConfiguration。
     /// main app と Share Extension の双方でこの factory を使うことで
     /// schema / groupContainer の指定がブレない。
-    static func sharedConfiguration() -> ModelConfiguration {
-        ModelConfiguration(
-            schema: all,
-            groupContainer: .identifier(AppGroup.identifier)
-        )
+    ///
+    /// spec 051 Phase A: `cloudKitEnabled: true` で CloudKit private DB と App Group を
+    /// 同時指定する (実機 spike で iOS 26 動作確認済)。
+    static func sharedConfiguration(cloudKitEnabled: Bool = isCloudKitEnabledByUser) -> ModelConfiguration {
+        if cloudKitEnabled {
+            return ModelConfiguration(
+                schema: all,
+                isStoredInMemoryOnly: false,
+                groupContainer: .identifier(AppGroup.identifier),
+                cloudKitDatabase: .private("iCloud.app.KnowledgeTree")
+            )
+        } else {
+            return ModelConfiguration(
+                schema: all,
+                groupContainer: .identifier(AppGroup.identifier)
+            )
+        }
     }
 }
