@@ -158,6 +158,11 @@ struct ChatTabView: View {
             .presentationDragIndicator(.visible)
         }
         .accessibilityIdentifier("chat.tab.root")
+        // spec 057: clarification chip tap → input field に auto-fill + 自動送信
+        .onReceive(ChatMessageRow.clarificationTapNotificationPublisher) { tappedChip in
+            inputText = tappedChip
+            Task { await sendQuestion() }
+        }
         // spec 045: SavedAnswer の「再生成」trigger を消費
         // - 新 ChatSession を作る + question を pin + 自動 send
         // - ChatService の hook 経由で captureIfWorthyOrReplaceStale が走り、新 SavedAnswer auto-save

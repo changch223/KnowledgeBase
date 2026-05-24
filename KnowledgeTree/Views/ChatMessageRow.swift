@@ -13,6 +13,7 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ChatMessageRow: View {
     let message: ChatMessage
@@ -21,6 +22,8 @@ struct ChatMessageRow: View {
 
     @Query private var allArticles: [Article]
     @Environment(\.openURL) private var openURL
+    /// spec 057: long press menu 「保存」で SavedAnswerService 利用
+    @Environment(ServiceContainer.self) private var serviceContainer
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -59,19 +62,23 @@ struct ChatMessageRow: View {
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                     .environment(\.openURL, OpenURLAction { url in
-                        // article-id://UUID を捕捉、Article fetch + 詳細遷移
                         if let id = Self.extractArticleID(from: url),
                            let article = allArticles.first(where: { $0.id == id }) {
-                            // navigationDestination(for: Article.self) は ChatTabView 側にある想定
-                            // SwiftUI の openURL は NavigationStack に value を push できないため、
-                            // 代替: NotificationCenter or environment を介す。本 MVP では .systemAction で
-                            // 「処理した」だけ返し、tap で何か起きない。tap-to-navigate は補助 DisclosureGroup
-                            // で代替 (見つけやすさは確保)。inline link は視覚的アクセント役を担う。
                             _ = article
                             return .handled
                         }
                         return .systemAction
                     })
+            }
+
+            // spec 057: clarification suggestions chip 表示 (assistant + suggestions 非空)
+            if !message.clarificationSuggestions.isEmpty {
+                ClarificationChipsView(
+                    suggestions: message.clarificationSuggestions,
+                    onTap: { selected in
+                        ChatMessageRow.clarificationTapNotificationPublisher.send(selected)
+                    }
+                )
             }
 
             if !message.citedArticleIDs.isEmpty {
@@ -83,6 +90,46 @@ struct ChatMessageRow: View {
         .padding(DS.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsCardBackground()
+        // spec 057: long press → 保存 / コピー / 共有
+        .contextMenu {
+            AnswerActionsMenu(
+                question: previousUserQuestion,
+                answer: message.text,
+                citedArticleIDs: message.citedArticleIDs.compactMap { UUID(uuidString: $0) },
+                onSave: { saveExplicit() }
+            )
+        }
+    }
+
+    /// spec 057: clarification chip tap を ChatTabView に通知する Combine subject (static)。
+    static let clarificationTapNotificationPublisher = PassthroughSubject<String, Never>()
+
+    /// spec 057: assistant message に紐付く直前の user message text (long press 「保存」用)。
+    /// 同 session 内で本 message より前の user message を探す。
+    private var previousUserQuestion: String {
+        guard let session = message.session else { return "" }
+        let sorted = (session.messages ?? []).sorted { $0.timestamp < $1.timestamp }
+        guard let myIndex = sorted.firstIndex(where: { $0.id == message.id }) else { return "" }
+        let earlier = sorted.prefix(myIndex)
+        return earlier.reversed().first(where: { $0.role == ChatMessageRole.user.rawValue })?.text ?? ""
+    }
+
+    private func saveExplicit() {
+        guard !message.clarificationSuggestions.isEmpty == false else {
+            // clarification message は保存しない (assistant answer のみ)
+            return
+        }
+        guard let service = serviceContainer.savedAnswerService else { return }
+        do {
+            _ = try service.saveExplicit(
+                question: previousUserQuestion,
+                answer: message.text,
+                citedArticleIDs: message.citedArticleIDs,
+                sessionID: message.session?.id
+            )
+        } catch {
+            // silent fail (logger なし、UI feedback は haptic で代替)
+        }
     }
 
     /// AttributedString を生成 — `[タイトル](article-id://UUID)` を inline link 化、

@@ -221,6 +221,14 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var tutorReplyCallCount = 0
     var lastTutorReplyPrompt: String?
 
+    /// spec 057: Agentic Chat 用 AgentAction sequence (FIFO で消費)。
+    /// nextAgentActions が空のとき、`defaultAgentAction` を返す。
+    var nextAgentActions: [AgentAction] = []
+    var defaultAgentAction: AgentAction = .immediate(answer: "Mock default agent answer")
+    var agentActionCallCount = 0
+    var lastAgentActionPrompt: String?
+    var agentActionError: Error?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -318,6 +326,19 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         case .success(let output): return output
         case .failure(let error): throw error
         }
+    }
+
+    func generateAgentAction(prompt: String) async throws -> AgentAction {
+        agentActionCallCount += 1
+        lastAgentActionPrompt = prompt
+        if let error = agentActionError {
+            agentActionError = nil
+            throw error
+        }
+        if !nextAgentActions.isEmpty {
+            return nextAgentActions.removeFirst()
+        }
+        return defaultAgentAction
     }
 }
 

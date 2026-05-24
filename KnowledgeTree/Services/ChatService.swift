@@ -65,13 +65,18 @@ final class ChatService: ChatServiceProtocol {
     /// 1 ユーザーあたりの最大セッション数 (FIFO で古いを削除)。
     private let maxSessions: Int = 50
 
+    /// spec 057: Agentic Chat agent loop を有効にするか (default true、production)。
+    /// test では false にして既存 RAG 経路テストを継続実行可能。
+    private let agentLoopEnabled: Bool
+
     init(
         context: ModelContext,
         embeddingService: EmbeddingService,
         session: LanguageModelSessionProtocol,
         availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
         graphTraversal: GraphTraversalServiceProtocol? = nil,
-        savedAnswerService: SavedAnswerServiceProtocol? = nil
+        savedAnswerService: SavedAnswerServiceProtocol? = nil,
+        agentLoopEnabled: Bool = true
     ) {
         self.context = context
         self.embeddingService = embeddingService
@@ -79,6 +84,7 @@ final class ChatService: ChatServiceProtocol {
         self.availability = availability
         self.graphTraversal = graphTraversal
         self.savedAnswerService = savedAnswerService
+        self.agentLoopEnabled = agentLoopEnabled
     }
 
     // MARK: - send
@@ -104,15 +110,133 @@ final class ChatService: ChatServiceProtocol {
         }
         session.lastMessageAt = .now
 
+        // spec 057: Agentic Chat — Agent loop で intent 判定 (MVP は 1 round、後で max 3 round に拡張可能)
+        // - Apple Intelligence 利用可 + agentLoopEnabled なら AgentAction 取得 → switch 分岐
+        // - 不可 / agent loop error / agentLoopEnabled=false → 既存 RAG 経路に fallback
+        if agentLoopEnabled, availability.isAvailable, let agentAction = await tryGenerateAgentAction(question: trimmed, contextMessages: contextMessages) {
+            switch agentAction {
+            case .immediate(let answer):
+                // 即答: Foundation Models 一般知識、検索なし、引用なし
+                let filtered = HedgePhraseFilter.replace(answer)
+                return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
+
+            case .askClarification(let q, let suggestions):
+                // 聞き返し: chip 3 つ + 質問本文を 1 assistant message として永続化
+                return try persistAssistant(text: q, citedIDs: [], suggestions: Array(suggestions.prefix(3)), in: session)
+
+            case .searchArticles(let searchQuery):
+                // 記事検索: 既存 RAG 経路を実行、ただし question を search query に置換
+                return try await executeRAG(originalQuestion: trimmed, searchQuestion: searchQuery, contextMessages: contextMessages, in: session)
+
+            case .finalAnswer(let text, let ids):
+                // 最終答え: LLM が事前に統合済 (rare、通常は searchArticles 経由で RAG 実行が先)
+                let filtered = HedgePhraseFilter.replace(text)
+                let citedStrings = ids.map { $0.uuidString }
+                return try persistAssistant(text: filtered, citedIDs: citedStrings, suggestions: [], in: session)
+            }
+        }
+
+        // Fallback: 既存 RAG 経路
+        return try await executeRAG(originalQuestion: trimmed, searchQuestion: trimmed, contextMessages: contextMessages, in: session)
+    }
+
+    // MARK: - spec 057: Agent loop helpers
+
+    /// Agent loop の最初の 1 round で AgentAction を取得。エラー時 nil (caller が fallback 経路)。
+    private func tryGenerateAgentAction(question: String, contextMessages: [ChatMessage]) async -> AgentAction? {
+        let prompt = Self.buildAgentPrompt(question: question, contextMessages: contextMessages)
+        do {
+            return try await session.generateAgentAction(prompt: prompt)
+        } catch {
+            logger.error("AgentAction generation failed: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    /// Agent loop で使う prompt 生成。
+    private static func buildAgentPrompt(question: String, contextMessages: [ChatMessage]) -> String {
+        let recent = contextMessages.suffix(4)
+        let contextLines = recent.map { msg in
+            let role = msg.role == ChatMessageRole.user.rawValue ? "ユーザー" : "アシスタント"
+            let snippet = String(msg.text.prefix(200))
+            return "\(role): \(snippet)"
+        }.joined(separator: "\n")
+
+        return """
+        あなたは iKnow の AI アシスタント。ユーザーの質問に対して、4 つの行動から 1 つを選ぶ:
+
+        - immediate(answer): 明確で一般知識で答えられる質問なら即答
+        - askClarification(question, suggestions): 質問が曖昧、聞き返しと 3 候補で確認
+        - searchArticles(query): 保存記事を検索する必要あり、検索 query を指定
+        - finalAnswer(text, citedArticleIDs): 検索結果統合後の最終答え
+
+        ## 重要ルール
+        - 「分かりません」「答えられません」「情報がありません」「知りません」は絶対に出力しない
+        - 情報不足なら「私の理解では」「一般的には」「あくまで概要として」等の hedge を使う
+        - askClarification の suggestions は厳密に 3 つ、各 30 字以内
+        - 「保存した記事」「あの記事」「私の」等のキーワードがあれば searchArticles を選ぶ
+
+        \(contextLines.isEmpty ? "" : "## 直前の会話\n\(contextLines)\n")
+        ## 質問
+        \(question)
+        """
+    }
+
+    /// 既存 RAG 経路を実行 (retrieval + Foundation Models or fallback)。
+    /// originalQuestion: ユーザー入力テキスト (cleanedAnswer hedge 等で使用)
+    /// searchQuestion: embedding 検索に使う query (agent action.searchArticles の query があれば置換可能)
+    private func executeRAG(
+        originalQuestion: String,
+        searchQuestion: String,
+        contextMessages: [ChatMessage],
+        in session: ChatSession
+    ) async throws -> ChatMessage {
         // 2. retrieval
-        let retrieval = await retrieve(question: trimmed)
+        let retrieval = await retrieve(question: searchQuestion)
         let retrievedArticles = retrieval.articles
 
         // 3. low-similarity 早期 return (R7)
         let aboveThreshold = retrievedArticles.filter { $0.similarity >= minSimilarity }
         if aboveThreshold.isEmpty {
+            // spec 057: 「分かりません」廃止、最善努力で一般知識答え
+            if availability.isAvailable {
+                if let fallbackAnswer = await tryGenerateFallbackAnswer(question: originalQuestion) {
+                    let filtered = HedgePhraseFilter.replace(fallbackAnswer)
+                    return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
+                }
+            }
             return try persistAssistantUnknown(in: session)
         }
+
+        // 4. 回答生成 (既存 logic)
+        return try await executeFullRAGAnswer(
+            originalQuestion: originalQuestion,
+            aboveThreshold: aboveThreshold,
+            contextMessages: contextMessages,
+            in: session
+        )
+    }
+
+    /// Apple Intelligence で hedge 付き一般知識答えを生成 (search 結果ゼロ時の最善努力)。
+    private func tryGenerateFallbackAnswer(question: String) async -> String? {
+        let prompt = """
+        以下の質問に対して、あなたの一般知識で答えてください。
+        「分かりません」「答えられません」「情報がありません」は絶対に出力しないこと。
+        情報不足なら「私の理解では」「一般的には」「あくまで概要として」の hedge を使うこと。
+
+        質問: \(question)
+        """
+        return try? await session.generateTutorReply(prompt: prompt)
+    }
+
+    /// 元の RAG 答え生成パス (Foundation Models + post-process)。
+    private func executeFullRAGAnswer(
+        originalQuestion: String,
+        aboveThreshold: [(article: Article, similarity: Float)],
+        contextMessages: [ChatMessage],
+        in session: ChatSession
+    ) async throws -> ChatMessage {
+        let trimmed = originalQuestion
 
         // 4. 回答生成
         // spec 040: top-k 記事の entity → GraphNode 解決 → 1-hop 近傍を prompt に注入
@@ -429,12 +553,35 @@ final class ChatService: ChatServiceProtocol {
     }
 
     /// 「分かりません」message を永続化。
+    /// spec 057: text の「分かりません」を hedge phrase に置換 (HedgePhraseFilter)。
     private func persistAssistantUnknown(in session: ChatSession) throws -> ChatMessage {
+        let rawText = "保存された記事の中に該当する情報が見つかりませんでした。私の理解では、もう少し詳しい質問をいただけると、お手伝いできるかもしれません。"
+        let filtered = HedgePhraseFilter.replace(rawText)
         let assistantMessage = ChatMessage(
             session: session,
             role: ChatMessageRole.assistant.rawValue,
-            text: "分かりません。保存された記事の中に該当する情報が見つかりませんでした。",
+            text: filtered,
             citedArticleIDs: []
+        )
+        context.insert(assistantMessage)
+        session.lastMessageAt = .now
+        try context.save()
+        return assistantMessage
+    }
+
+    /// spec 057: 汎用 assistant message 永続化 (immediate / clarification / finalAnswer の共通 helper)。
+    private func persistAssistant(
+        text: String,
+        citedIDs: [String],
+        suggestions: [String],
+        in session: ChatSession
+    ) throws -> ChatMessage {
+        let assistantMessage = ChatMessage(
+            session: session,
+            role: ChatMessageRole.assistant.rawValue,
+            text: text,
+            citedArticleIDs: citedIDs,
+            clarificationSuggestions: suggestions
         )
         context.insert(assistantMessage)
         session.lastMessageAt = .now

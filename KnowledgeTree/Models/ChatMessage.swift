@@ -21,6 +21,9 @@ final class ChatMessage {
     var text: String = ""
     var citedArticleIDs: [String] = []
     var timestamp: Date = Date.now
+    /// spec 057: clarification message のときの 3 候補 chip (assistant role のみ意味あり)。
+    /// 通常 answer の場合は空配列。
+    var clarificationSuggestions: [String] = []
 
     init(
         id: UUID = UUID(),
@@ -28,7 +31,8 @@ final class ChatMessage {
         role: String,
         text: String,
         citedArticleIDs: [String] = [],
-        timestamp: Date = Date.now
+        timestamp: Date = Date.now,
+        clarificationSuggestions: [String] = []
     ) {
         self.id = id
         self.session = session
@@ -36,6 +40,7 @@ final class ChatMessage {
         self.text = text
         self.citedArticleIDs = citedArticleIDs
         self.timestamp = timestamp
+        self.clarificationSuggestions = clarificationSuggestions
     }
 }
 

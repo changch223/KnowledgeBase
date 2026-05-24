@@ -229,6 +229,11 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// Generable 制約なし、plain string 返却。prompt 内に instructions + concept context + 会話履歴 + user 入力を全て展開する。
     /// retrieval なし (ChatService の RAG 経路を経由しない、low-similarity 早期 return を避けるため)。
     func generateTutorReply(prompt: String) async throws -> String
+
+    /// spec 057: Agentic Chat 用、AgentAction Generable enum を生成。
+    /// LLM が agent loop の毎 turn で「immediate / askClarification / searchArticles / finalAnswer」のいずれかを返す。
+    /// Swift 側で switch 分岐して状態遷移する (Tool Use 不在の代替パターン)。
+    func generateAgentAction(prompt: String) async throws -> AgentAction
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -354,6 +359,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
             prompt
         }
         return response.content
+    }
+
+    /// spec 057: Agentic Chat 用 AgentActionOutput Generable struct 生成 → AgentAction enum に変換。
+    func generateAgentAction(prompt: String) async throws -> AgentAction {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: AgentActionOutput.self
+        ) {
+            prompt
+        }
+        return AgentAction(from: response.content)
     }
 }
 

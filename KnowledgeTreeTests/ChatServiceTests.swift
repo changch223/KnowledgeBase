@@ -69,13 +69,16 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         let result = try await service.send(question: "Swift について教えて", in: session)
 
         #expect(result.role == "assistant")
-        #expect(result.text.contains("分かりません"))
+        // spec 057: 「分かりません」廃止、何かしらの answer 返却 (tutor reply fallback or hedge メッセージ)
+        #expect(!HedgePhraseFilter.containsBanned(result.text))
+        #expect(!result.text.isEmpty)
         #expect(result.citedArticleIDs.isEmpty)
     }
 
@@ -102,12 +105,14 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         let result = try await service.send(question: "Swift について", in: session)
 
-        #expect(result.text.contains("分かりません"))
+        // spec 057: 「分かりません」廃止、cited 空時は hedge phrase 入りメッセージに置換
+        #expect(!HedgePhraseFilter.containsBanned(result.text))
         #expect(result.citedArticleIDs.isEmpty)
     }
 
@@ -134,7 +139,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         let result = try await service.send(question: "Swift 6 について", in: session)
@@ -160,7 +166,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         let result = try await service.send(question: "Swift 6 について", in: session)
@@ -189,7 +196,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         let result = try await service.send(question: "Swift 6 について", in: session)
@@ -212,7 +220,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
 
         // 50 セッション作成
@@ -247,7 +256,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
 
         // 3 セッション + メッセージを追加
@@ -321,7 +331,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
 
@@ -359,7 +370,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
 
         // 2 session 作成、片方に message を挿入
@@ -429,7 +441,8 @@ struct ChatServiceTests {
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
             availability: availability,
-            graphTraversal: nil
+            graphTraversal: nil,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         _ = try await service.send(question: "Swift 6 について", in: session)
@@ -474,7 +487,8 @@ struct ChatServiceTests {
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
             availability: availability,
-            graphTraversal: GraphTraversalService()
+            graphTraversal: GraphTraversalService(),
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         _ = try await service.send(question: "Apple について", in: session)
@@ -524,7 +538,8 @@ struct ChatServiceTests {
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
             availability: availability,
-            graphTraversal: GraphTraversalService()
+            graphTraversal: GraphTraversalService(),
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
         _ = try await service.send(question: "Swift 6 リリース 機能", in: session)
@@ -554,7 +569,8 @@ struct ChatServiceTests {
             context: context,
             embeddingService: makeMockEmbedding(available: false),
             session: mockSession,
-            availability: availability
+            availability: availability,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
 
@@ -589,7 +605,8 @@ struct ChatServiceTests {
             session: mockSession,
             availability: availability,
             graphTraversal: nil,
-            savedAnswerService: mockSavedAnswer
+            savedAnswerService: mockSavedAnswer,
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
 
@@ -618,7 +635,8 @@ struct ChatServiceTests {
             session: mockSession,
             availability: availability,
             graphTraversal: nil,
-            savedAnswerService: nil  // 未注入
+            savedAnswerService: nil,  // 未注入
+            agentLoopEnabled: false
         )
         let session = try service.createSession()
 
@@ -659,5 +677,17 @@ final class MockSavedAnswerService: SavedAnswerServiceProtocol {
         sessionID: UUID?
     ) async {
         captureIfWorthyOrReplaceStaleCallCount += 1
+    }
+
+    /// spec 057: mock for saveExplicit (long press menu「保存」)
+    var saveExplicitCallCount = 0
+    func saveExplicit(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) throws -> SavedAnswer {
+        saveExplicitCallCount += 1
+        return SavedAnswer(question: question, answer: answer)
     }
 }
