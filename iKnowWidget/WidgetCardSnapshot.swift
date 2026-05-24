@@ -44,28 +44,16 @@ struct WidgetCardSnapshot: Identifiable, Hashable {
 extension WidgetCardSnapshot {
 
     /// App Group SwiftData container を開いて、SurfaceService 経由で上位 N 件を取得。
-    /// Widget context (@MainActor not necessarily) から呼ばれるため、@MainActor isolated。
+    /// TimelineProvider から `await` で呼ばれる。**async** 必須 — semaphore + MainActor は deadlock するため不可。
     @MainActor
-    static func fetchTop(limit: Int) -> [WidgetCardSnapshot] {
+    static func fetchTop(limit: Int) async -> [WidgetCardSnapshot] {
         guard let container = makeReadOnlyContainer() else {
             return []
         }
         let context = container.mainContext
         let service = DefaultUnderstandingCardSurfaceService(context: context)
-
-        // SurfaceService は async (await) だが、Task で待たずに同期化するため
-        // 同期版 wrapper を呼ぶ (内部は @MainActor fetch のみで I/O 待ちなし)。
-        // 注: SurfaceService.surfaceTopCards は async だが実体は同期 fetch なので
-        // ここで Task + semaphore で待つのは避け、await を spawn 同期化する。
-        let semaphore = DispatchSemaphore(value: 0)
-        var result: [UnderstandingCard] = []
-        Task { @MainActor in
-            result = await service.surfaceTopCards(limit: limit)
-            semaphore.signal()
-        }
-        _ = semaphore.wait(timeout: .now() + .seconds(2))
-
-        return result.compactMap { card in
+        let cards = await service.surfaceTopCards(limit: limit)
+        return cards.compactMap { card in
             convert(card: card)
         }
     }

@@ -25,10 +25,10 @@ struct LearningCardsProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (LearningCardsEntry) -> Void) {
-        // Widget gallery 用 snapshot — 同期で placeholder か実データを返す
+        // Widget gallery 用 snapshot — 実データを await で取得
         let limit = limitForFamily(context.family)
         Task { @MainActor in
-            let cards = WidgetCardSnapshot.fetchTop(limit: limit)
+            let cards = await WidgetCardSnapshot.fetchTop(limit: limit)
             completion(LearningCardsEntry(date: .now, cards: cards))
         }
     }
@@ -36,7 +36,7 @@ struct LearningCardsProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<LearningCardsEntry>) -> Void) {
         let limit = limitForFamily(context.family)
         Task { @MainActor in
-            let cards = WidgetCardSnapshot.fetchTop(limit: limit)
+            let cards = await WidgetCardSnapshot.fetchTop(limit: limit)
             let entry = LearningCardsEntry(date: .now, cards: cards)
             let nextUpdate = Date().addingTimeInterval(reloadInterval)
             let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
