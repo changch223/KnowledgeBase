@@ -27,6 +27,8 @@ struct DeepDiveChatView: View {
     @State private var startError: String?
     @State private var inputText: String = ""
     @State private var isSending: Bool = false
+    /// spec 044 brushup 2: 「✓ わかった」「🤔 もっと」「✗ 興味ない」tap 直後の視覚 fb (2 秒で消える)
+    @State private var ackToast: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,6 +39,19 @@ struct DeepDiveChatView: View {
         }
         .navigationTitle(Text(card.deepDiveTitle))
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottom) {
+            if let ackToast {
+                Text(ackToast)
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, DS.Spacing.xl)
+                    .padding(.vertical, DS.Spacing.md)
+                    .background(.regularMaterial, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.green.opacity(0.4), lineWidth: 1))
+                    .padding(.bottom, 140)  // action bar + input の上に出す
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .accessibilityIdentifier("deepdive.ackToast")
+            }
+        }
         .task {
             await startChat()
         }
@@ -172,6 +187,17 @@ struct DeepDiveChatView: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         guard let tracker = services.understandingTrackerService else { return }
         try? await tracker.recordUnderstood(card: card)
+        // 視覚 fb: toast 表示 + AI に「次の確認質問」を投げる (家庭教師ループ継続)
+        await showAck("✓ 記録しました")
+        if let service = services.deepDiveChatService, let session {
+            isSending = true
+            defer { isSending = false }
+            _ = try? await service.sendUserMessage(
+                "今のところまでは理解しました。もう少し進んだ次の確認質問を 1 つお願いします。",
+                in: session,
+                card: card
+            )
+        }
     }
 
     private func handleNeedMore() async {
@@ -180,6 +206,7 @@ struct DeepDiveChatView: View {
               let service = services.deepDiveChatService,
               let session else { return }
         try? await tracker.recordNeedMore(card: card)
+        await showAck("🤔 別の角度で聞きます")
         isSending = true
         defer { isSending = false }
         _ = try? await service.sendUserMessage("もう少し別の角度から教えてください。", in: session, card: card)
@@ -190,6 +217,17 @@ struct DeepDiveChatView: View {
         guard let tracker = services.understandingTrackerService else { return }
         try? await tracker.recordDismissed(card: card)
         dismiss()
+    }
+
+    /// 2 秒間 ack toast を表示して fade out。calm UX。
+    private func showAck(_ text: String) async {
+        withAnimation(.easeOut(duration: 0.25)) {
+            ackToast = text
+        }
+        try? await Task.sleep(nanoseconds: 1_800_000_000)
+        withAnimation(.easeIn(duration: 0.3)) {
+            ackToast = nil
+        }
     }
 }
 
