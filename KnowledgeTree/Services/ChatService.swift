@@ -299,7 +299,7 @@ final class ChatService: ChatServiceProtocol {
     /// spec 040: relatedEntities が非空なら「## 関連エンティティ」セクションを記事一覧の後に挿入。
     static func buildPrompt(question: String, articles: [Article], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = []) -> String {
         var prompt = """
-        あなたは知積 (KnowledgeTree) の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
+        あなたは iKnow の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
 
         ## ルール
         1. 必ず以下の【参考記事】の内容のみに基づいて回答してください。一般知識から推測してはいけません。

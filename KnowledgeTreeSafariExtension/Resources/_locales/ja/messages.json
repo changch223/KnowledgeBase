@@ -1,10 +1,10 @@
 {
     "extension_name": {
-        "message": "知積",
+        "message": "iKnow",
         "description": "The display name for the extension."
     },
     "extension_description": {
-        "message": "Safari で開いたページを 知積 に自動保存",
+        "message": "Safari で開いたページを iKnow に自動保存",
         "description": "Description of what the extension does."
     }
 }

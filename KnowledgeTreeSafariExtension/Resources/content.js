@@ -18,7 +18,7 @@
     if (window !== window.top) return;
 
     // 診断 log (Mac Safari Web Inspector で確認)
-    console.log("[知積] content.js injected at", window.location.href);
+    console.log("[iKnow] content.js injected at", window.location.href);
 
     const BLACKLIST_PATTERNS = [
         /^https?:\/\/[^/]*\.google\.[a-z.]+\/search/,
@@ -60,7 +60,7 @@
             return;
         }
         if (isBlacklisted(url)) {
-            console.log("[知積] blacklisted, skip:", url);
+            console.log("[iKnow] blacklisted, skip:", url);
             lastProcessedURL = url;
             return;
         }
@@ -72,14 +72,14 @@
             pendingTimer = null;
         }
 
-        console.log("[知積] requesting autoSave settings for", url);
+        console.log("[iKnow] requesting autoSave settings for", url);
         browser.runtime
             .sendMessage({ action: "getAutoSaveSettings" })
             .then((response) => {
-                console.log("[知積] settings response:", response);
+                console.log("[iKnow] settings response:", response);
                 const settings = response || {};
                 if (!settings.autoSaveEnabled) {
-                    console.log("[知積] autoSave is OFF, skip");
+                    console.log("[iKnow] autoSave is OFF, skip");
                     return;
                 }
 
@@ -88,30 +88,30 @@
                     : 10;
                 const delayMs = Math.max(0, delaySec) * 1000;
 
-                console.log("[知積] autoSave scheduled in", delaySec, "seconds for", url);
+                console.log("[iKnow] autoSave scheduled in", delaySec, "seconds for", url);
                 pendingTimer = setTimeout(() => {
                     pendingTimer = null;
                     // 遅延中に再び URL が変わっていたら、最新 URL の info を抽出 (lastProcessedURL は更新済)
                     const info = extractPageInfo();
                     // 遅延中に異なる URL に遷移し、新フローが既に発火している場合は skip
                     if (info.url !== lastProcessedURL) {
-                        console.log("[知積] URL changed during delay, skip stale save");
+                        console.log("[iKnow] URL changed during delay, skip stale save");
                         return;
                     }
-                    console.log("[知積] sending saveURL:", info.url);
+                    console.log("[iKnow] sending saveURL:", info.url);
                     browser.runtime.sendMessage({
                         action: "saveURL",
                         url: info.url,
                         title: info.title,
                         ogImage: info.ogImage,
                         source: "auto",
-                    }).then((r) => console.log("[知積] saveURL response:", r))
-                      .catch((e) => console.error("[知積] saveURL failed:", e));
+                    }).then((r) => console.log("[iKnow] saveURL response:", r))
+                      .catch((e) => console.error("[iKnow] saveURL failed:", e));
                 }, delayMs);
             })
             .catch((e) => {
                 // silent fail (constitution V)
-                console.error("[知積] settings query failed:", e);
+                console.error("[iKnow] settings query failed:", e);
             });
     }
 
@@ -128,7 +128,7 @@
         if (req.action === "urlMaybeChanged") {
             // background.js の tabs.onUpdated 経由で来る通知。
             // 同 URL なら lastProcessedURL チェックで no-op、別 URL なら再処理。
-            console.log("[知積] urlMaybeChanged event received");
+            console.log("[iKnow] urlMaybeChanged event received");
             runAutoSaveFlow();
             sendResponse({ ok: true });
             return false;

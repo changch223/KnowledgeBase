@@ -62,6 +62,9 @@ final class ServiceContainer {
     var deepDiveChatService: DeepDiveChatServiceProtocol?
     /// spec 045: SavedAnswer の「再生成」trigger。SavedAnswerDetailView がセット → KnowledgeTreeApp が観測して AI チャットタブに切替 + ChatTabView が消費して新 ChatSession + question 自動送信。
     var pendingRegenerateRequest: PendingRegenerateRequest?
+    /// spec 048: Apple Intelligence 可用性 (banner 表示判定用)。
+    /// bootstrap 完了後に set される。nil ならまだ初期化中 = banner も非表示。
+    var availabilityChecker: AvailabilityChecker?
 }
 
 /// spec 045: 「再生成」trigger payload。

@@ -27,7 +27,7 @@ browser.action.onClicked.addListener(async (tab) => {
         });
     } catch (e) {
         // silent fail
-        console.error("[知積] manual save failed:", e);
+        console.error("[iKnow] manual save failed:", e);
     }
 });
 
@@ -45,7 +45,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             .sendNativeMessage("application.id", message)
             .then((response) => sendResponse(response))
             .catch((e) => {
-                console.error("[知積] getAutoSaveSettings relay failed:", e);
+                console.error("[iKnow] getAutoSaveSettings relay failed:", e);
                 sendResponse(null);
             });
         return true;  // async response (Safari 必須)
@@ -57,7 +57,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             .sendNativeMessage("application.id", message)
             .then(() => sendResponse({ ok: true }))
             .catch((e) => {
-                console.error("[知積] saveURL relay failed:", e);
+                console.error("[iKnow] saveURL relay failed:", e);
                 sendResponse({ ok: false });
             });
         return true;
