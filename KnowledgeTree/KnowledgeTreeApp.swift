@@ -45,6 +45,10 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.registerHandler()
         // spec 042: ConceptPage 再合成 BGTask handler の register (chunked extraction とは別 identifier)
         BackgroundExtractionScheduler.shared.registerConceptResynthesisHandler()
+        // spec 058: 週 1 Lint loop BGTask handler の register (日曜 3 AM、別 identifier)
+        BackgroundExtractionScheduler.shared.registerWeeklyLintHandler()
+        // spec 058: Schema 外出し (docs/iknow-schema.md) を memory cache、fallback で安全保証
+        SchemaLoader.shared.load()
         // spec 056: V3.0 redesign で起動 default は知識 Clip に固定 (毎回 reset)。
         // 旧 spec 044 / spec 035 の tab migration flag は不要 (default を struct init で強制)。
         // spec 051 Phase A 完成: iCloud toggle が有効 (forced reset 削除)。
@@ -289,6 +293,13 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
         // spec 042: ConceptPage 再合成 BGTask に synthesis service を bind
         BackgroundExtractionScheduler.shared.conceptSynthesisProvider = { conceptSynthesisService }
+        // spec 058: 週 1 Lint loop BGTask に LintEngine を bind
+        let lintEngine: LintEngineProtocol = DefaultLintEngine(
+            context: context,
+            refreshTrigger: refreshTrigger,
+            categoryClassifier: categoryClassifier
+        )
+        BackgroundExtractionScheduler.shared.lintEngineProvider = { lintEngine }
 
         // spec 021: ChatService 構築 (embedding + Foundation Models + availability で 3 経路分岐)
         // spec 040: graphTraversal を inject、RAG prompt に「## 関連エンティティ」を追加
@@ -366,6 +377,10 @@ struct KnowledgeTreeApp: App {
         // spec 056: V3.0 redesign 用の新 service 2 つ
         serviceContainer.recentArticlesService = DefaultRecentArticlesService()
         serviceContainer.suggestedPromptGenerator = DefaultSuggestedPromptGenerator()
+        // spec 058: LintEngine (週 1 BGTask + Settings 「今すぐ整理」 button から呼ばれる)
+        // 上記で BGTaskScheduler 用に作成済の lintEngine を ServiceContainer にも入れる
+        serviceContainer.lintEngine = lintEngine
+        serviceContainer.healthScoreService = DefaultHealthScoreService(context: context)
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()
@@ -405,5 +420,7 @@ struct KnowledgeTreeApp: App {
         await conceptSynthesisService.resynthesizeAllStale()
         // spec 042: 次回 BGTask を 1 時間後に予約
         await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis()
+        // spec 058: 週 1 Lint loop BGTask の最初の予約 (次の日曜 3 AM)
+        await BackgroundExtractionScheduler.shared.scheduleNextWeeklyLint()
     }
 }

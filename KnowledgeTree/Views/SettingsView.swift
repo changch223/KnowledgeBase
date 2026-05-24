@@ -40,6 +40,17 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            // spec 058: 健全性スコア + 「今すぐ整理」 button (最上部に控えめに配置)
+            Section {
+                HealthScoreCard()
+                LintNowButton()
+            } header: {
+                Text("settings.health.section.title")
+            }
+
+            // spec 058: 整理ログ (直近 30 件)
+            LintLogSection()
+
             // spec 051 Phase A 完成: iCloud sync toggle (opt-in、再起動必要)
             Section {
                 if showRestartBanner {

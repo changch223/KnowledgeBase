@@ -57,16 +57,22 @@ final class DefaultLintEngine: LintEngineProtocol {
     private let maxLinks: Int = 5
     /// LintLog cap (FIFO で最古から削除)
     private let lintLogCap: Int = 100
+    /// spec 058 Step 6: SavedAnswer auto-refresh 用 (ChatService 経由 agent loop で再生成)
+    private let chatService: ChatServiceProtocol?
+    /// 1 回の loop で最大 N 件 SavedAnswer を refresh (token cost / 時間制限内)
+    private let maxRefreshPerRun: Int = 3
 
     init(
         context: ModelContext,
         refreshTrigger: RefreshTrigger? = nil,
         categoryClassifier: AutoCategoryClassifier? = nil,
+        chatService: ChatServiceProtocol? = nil,
         inactiveCleanupDays: Int = 60
     ) {
         self.context = context
         self.refreshTrigger = refreshTrigger
         self.categoryClassifier = categoryClassifier
+        self.chatService = chatService
         self.inactiveCleanupDays = inactiveCleanupDays
     }
 
@@ -91,9 +97,8 @@ final class DefaultLintEngine: LintEngineProtocol {
         // Step 5: Tag/Category 再分類
         result.reclassifiedCount = await stepReclassifyTagCategories()
 
-        // Step 6: SavedAnswer auto-refresh
-        // (本 step は spec 058 Phase C で実装、現段階では skip)
-        // result.refreshedSavedAnswerCount = await stepRefreshStaleSavedAnswers()
+        // Step 6: SavedAnswer auto-refresh (spec 058 Phase C)
+        result.refreshedSavedAnswerCount = await stepRefreshStaleSavedAnswers()
 
         // LintLog cap 維持 (FIFO で最古から削除)
         trimLintLogToCap()
@@ -311,6 +316,44 @@ final class DefaultLintEngine: LintEngineProtocol {
         }
         try? context.save()
         return reclassifyCount
+    }
+
+    // MARK: - Step 6: SavedAnswer auto-refresh (spec 058 Phase C)
+
+    private func stepRefreshStaleSavedAnswers() async -> Int {
+        guard let chatService else { return 0 }
+        let descriptor = FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.isStale == true },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        let staleAnswers = (try? context.fetch(descriptor)) ?? []
+        let toRefresh = Array(staleAnswers.prefix(maxRefreshPerRun))
+        var refreshCount = 0
+
+        for stale in toRefresh {
+            // ChatService.send 経由で agent loop で新答え生成
+            // 新 session 作成 → ask → 新 SavedAnswer 作成 (saveExplicit でなく manual capture)
+            do {
+                let newSession = try chatService.createSession()
+                _ = try await chatService.send(
+                    question: stale.question,
+                    in: newSession,
+                    contextMessages: []
+                )
+                logLintAction(
+                    .refreshSavedAnswer,
+                    targetName: String(stale.question.prefix(60)),
+                    before: "isStale=true (id=\(stale.id.uuidString.prefix(8)))",
+                    after: "新 ChatSession で再生成"
+                )
+                // 旧 SavedAnswer は isStale=true のまま archive (履歴保持)
+                refreshCount += 1
+            } catch {
+                logger.error("LintEngine: SavedAnswer refresh failed: \(String(describing: error), privacy: .public)")
+            }
+        }
+        try? context.save()
+        return refreshCount
     }
 
     // MARK: - LintLog 永続化 + cap 維持

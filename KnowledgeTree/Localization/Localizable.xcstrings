@@ -4084,6 +4084,182 @@
           }
         }
       }
+    },
+    "settings.health.section.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理"
+          }
+        }
+      }
+    },
+    "settings.health.healthy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理対象はありません ✨"
+          }
+        }
+      }
+    },
+    "settings.health.targetCount %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理対象 %lld 件"
+          }
+        }
+      }
+    },
+    "settings.lintNow.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ整理する"
+          }
+        }
+      }
+    },
+    "settings.lintNow.result.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理完了"
+          }
+        }
+      }
+    },
+    "settings.lintNow.result.summary %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の操作を実行しました"
+          }
+        }
+      }
+    },
+    "settings.lintLog.section.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理ログ (直近 30 件)"
+          }
+        }
+      }
+    },
+    "settings.lintLog.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理ログはまだありません"
+          }
+        }
+      }
+    },
+    "settings.lintLog.empty.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週 1 自動整理が実行されると、ここに記録されます"
+          }
+        }
+      }
+    },
+    "lintLog.action.merge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統合"
+          }
+        }
+      }
+    },
+    "lintLog.action.deleteConceptPage": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除 (概念)"
+          }
+        }
+      }
+    },
+    "lintLog.action.deleteTag": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除 (タグ)"
+          }
+        }
+      }
+    },
+    "lintLog.action.linkConceptPage": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク追加"
+          }
+        }
+      }
+    },
+    "lintLog.action.reclassifyTag": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分野再分類"
+          }
+        }
+      }
+    },
+    "lintLog.action.refreshSavedAnswer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "答え再生成"
+          }
+        }
+      }
+    },
+    "lintLog.action.unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
