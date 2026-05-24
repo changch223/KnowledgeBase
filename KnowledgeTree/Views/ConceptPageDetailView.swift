@@ -114,9 +114,8 @@ struct ConceptPageDetailView: View {
                 .accessibilityIdentifier("conceptPageDetail_editButton")
             }
         }
-        .navigationDestination(for: UnderstandingCard.self) { card in
-            DeepDiveChatView(card: card)
-        }
+        // spec 058 polish: 親 NavigationStack (KnowledgeClipView) で同 destination 宣言済、
+        // 重複宣言で warning が出るため削除。「学習する」 button からの navigation は親経由で動作。
         .sheet(isPresented: $showEditSheet) {
             if let store = services.conceptPageStore {
                 ConceptPageEditSheet(
@@ -140,11 +139,8 @@ struct ConceptPageDetailView: View {
     }
 
     private var headerSection: some View {
+        // spec 058 polish: navigationTitle 経由で表示するため、body 内の title 重複を削除。
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-            Text(conceptPage.name)
-                .font(.largeTitle.bold())
-                .lineLimit(2)
-
             HStack(spacing: DS.Spacing.md) {
                 Text(categoryDisplay)
                     .font(.caption)
