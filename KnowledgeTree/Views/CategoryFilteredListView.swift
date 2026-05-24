@@ -170,7 +170,7 @@ enum CategoryFilter {
     static func categoryTags(_ allTags: [Tag], category: Category) -> [Tag] {
         allTags
             .filter { CategorySeed.category(for: $0.categoryRaw).name == category.name }
-            .sorted { $0.articles.count > $1.articles.count }
+            .sorted { ($0.articles ?? []).count > ($1.articles ?? []).count }
     }
 
     /// 表示するタグチップ。showsAll = false なら上位 5 個まで。
@@ -191,7 +191,7 @@ enum CategoryFilter {
         var seen = Set<PersistentIdentifier>()
         var result: [Article] = []
         for tag in pool {
-            for article in tag.articles where !seen.contains(article.persistentModelID) {
+            for article in (tag.articles ?? []) where !seen.contains(article.persistentModelID) {
                 seen.insert(article.persistentModelID)
                 result.append(article)
             }
@@ -210,7 +210,7 @@ private struct TagFilterChip: View {
         Button(action: onTap) {
             HStack(spacing: DS.Spacing.xxs) {
                 Text(tag.name)
-                Text("(\(tag.articles.count))")
+                Text("(\((tag.articles ?? []).count))")
                     .font(.caption2)
                     .foregroundStyle(isSelected ? .white.opacity(0.85) : .secondary)
             }
@@ -224,7 +224,7 @@ private struct TagFilterChip: View {
             .foregroundStyle(isSelected ? Color.white : .primary)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(tag.name)、\(tag.articles.count) 件\(isSelected ? "、選択中" : "")"))
+        .accessibilityLabel(Text("\(tag.name)、\((tag.articles ?? []).count) 件\(isSelected ? "、選択中" : "")"))
         .accessibilityIdentifier("category.detail.tagChip.\(tag.name)")
     }
 }

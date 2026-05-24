@@ -33,7 +33,7 @@ struct GraphExtractionServiceTests {
         // Tag 経由で Category 解決
         let tag = Tag(name: "tag-\(url)", categoryRaw: categoryRaw)
         context.insert(tag)
-        article.tags.append(tag)
+        article.tags?.append(tag)
 
         let knowledge = ExtractedKnowledge(article: article, status: .succeeded)
         knowledge.essence = essence
@@ -46,7 +46,7 @@ struct GraphExtractionServiceTests {
                 order: i
             )
             context.insert(entity)
-            knowledge.entities.append(entity)
+            knowledge.entities?.append(entity)
         }
         context.insert(knowledge)
         article.extractedKnowledge = knowledge

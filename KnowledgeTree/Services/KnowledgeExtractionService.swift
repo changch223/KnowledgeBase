@@ -163,7 +163,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private func markDigestStaleIfPossible(article: Article) {
         guard let digestService else { return }
         // article.tags はこの時点で applyAutoTagsIfPossible により設定済み
-        let categoryNames = Set(article.tags.compactMap(\.categoryRaw))
+        let categoryNames = Set((article.tags ?? []).compactMap(\.categoryRaw))
         for name in categoryNames {
             guard let category = CategorySeed.allSeeds.first(where: { $0.name == name }) else {
                 continue
@@ -245,7 +245,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             switch result {
             case .success(let output):
                 let status = Self.determineStatus(output: output)
-                logger.notice("knowledge result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) facts=\(output.keyFacts.count) entities=\(output.entities.count)")
+                logger.notice("knowledge result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) facts=\((output.keyFacts ?? []).count) entities=\((output.entities ?? []).count)")
                 if status == .failed {
                     try? store.upsertFailure(article: article, reason: "AI が記事から知識を抽出できませんでした")
                 } else {
@@ -408,7 +408,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         let durationMs = Int(Date().timeIntervalSince(startTime) * 1000)
         let status = aggregated.determineStatus()
 
-        logger.notice("knowledge chunked result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) processed=\(aggregated.successfulChunkCount)/\(chunks.count) hierarchical=\(useHierarchical) facts=\(aggregated.keyFacts.count) entities=\(aggregated.entities.count) metaCalls=\(metaCallCount) skippedTail=\(skippedTail)")
+        logger.notice("knowledge chunked result for \(article.url, privacy: .public): status=\(String(describing: status), privacy: .public) durationMs=\(durationMs) processed=\(aggregated.successfulChunkCount)/\(chunks.count) hierarchical=\(useHierarchical) facts=\((aggregated.keyFacts ?? []).count) entities=\((aggregated.entities ?? []).count) metaCalls=\(metaCallCount) skippedTail=\(skippedTail)")
 
         switch status {
         case .failed:
@@ -453,8 +453,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     static func determineStatus(output: ExtractedKnowledgeOutput) -> ExtractionStatus {
         let hasEssence = !output.essence.isEmpty
         let hasSummary = !output.summary.isEmpty
-        let hasKeyFacts = !output.keyFacts.isEmpty
-        let hasEntities = !output.entities.isEmpty
+        let hasKeyFacts = !(output.keyFacts ?? []).isEmpty
+        let hasEntities = !(output.entities ?? []).isEmpty
         let count = [hasEssence, hasSummary, hasKeyFacts, hasEntities].filter { $0 }.count
 
         switch count {

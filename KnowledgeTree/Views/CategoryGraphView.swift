@@ -90,7 +90,7 @@ struct CategoryGraphView: View {
                     // edges first (背面)
                     for node in nodes {
                         guard let sourcePoint = positionLookup[node.id] else { continue }
-                        for edge in node.outgoingEdges {
+                        for edge in (node.outgoingEdges ?? []) {
                             guard let target = edge.target,
                                   target.isActive,
                                   let targetPoint = positionLookup[target.id] else { continue }

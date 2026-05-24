@@ -70,7 +70,7 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
     }
 
     func resynthesize(_ conceptPage: ConceptPage) async {
-        let articles = conceptPage.relatedArticles.sorted { $0.savedAt > $1.savedAt }
+        let articles = (conceptPage.relatedArticles ?? []).sorted { $0.savedAt > $1.savedAt }
         let essences = articles.compactMap { $0.extractedKnowledge?.essence }.filter { !$0.isEmpty }
 
         if essences.isEmpty {
@@ -190,7 +190,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             return
         }
 
-        let articles = conceptPage.relatedArticles
+        let articles = conceptPage.relatedArticles ?? []
         guard !articles.isEmpty else {
             // 関連記事 0 件 → 何もせず stale 解除 (孤立 ConceptPage、Wikilint で別 spec)
             conceptPage.isStale = false
@@ -481,8 +481,9 @@ enum ConceptSynthesisCommon {
 
             if let existingPage {
                 // 関連記事 link、未 link なら追加 + isStale = true
-                if !existingPage.relatedArticles.contains(where: { $0.id == article.id }) {
-                    existingPage.relatedArticles.append(article)
+                if !(existingPage.relatedArticles?.contains(where: { $0.id == article.id }) ?? false) {
+                    if existingPage.relatedArticles == nil { existingPage.relatedArticles = [] }
+                    existingPage.relatedArticles?.append(article)
                 }
                 existingPage.isStale = true
                 existingPage.updatedAt = .now
@@ -525,7 +526,7 @@ enum ConceptSynthesisCommon {
     /// Article から代表 categoryRaw を解決。
     /// 複数 tag があれば最頻出、tag が無ければ「その他」。
     static func resolveCategoryRaw(for article: Article) -> String {
-        let raws = article.tags.compactMap(\.categoryRaw).filter { !$0.isEmpty }
+        let raws = (article.tags ?? []).compactMap(\.categoryRaw).filter { !$0.isEmpty }
         if raws.isEmpty {
             return CategorySeed.otherCategory.name
         }

@@ -54,7 +54,7 @@ struct AutoTagBackfillRunnerTests {
                 order: index
             )
             context.insert(entity)
-            knowledge.entities.append(entity)
+            knowledge.entities?.append(entity)
         }
         return article
     }
@@ -94,8 +94,8 @@ struct AutoTagBackfillRunnerTests {
         let runner = makeRunner(context: context, flagStore: flagStore)
         await runner.run()
 
-        #expect(a1.tags.count == 3)  // 全 entity が salience>=4
-        #expect(a2.tags.count == 2)
+        #expect((a1.tags ?? []).count == 3)  // 全 entity が salience>=4
+        #expect((a2.tags ?? []).count == 2)
         #expect(flagStore.isCompleted() == true)
     }
 
@@ -113,7 +113,7 @@ struct AutoTagBackfillRunnerTests {
         let runner = makeRunner(context: context, flagStore: flagStore)
         await runner.run()
 
-        #expect(a1.tags.count == 0)  // backfill スキップ
+        #expect((a1.tags ?? []).count == 0)  // backfill スキップ
         #expect(flagStore.isCompleted() == true)  // 維持
     }
 
@@ -164,10 +164,10 @@ struct AutoTagBackfillRunnerTests {
         )
         await runner.run()
 
-        #expect(target.tags.count == 3)  // auto-apply
-        #expect(skipA.tags.count == 1)   // 既存タグ維持、auto-apply スキップ
-        #expect(skipB.tags.count == 0)   // failed スキップ
-        #expect(skipC.tags.count == 0)   // pending スキップ
+        #expect((target.tags ?? []).count == 3)  // auto-apply
+        #expect((skipA.tags ?? []).count == 1)   // 既存タグ維持、auto-apply スキップ
+        #expect((skipB.tags ?? []).count == 0)   // failed スキップ
+        #expect((skipC.tags ?? []).count == 0)   // pending スキップ
     }
 
     @Test func testSkipsArticlesWithExistingTags() async throws {
@@ -191,8 +191,8 @@ struct AutoTagBackfillRunnerTests {
         )
         await runner.run()
 
-        #expect(article.tags.count == 1)  // 既存タグ 1 件のまま
-        #expect(article.tags.first?.name == "manual")
+        #expect((article.tags ?? []).count == 1)  // 既存タグ 1 件のまま
+        #expect((article.tags ?? []).first?.name == "manual")
     }
 
     @Test func testSkipsArticlesWithFailedKnowledge() async throws {
@@ -210,7 +210,7 @@ struct AutoTagBackfillRunnerTests {
         let runner = makeRunner(context: context, flagStore: flagStore)
         await runner.run()
 
-        #expect(article.tags.count == 0)
+        #expect((article.tags ?? []).count == 0)
     }
 
     @Test func testProcessesNewestFirst() async throws {
@@ -243,9 +243,9 @@ struct AutoTagBackfillRunnerTests {
         await runner.run()
 
         // 全 article に tag 付与確認 (順序の正確検証は内部実装詳細、ここでは全件処理を確認)
-        #expect(recent.tags.count == 1)
-        #expect(middle.tags.count == 1)
-        #expect(old.tags.count == 1)
+        #expect((recent.tags ?? []).count == 1)
+        #expect((middle.tags ?? []).count == 1)
+        #expect((old.tags ?? []).count == 1)
         #expect(flagStore.isCompleted() == true)
     }
 

@@ -12,7 +12,7 @@ struct ConceptPageCard: View {
     @Bindable var conceptPage: ConceptPage
 
     /// 関連記事数。Card preview に表示。
-    private var relatedCount: Int { conceptPage.relatedArticles.count }
+    private var relatedCount: Int { (conceptPage.relatedArticles ?? []).count }
 
     /// summary preview (1 行表示用)。空 or stale 時は「整理中…」placeholder。
     private var previewText: String {

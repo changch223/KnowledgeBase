@@ -111,10 +111,10 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         if let existing = article.extractedKnowledge {
             knowledge = existing
             // 旧 children を明示削除 (cascade delete だけだと SwiftData の動作が依存性高いため安全側)
-            for fact in knowledge.keyFacts {
+            for fact in (knowledge.keyFacts ?? []) {
                 context.delete(fact)
             }
-            for entity in knowledge.entities {
+            for entity in (knowledge.entities ?? []) {
                 context.delete(entity)
             }
             knowledge.keyFacts = []
@@ -138,7 +138,7 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         knowledge.skippedTailChars = skippedTailChars
 
         // KeyFacts: order を生成順で付与
-        for (idx, factOutput) in output.keyFacts.enumerated() {
+        for (idx, factOutput) in (output.keyFacts ?? []).enumerated() {
             let fact = KeyFact(
                 knowledge: knowledge,
                 statement: factOutput.statement,
@@ -146,11 +146,12 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
                 order: idx
             )
             context.insert(fact)
-            knowledge.keyFacts.append(fact)
+            if knowledge.keyFacts == nil { knowledge.keyFacts = [] }
+            knowledge.keyFacts?.append(fact)
         }
 
         // Entities: order を生成順、salience 順は表示時に sort
-        for (idx, entityOutput) in output.entities.enumerated() {
+        for (idx, entityOutput) in (output.entities ?? []).enumerated() {
             let entity = KnowledgeEntity(
                 knowledge: knowledge,
                 name: entityOutput.name,
@@ -159,7 +160,8 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
                 order: idx
             )
             context.insert(entity)
-            knowledge.entities.append(entity)
+            if knowledge.entities == nil { knowledge.entities = [] }
+            knowledge.entities?.append(entity)
         }
 
         try saveContext()
@@ -187,8 +189,9 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
             )
             staleDescriptor.fetchLimit = 1000
             let staleKnowledges = try context.fetch(staleDescriptor)
+            // spec 051 Phase A: ExtractedKnowledge.article は Optional 化、compactMap で nil 除外
             let staleArticles = staleKnowledges
-                .map(\.article)
+                .compactMap(\.article)
                 .filter { $0.body?.status == .succeeded }
 
             // 重複排除

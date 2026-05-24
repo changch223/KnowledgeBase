@@ -29,7 +29,7 @@ final class SavedAnswer {
     /// 引用 Article。`@Relationship(deleteRule: .nullify)` で Article 側に inverse property を追加せず、
     /// Article 削除時には relationship のみ自動 nullify され Article 自体は残る。
     @Relationship(deleteRule: .nullify)
-    var citedArticles: [Article] = []
+    var citedArticles: [Article]? = []
 
     /// 引用記事から resolve した関連 ConceptPage の id 配列 (overlap 数 desc top 5)。
     /// @Relationship ではなく ID 配列で弱結合、将来 spec 044+ で community-based 拡張時の migration 負担を回避。

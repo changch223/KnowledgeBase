@@ -220,9 +220,9 @@ struct SavedAnswerDetailView: View {
 
     @ViewBuilder
     private var citedArticlesSection: some View {
-        let sortedArticles = answer.citedArticles.sorted { $0.savedAt > $1.savedAt }
+        let sortedArticles = (answer.citedArticles ?? []).sorted { $0.savedAt > $1.savedAt }
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text(String(format: String(localized: "SavedAnswer.detail.citedArticles.title"), sortedArticles.count))
+            Text(String(format: String(localized: "SavedAnswer.(detail.citedArticles ?? []).title"), sortedArticles.count))
                 .font(.title3.bold())
             if sortedArticles.isEmpty {
                 Text("SavedAnswer.detail.emptyCitedArticles")

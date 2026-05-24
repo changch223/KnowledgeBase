@@ -59,12 +59,12 @@ final class GraphTraversalService: GraphTraversalServiceProtocol {
     func neighbors(of node: GraphNode) -> [GraphNode] {
         var seen: Set<UUID> = [node.id]
         var result: [GraphNode] = []
-        for edge in node.outgoingEdges {
+        for edge in (node.outgoingEdges ?? []) {
             guard let target = edge.target, target.isActive, !seen.contains(target.id) else { continue }
             seen.insert(target.id)
             result.append(target)
         }
-        for edge in node.incomingEdges {
+        for edge in (node.incomingEdges ?? []) {
             guard let source = edge.source, source.isActive, !seen.contains(source.id) else { continue }
             seen.insert(source.id)
             result.append(source)

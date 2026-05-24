@@ -87,8 +87,9 @@ final class SwiftDataArticleBodyStore: ArticleBodyStoreProtocol {
             )
             staleDescriptor.fetchLimit = 1000
             let staleBodies = try context.fetch(staleDescriptor)
+            // spec 051 Phase A: ArticleBody.article は Optional 化、compactMap で nil 除外
             let staleArticles = staleBodies
-                .map(\.article)
+                .compactMap(\.article)
                 .filter { $0.enrichment?.rawHTML != nil }
 
             var seen: Set<UUID> = []

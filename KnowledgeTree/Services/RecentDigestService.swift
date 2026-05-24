@@ -109,7 +109,7 @@ final class RecentDigestService: RecentDigestServiceProtocol {
 
         for (i, article) in articles.enumerated() {
             let essence = article.extractedKnowledge?.essence ?? ""
-            let keyFacts = article.extractedKnowledge?.keyFacts.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
+            let keyFacts = article.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
             prompt += """
 
             [\(i + 1)] タイトル: \(article.title)

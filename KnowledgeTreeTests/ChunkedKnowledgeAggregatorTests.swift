@@ -81,7 +81,7 @@ struct ChunkedKnowledgeAggregatorTests {
             ChunkResult(chunkIndex: 1, output: c2, error: nil),
         ]
         let aggregated = ChunkedKnowledgeAggregator.merge(results: results, metaSummary: nil)
-        #expect(aggregated.keyFacts.count == 2)
+        #expect((aggregated.keyFacts ?? []).count == 2)
         #expect(aggregated.keyFacts[0].statement == "事実 A")
         #expect(aggregated.keyFacts[1].statement == "事実 B")
     }
@@ -93,7 +93,7 @@ struct ChunkedKnowledgeAggregatorTests {
         let c1 = chunkOutput(keyFacts: [f1, f2])
         let results = [ChunkResult(chunkIndex: 0, output: c1, error: nil)]
         let aggregated = ChunkedKnowledgeAggregator.merge(results: results, metaSummary: nil)
-        #expect(aggregated.keyFacts.count == 2)
+        #expect((aggregated.keyFacts ?? []).count == 2)
     }
 
     @Test("entities の case-insensitive 統合")
@@ -105,7 +105,7 @@ struct ChunkedKnowledgeAggregatorTests {
             results: [ChunkResult(chunkIndex: 0, output: c1, error: nil)],
             metaSummary: nil
         )
-        #expect(aggregated.entities.count == 1)
+        #expect((aggregated.entities ?? []).count == 1)
         #expect(aggregated.entities[0].salience == 5)  // max
     }
 
@@ -119,7 +119,7 @@ struct ChunkedKnowledgeAggregatorTests {
             results: [ChunkResult(chunkIndex: 0, output: c1, error: nil)],
             metaSummary: nil
         )
-        #expect(aggregated.entities.count == 1)
+        #expect((aggregated.entities ?? []).count == 1)
         #expect(aggregated.entities[0].type == .organization)  // 2 vs 1 で organization 勝ち
         #expect(aggregated.entities[0].salience == 4)
     }
@@ -146,7 +146,7 @@ struct ChunkedKnowledgeAggregatorTests {
         )
         let output = aggregated.toOutput()
         #expect(output.essence == "e")
-        #expect(output.keyFacts.count == 1)
-        #expect(output.entities.count == 1)
+        #expect((output.keyFacts ?? []).count == 1)
+        #expect((output.entities ?? []).count == 1)
     }
 }

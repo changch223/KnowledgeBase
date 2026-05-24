@@ -187,14 +187,14 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("detail.tags.heading")
+            Text("(detail.tags ?? []).heading")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             // 既存タグ
-            if !article.tags.isEmpty {
+            if !(article.tags ?? []).isEmpty {
                 FlowingTagsLayout {
-                    ForEach(article.tags) { tag in
+                    ForEach(article.tags ?? []) { tag in
                         TagChip(
                             name: tag.name,
                             onRemove: { removeTag(name: tag.name) },
@@ -205,7 +205,7 @@ struct ArticleDetailView: View {
             }
 
             // 自動提案
-            let existingNames = Set(article.tags.map(\.name))
+            let existingNames = Set((article.tags ?? []).map(\.name))
             let suggestions = SuggestedTagFinder.find(for: article, existingTagNames: existingNames)
             if !suggestions.isEmpty {
                 Text("detail.suggestedTags.heading")
@@ -469,7 +469,7 @@ struct ArticleDetailView: View {
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
         return all.filter { page in
-            page.relatedArticles.contains(where: { $0.id == articleID })
+            page.relatedArticles?.contains(where: { $0.id == articleID }) ?? false
         }
     }
 

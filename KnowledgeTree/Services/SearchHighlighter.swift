@@ -47,19 +47,19 @@ enum SearchHighlighter {
             return SearchHighlight(fieldName: "search.field.summary", excerpt: excerpt)
         }
         // 5. keyFact
-        if let fact = article.extractedKnowledge?.keyFacts.first(where: {
+        if let fact = article.extractedKnowledge?.keyFacts?.first(where: {
             $0.statement.localizedStandardContains(q)
         }), let excerpt = highlightText(fact.statement, query: q) {
             return SearchHighlight(fieldName: "search.field.keyFact", excerpt: excerpt)
         }
         // 6. entity
-        if let entity = article.extractedKnowledge?.entities.first(where: {
+        if let entity = article.extractedKnowledge?.entities?.first(where: {
             $0.name.localizedStandardContains(q)
         }), let excerpt = highlightText(entity.name, query: q) {
             return SearchHighlight(fieldName: "search.field.entity", excerpt: excerpt)
         }
         // 7. tag
-        if let tag = article.tags.first(where: { $0.name.localizedStandardContains(q) }),
+        if let tag = (article.tags ?? []).first(where: { $0.name.localizedStandardContains(q) }),
            let excerpt = highlightText(tag.name, query: q) {
             return SearchHighlight(fieldName: "search.field.tag", excerpt: excerpt)
         }

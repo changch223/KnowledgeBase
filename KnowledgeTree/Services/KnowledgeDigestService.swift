@@ -116,7 +116,7 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
         let categoryName = category.name
         var descriptor = FetchDescriptor<Article>(
             predicate: #Predicate { article in
-                article.tags.contains { $0.categoryRaw == categoryName }
+                article.tags?.contains { $0.categoryRaw == categoryName } ?? false
             },
             sortBy: [SortDescriptor(\.savedAt, order: .reverse)]
         )
@@ -130,7 +130,7 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
         let articles = (try? context.fetch(descriptor)) ?? []
         let names = articles
             .filter { $0.extractedKnowledge?.essence?.isEmpty == false }
-            .flatMap { $0.tags.compactMap(\.categoryRaw) }
+            .flatMap { ($0.tags ?? []).compactMap(\.categoryRaw) }
         return Array(Set(names))
     }
 
@@ -155,7 +155,7 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
                 var graphLines: [String] = []
                 for node in topNodes {
                     // 各 node の outgoing edge 上位 2 件 (label + target、ラベル付きを優先)
-                    let labeledOutgoing = node.outgoingEdges
+                    let labeledOutgoing = (node.outgoingEdges ?? [])
                         .filter { $0.label != nil && $0.target?.isActive == true }
                         .sorted { $0.weight > $1.weight }
                         .prefix(2)
@@ -341,7 +341,7 @@ final class FallbackKnowledgeDigestService: KnowledgeDigestService {
         let categoryName = category.name
         var descriptor = FetchDescriptor<Article>(
             predicate: #Predicate { article in
-                article.tags.contains { $0.categoryRaw == categoryName }
+                article.tags?.contains { $0.categoryRaw == categoryName } ?? false
             },
             sortBy: [SortDescriptor(\.savedAt, order: .reverse)]
         )
@@ -354,7 +354,7 @@ final class FallbackKnowledgeDigestService: KnowledgeDigestService {
         let articles = (try? context.fetch(descriptor)) ?? []
         let names = articles
             .filter { $0.extractedKnowledge?.essence?.isEmpty == false }
-            .flatMap { $0.tags.compactMap(\.categoryRaw) }
+            .flatMap { ($0.tags ?? []).compactMap(\.categoryRaw) }
         return Array(Set(names))
     }
 

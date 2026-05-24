@@ -54,7 +54,7 @@ struct TagEditSheet: View {
                 }
                 Button("tag.edit.action.cancel", role: .cancel) {}
             } message: {
-                Text("tag.edit.confirmDelete.message \(tag.articles.count)")
+                Text("tag.edit.confirmDelete.message \((tag.articles ?? []).count)")
             }
             .alert("tag.edit.confirmMerge.title", isPresented: $showMergeConfirm) {
                 Button("tag.edit.action.merge", role: .destructive) {
@@ -63,7 +63,7 @@ struct TagEditSheet: View {
                 Button("tag.edit.action.cancel", role: .cancel) {}
             } message: {
                 if let target = selectedMergeTarget {
-                    Text("tag.edit.confirmMerge.message \(target.name) \(tag.articles.count)")
+                    Text("tag.edit.confirmMerge.message \(target.name) \((tag.articles ?? []).count)")
                 }
             }
             .alert(
@@ -149,7 +149,7 @@ struct TagEditSheet: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 Text("tag.edit.section.delete.help")
-                Text("tag.management.row.articleCount \(tag.articles.count)")
+                Text("tag.management.row.articleCount \((tag.articles ?? []).count)")
             }
         }
     }

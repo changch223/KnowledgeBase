@@ -129,7 +129,8 @@ final class SwiftDataArticleEnrichmentStore: ArticleEnrichmentStoreProtocol {
             )
             pendingDescriptor.fetchLimit = 1000
             let pendingEnrichments = try context.fetch(pendingDescriptor)
-            let pendingArticles = pendingEnrichments.map(\.article)
+            // spec 051 Phase A: ArticleEnrichment.article は Optional 化、compactMap で nil 除外
+            let pendingArticles = pendingEnrichments.compactMap(\.article)
 
             // 重複排除
             var seen = Set<UUID>()

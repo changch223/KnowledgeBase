@@ -172,7 +172,7 @@ final class DefaultUnderstandingCardSurfaceService: UnderstandingCardSurfaceServ
 
     /// shallow 判定: 関連記事に savedAt >= cutoff の Article が 1 件以上あるか。
     private func hasRecentArticle(page: ConceptPage, cutoff: Date) -> Bool {
-        for article in page.relatedArticles {
+        for article in (page.relatedArticles ?? []) {
             if article.savedAt >= cutoff { return true }
         }
         return false

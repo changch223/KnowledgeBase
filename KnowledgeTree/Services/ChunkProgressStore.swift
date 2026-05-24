@@ -50,7 +50,7 @@ final class SwiftDataChunkProgressStore: ChunkProgressStoreProtocol {
         let json = try encoder.encode(output)
         let jsonString = String(data: json, encoding: .utf8) ?? "{}"
 
-        if let existing = knowledge.chunkProgress.first(where: { $0.chunkIndex == chunkIndex }) {
+        if let existing = (knowledge.chunkProgress ?? []).first(where: { $0.chunkIndex == chunkIndex }) {
             existing.chunkOutputJSON = jsonString
             existing.savedAt = Date()
         } else {
@@ -60,14 +60,15 @@ final class SwiftDataChunkProgressStore: ChunkProgressStoreProtocol {
                 chunkOutputJSON: jsonString
             )
             context.insert(progress)
-            knowledge.chunkProgress.append(progress)
+            if knowledge.chunkProgress == nil { knowledge.chunkProgress = [] }
+            knowledge.chunkProgress?.append(progress)
         }
         try context.save()
         refreshTrigger?.bump()
     }
 
     func fetchAll(knowledge: ExtractedKnowledge) throws -> [LoadedChunkProgress] {
-        knowledge.chunkProgress
+        (knowledge.chunkProgress ?? [])
             .sorted { $0.chunkIndex < $1.chunkIndex }
             .compactMap { progress in
                 guard let data = progress.chunkOutputJSON.data(using: .utf8),
@@ -78,7 +79,7 @@ final class SwiftDataChunkProgressStore: ChunkProgressStoreProtocol {
     }
 
     func cleanup(knowledge: ExtractedKnowledge) throws {
-        for progress in knowledge.chunkProgress {
+        for progress in (knowledge.chunkProgress ?? []) {
             context.delete(progress)
         }
         knowledge.chunkProgress = []

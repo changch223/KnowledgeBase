@@ -27,7 +27,7 @@ struct TagListView: View {
                             Text(tag.name)
                                 .font(.body)
                             Spacer()
-                            Text("\(tag.articles.count)")
+                            Text("\((tag.articles ?? []).count)")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                         }

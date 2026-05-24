@@ -45,7 +45,8 @@ struct SearchServiceTests {
                     order: i
                 )
                 context.insert(entity)
-                knowledge.entities.append(entity)
+                if knowledge.entities == nil { knowledge.entities = [] }
+                knowledge.entities?.append(entity)
             }
             context.insert(knowledge)
             article.extractedKnowledge = knowledge
@@ -53,7 +54,8 @@ struct SearchServiceTests {
         for name in tagNames {
             let tag = KnowledgeTree.Tag(name: name)
             context.insert(tag)
-            article.tags.append(tag)
+            if article.tags == nil { article.tags = [] }
+            article.tags?.append(tag)
         }
         return article
     }

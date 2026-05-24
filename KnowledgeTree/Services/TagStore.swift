@@ -57,8 +57,9 @@ final class TagStore {
         }
 
         // 重複チェック
-        if !article.tags.contains(where: { $0.name == normalized }) {
-            article.tags.append(tag)
+        if !(article.tags?.contains(where: { $0.name == normalized }) ?? false) {
+            if article.tags == nil { article.tags = [] }
+            article.tags?.append(tag)
         }
 
         try context.save()
@@ -84,11 +85,11 @@ final class TagStore {
 
     /// 正規化済 name で article から Tag を除去。tag.articles が空になったら自動削除。
     func removeTag(normalizedName: String, from article: Article) throws {
-        guard let tag = article.tags.first(where: { $0.name == normalizedName }) else {
+        guard let tag = (article.tags ?? []).first(where: { $0.name == normalizedName }) else {
             return
         }
-        article.tags.removeAll { $0.name == normalizedName }
-        if tag.articles.isEmpty {
+        article.tags?.removeAll { $0.name == normalizedName }
+        if (tag.articles ?? []).isEmpty {
             context.delete(tag)
         }
         try context.save()
@@ -106,7 +107,7 @@ final class TagStore {
     /// 全 Tag をスキャンして articles 空のものを削除。bootstrap 等で定期実行。
     func cleanupOrphans() throws {
         let allTags = try fetchAllTags()
-        let orphans = allTags.filter { $0.articles.isEmpty }
+        let orphans = allTags.filter { ($0.articles ?? []).isEmpty }
         guard !orphans.isEmpty else { return }
         for tag in orphans {
             context.delete(tag)
@@ -153,13 +154,14 @@ final class TagStore {
         guard source.id != target.id else { return }
 
         // source の articles を target に移動 (重複は skip)
-        let sourceArticles = source.articles
+        let sourceArticles = source.articles ?? []
         for article in sourceArticles {
             // article.tags から source を除去
-            article.tags.removeAll { $0.id == source.id }
+            article.tags?.removeAll { $0.id == source.id }
             // 既に target が article に紐付いていれば skip
-            if !article.tags.contains(where: { $0.id == target.id }) {
-                article.tags.append(target)
+            if !(article.tags?.contains(where: { $0.id == target.id }) ?? false) {
+                if article.tags == nil { article.tags = [] }
+                article.tags?.append(target)
             }
         }
 
@@ -172,9 +174,9 @@ final class TagStore {
     /// Tag を削除。全 articles の relationship を解除してから Tag 削除。
     func delete(_ tag: Tag) throws {
         // 全 articles から Tag relationship を解除
-        let articles = tag.articles
+        let articles = tag.articles ?? []
         for article in articles {
-            article.tags.removeAll { $0.id == tag.id }
+            article.tags?.removeAll { $0.id == tag.id }
         }
         context.delete(tag)
         try context.save()

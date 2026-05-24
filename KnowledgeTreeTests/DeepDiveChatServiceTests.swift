@@ -58,9 +58,9 @@ struct DeepDiveChatServiceTests {
         let session = try await service.startTutorSession(for: card)
 
         #expect(session.title.contains("Apple Vision Pro"))
-        #expect(session.messages.count == 1)
-        #expect(session.messages[0].role == ChatMessageRole.assistant.rawValue)
-        #expect(session.messages[0].text.contains("気になりますか"))
+        #expect((session.messages ?? []).count == 1)
+        #expect((session.messages ?? [])[0].role == ChatMessageRole.assistant.rawValue)
+        #expect((session.messages ?? [])[0].text.contains("気になりますか"))
         #expect(tracker.openedCount == 1)
         #expect(mockLM.tutorReplyCallCount == 1)
     }
@@ -91,7 +91,7 @@ struct DeepDiveChatServiceTests {
         #expect(prompt.contains("家庭教師"))
 
         // session には user_message が無い (初回は AI 発話のみ、これが「system prompt 露出」bug の根本修正)
-        let userMessages = session.messages.filter { $0.role == ChatMessageRole.user.rawValue }
+        let userMessages = (session.messages ?? []).filter { $0.role == ChatMessageRole.user.rawValue }
         #expect(userMessages.isEmpty)
     }
 
@@ -114,16 +114,16 @@ struct DeepDiveChatServiceTests {
 
         let card = UnderstandingCard.fromConceptPage(page)
         let session = try await service.startTutorSession(for: card)
-        let beforeCount = session.messages.count
+        let beforeCount = (session.messages ?? []).count
 
         mockLM.nextTutorReplyResult = .success("いい質問ですね。GPT は大規模言語モデルで、…")
         _ = try await service.sendUserMessage("GPT とは何ですか?", in: session, card: card)
 
         // user + assistant の 2 件追加
-        #expect(session.messages.count == beforeCount + 2)
-        let lastUser = session.messages.first { $0.role == ChatMessageRole.user.rawValue }
+        #expect((session.messages ?? []).count == beforeCount + 2)
+        let lastUser = (session.messages ?? []).first { $0.role == ChatMessageRole.user.rawValue }
         #expect(lastUser?.text == "GPT とは何ですか?")
-        let assistantTexts = session.messages.filter { $0.role == ChatMessageRole.assistant.rawValue }.map(\.text)
+        let assistantTexts = (session.messages ?? []).filter { $0.role == ChatMessageRole.assistant.rawValue }.map(\.text)
         #expect(assistantTexts.contains("いい質問ですね。GPT は大規模言語モデルで、…"))
     }
 
@@ -148,8 +148,8 @@ struct DeepDiveChatServiceTests {
 
         // fallback で初回 AI 発話が永続化される (LM 呼ばれない)
         #expect(mockLM.tutorReplyCallCount == 0)
-        #expect(session.messages.count == 1)
-        #expect(session.messages[0].text.contains("X"))
+        #expect((session.messages ?? []).count == 1)
+        #expect((session.messages ?? [])[0].text.contains("X"))
     }
 
     // MARK: - 5. LM が throws しても fallback で session 作成成功
@@ -173,8 +173,8 @@ struct DeepDiveChatServiceTests {
         let session = try await service.startTutorSession(for: card)
 
         // throws しない (内部で catch + fallback)、session は返却され message 1 件あり
-        #expect(session.messages.count == 1)
-        #expect(!session.messages[0].text.isEmpty)
+        #expect((session.messages ?? []).count == 1)
+        #expect(!(session.messages ?? [])[0].text.isEmpty)
     }
 
     // MARK: - 6. SavedAnswer 経路: prompt に question + answer 抜粋

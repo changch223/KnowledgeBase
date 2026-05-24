@@ -31,7 +31,7 @@ struct SavedAnswerRow: View {
                     .font(.body)
                     .lineLimit(1)
                 HStack(spacing: DS.Spacing.sm) {
-                    Text(String(format: String(localized: "SavedAnswer.row.citedCount"), answer.citedArticles.count))
+                    Text(String(format: String(localized: "SavedAnswer.row.citedCount"), (answer.citedArticles ?? []).count))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Text("·")
@@ -58,7 +58,7 @@ struct SavedAnswerRow: View {
         .padding(.vertical, DS.Spacing.sm)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(answer.questionPreview), 引用 \(answer.citedArticles.count) 件, \(SavedAtFormatter.accessibilityText(answer.savedAt))")
+        .accessibilityLabel("\(answer.questionPreview), 引用 \((answer.citedArticles ?? []).count) 件, \(SavedAtFormatter.accessibilityText(answer.savedAt))")
         .accessibilityIdentifier("savedAnswerRow_\(answer.id.uuidString)")
     }
 }

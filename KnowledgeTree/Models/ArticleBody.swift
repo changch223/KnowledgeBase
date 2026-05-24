@@ -11,7 +11,7 @@ import SwiftData
 @Model
 final class ArticleBody {
     var id: UUID = UUID()
-    var article: Article
+    var article: Article?
     var statusRaw: String = ""
     var extractedText: String?
     var extractionVersion: Int = 0

@@ -162,8 +162,9 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
         let candidates = (try? context.fetch(descriptor)) ?? []
         if let existing = candidates.first(where: { $0.name.lowercased() == key }) {
             // mention 重複防止: 同記事に対する mention は 1 度のみ
-            if !existing.articles.contains(where: { $0.id == article.id }) {
-                existing.articles.append(article)
+            if !(existing.articles?.contains(where: { $0.id == article.id }) ?? false) {
+                if existing.articles == nil { existing.articles = [] }
+                existing.articles?.append(article)
                 existing.mentionCount += 1
             }
             // active 再開 (deactivate 後の再 mention で復帰)
@@ -175,7 +176,7 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
         } else {
             // 新規 GraphNode
             // 元 KnowledgeEntity から entityType / salience 取得 (記事内 entity と name match)
-            let matchedEntity = article.extractedKnowledge?.entities.first(where: {
+            let matchedEntity = article.extractedKnowledge?.entities?.first(where: {
                 $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == key
             })
             let entityType = matchedEntity?.typeRaw ?? EntityTypeStored.concept.rawValue
@@ -189,7 +190,8 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
                 mentionCount: 1,
                 isActive: true
             )
-            node.articles.append(article)
+            if node.articles == nil { node.articles = [] }
+            node.articles?.append(article)
             context.insert(node)
             return node
         }
@@ -206,7 +208,7 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
         categoryRaw: String
     ) {
         // 既存 edge を探す (source.outgoingEdges から target 一致のものを線形 scan)
-        let existing = source.outgoingEdges.first { edge in
+        let existing = (source.outgoingEdges ?? []).first { edge in
             edge.target?.id == target.id && edge.label == label
         }
         if let existing {
@@ -259,7 +261,7 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
     /// Article の Category を tag.categoryRaw 経由で解決。
     /// 複数 tag に異なる Category があれば、最初のもの (出現順) を採用。
     private func resolveCategory(article: Article) -> String? {
-        for tag in article.tags {
+        for tag in (article.tags ?? []) {
             if let categoryRaw = tag.categoryRaw, !categoryRaw.isEmpty {
                 return categoryRaw
             }
@@ -271,8 +273,8 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
 
     static func buildPrompt(article: Article) -> String {
         let essence = article.extractedKnowledge?.essence ?? ""
-        let keyFacts = article.extractedKnowledge?.keyFacts.prefix(5).map { $0.statement }.joined(separator: " / ") ?? ""
-        let entityNames = article.extractedKnowledge?.entities.prefix(8).map { $0.name }.joined(separator: ", ") ?? ""
+        let keyFacts = article.extractedKnowledge?.keyFacts?.prefix(5).map { $0.statement }.joined(separator: " / ") ?? ""
+        let entityNames = article.extractedKnowledge?.entities?.prefix(8).map { $0.name }.joined(separator: ", ") ?? ""
 
         return """
         以下の記事から、主要な事実関係を triple 形式 (subject, predicate, object) で抽出してください。

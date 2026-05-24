@@ -327,7 +327,7 @@ final class ChatService: ChatServiceProtocol {
 
         for (i, article) in articles.enumerated() {
             let essence = article.extractedKnowledge?.essence ?? ""
-            let keyFacts = article.extractedKnowledge?.keyFacts.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
+            let keyFacts = article.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
             prompt += """
 
             [\(i + 1)] ID: \(article.id.uuidString)
@@ -341,7 +341,7 @@ final class ChatService: ChatServiceProtocol {
         if !relatedEntities.isEmpty {
             prompt += "\n\n## 関連エンティティ (参考)\n"
             for node in relatedEntities.prefix(10) {
-                let labeledOutgoing = node.outgoingEdges
+                let labeledOutgoing = (node.outgoingEdges ?? [])
                     .filter { $0.label != nil && $0.target?.isActive == true }
                     .sorted { $0.weight > $1.weight }
                     .prefix(2)
@@ -410,7 +410,7 @@ final class ChatService: ChatServiceProtocol {
         for (i, article) in articles.enumerated() {
             let essence = article.extractedKnowledge?.essence ?? article.title
             text += "\(i + 1). \(essence)\n"
-            let facts = article.extractedKnowledge?.keyFacts.prefix(2).map { "  ・\($0.statement)" } ?? []
+            let facts = article.extractedKnowledge?.keyFacts?.prefix(2).map { "  ・\($0.statement)" } ?? []
             if !facts.isEmpty {
                 text += facts.joined(separator: "\n") + "\n"
             }

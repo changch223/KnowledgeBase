@@ -41,7 +41,7 @@ final class ConceptPage {
     /// 原典 Article への参照 (片方向、deleteRule: .nullify で Article 側に影響ゼロ)。
     /// Article 削除時は relationship が自動 nullify、ConceptPage 側 relatedArticles からは除外される。
     @Relationship(deleteRule: .nullify)
-    var relatedArticles: [Article] = []
+    var relatedArticles: [Article]? = []
 
     /// graph 経由で関連が判明した他 ConceptPage の id 配列。
     /// @Relationship ではなく ID 配列とすることで、将来 spec 045 (Community) /

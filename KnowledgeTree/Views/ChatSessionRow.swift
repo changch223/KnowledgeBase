@@ -45,7 +45,7 @@ struct ChatSessionRow: View {
     }
 
     private var lastMessagePreview: String? {
-        let sorted = session.messages.sorted { $0.timestamp > $1.timestamp }
+        let sorted = (session.messages ?? []).sorted { $0.timestamp > $1.timestamp }
         guard let last = sorted.first else { return nil }
         let text = last.text.trimmingCharacters(in: .whitespacesAndNewlines)
         return text.count > 60 ? String(text.prefix(60)) + "…" : text

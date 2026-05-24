@@ -37,7 +37,7 @@ struct ConceptSynthesisServiceTests {
 
         let tag = Tag(name: "tag-\(url)", categoryRaw: categoryRaw)
         context.insert(tag)
-        article.tags.append(tag)
+        article.tags?.append(tag)
 
         let knowledge = ExtractedKnowledge(article: article, status: .succeeded)
         if let essence { knowledge.essence = essence }
@@ -53,7 +53,7 @@ struct ConceptSynthesisServiceTests {
                 order: idx
             )
             context.insert(entity)
-            knowledge.entities.append(entity)
+            knowledge.entities?.append(entity)
         }
         return article
     }
@@ -120,7 +120,7 @@ struct ConceptSynthesisServiceTests {
         let page = pages[0]
         #expect(page.name == "Apple")
         #expect(page.categoryRaw == "テクノロジー")
-        #expect(page.relatedArticles.count == 2)
+        #expect((page.relatedArticles ?? []).count == 2)
         // Fix 2: 即時 synthesis が走るので、isStale=false + summary が生成される
         #expect(page.isStale == false)
         #expect(page.summary == "Apple 統合 summary (mock)")
@@ -159,7 +159,7 @@ struct ConceptSynthesisServiceTests {
 
         let pages = try context.fetch(FetchDescriptor<ConceptPage>())
         #expect(pages.count == 1)
-        #expect(pages[0].relatedArticles.count == 3)
+        #expect((pages[0].relatedArticles ?? []).count == 3)
         // Fix 2: 即時 synthesis 走るので isStale=false
         #expect(pages[0].isStale == false)
         // 空 summary 返却時の defensive code で既存 summary 維持
@@ -384,6 +384,6 @@ struct ConceptSynthesisServiceTests {
 
         let pages = try context.fetch(FetchDescriptor<ConceptPage>())
         #expect(pages.count == 1)
-        #expect(pages[0].relatedArticles.count == 2)
+        #expect((pages[0].relatedArticles ?? []).count == 2)
     }
 }

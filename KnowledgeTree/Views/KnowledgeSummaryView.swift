@@ -15,7 +15,7 @@ struct KnowledgeSummaryView: View {
     let knowledge: ExtractedKnowledge
 
     private var sortedEntities: [KnowledgeEntity] {
-        knowledge.entities.sorted { lhs, rhs in
+        (knowledge.entities ?? []).sorted { lhs, rhs in
             if lhs.salience != rhs.salience {
                 return lhs.salience > rhs.salience
             }
@@ -24,7 +24,7 @@ struct KnowledgeSummaryView: View {
     }
 
     private var sortedFacts: [KeyFact] {
-        knowledge.keyFacts.sorted { $0.order < $1.order }
+        (knowledge.keyFacts ?? []).sorted { $0.order < $1.order }
     }
 
     var body: some View {
@@ -77,7 +77,7 @@ struct KnowledgeSummaryView: View {
             // 登場するもの
             if !sortedEntities.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    Text("knowledge.entities.heading")
+                    Text("(knowledge.entities ?? []).heading")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                     EntityChipFlow(entities: sortedEntities)

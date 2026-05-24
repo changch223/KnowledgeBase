@@ -89,8 +89,9 @@ final class ConceptPageStore {
         }
 
         // relatedArticles を union (重複 skip)
-        for article in source.relatedArticles where !target.relatedArticles.contains(where: { $0.id == article.id }) {
-            target.relatedArticles.append(article)
+        for article in (source.relatedArticles ?? []) where !(target.relatedArticles?.contains(where: { $0.id == article.id }) ?? false) {
+            if target.relatedArticles == nil { target.relatedArticles = [] }
+            target.relatedArticles?.append(article)
         }
 
         // relatedConceptIDs を union (target 自身 + source 自身を除外)
