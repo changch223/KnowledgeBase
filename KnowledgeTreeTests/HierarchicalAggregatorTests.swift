@@ -119,12 +119,12 @@ struct HierarchicalAggregatorTests {
             lvl2Results: lvl2,
             lvl3Result: chunkOutput(keyFacts: [KeyFactOutput(statement: "more noise", type: .quote)])
         )
-        #expect(aggregated.keyFacts.count == 2)
+        #expect((aggregated.keyFacts ?? []).count == 2)
         #expect(aggregated.keyFacts.contains { $0.statement == "fact A" })
         #expect(aggregated.keyFacts.contains { $0.statement == "fact B" })
         #expect(!aggregated.keyFacts.contains { $0.statement == "noise" })
         #expect(!aggregated.keyFacts.contains { $0.statement == "more noise" })
-        #expect(aggregated.entities.count == 1)
+        #expect((aggregated.entities ?? []).count == 1)
         #expect(aggregated.entities[0].name == "X")
     }
 }

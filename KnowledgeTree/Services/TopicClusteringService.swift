@@ -90,7 +90,7 @@ final class TopicClusteringService: TopicClusteringServiceProtocol {
         )
 
         // 3. minClusterSize 以上のクラスタのみ採用
-        let validClusters = clusters.filter { $0.articles.count >= minClusterSize }
+        let validClusters = clusters.filter { ($0.articles ?? []).count >= minClusterSize }
         let minSize = self.minClusterSize
         guard !validClusters.isEmpty else {
             logger.notice("topic clustering: no valid clusters (min size \(minSize))")

@@ -11,7 +11,7 @@ import SwiftData
 @Model
 final class ArticleEnrichment {
     var id: UUID = UUID()
-    var article: Article
+    var article: Article?
     var statusRaw: String = ""
     var canonicalTitle: String?
     var summary: String?

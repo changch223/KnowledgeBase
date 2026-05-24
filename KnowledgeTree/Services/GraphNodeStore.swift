@@ -78,15 +78,18 @@ final class GraphNodeStore {
         }
 
         // articles を target に集約 (重複 skip)
-        for article in source.articles where !target.articles.contains(where: { $0.id == article.id }) {
-            target.articles.append(article)
+        // spec 051 Phase A: articles を Optional 化、`?? []` で safe unwrap。
+        let sourceArticles = source.articles ?? []
+        for article in sourceArticles where !(target.articles?.contains(where: { $0.id == article.id }) ?? false) {
+            if target.articles == nil { target.articles = [] }
+            target.articles?.append(article)
         }
         target.mentionCount = max(target.mentionCount, source.mentionCount) +
             min(target.mentionCount, source.mentionCount) / 2  // 部分加算で sum 爆発を抑える
         target.salience = max(target.salience, source.salience)
 
         // outgoing edges を target に付け替え
-        let outgoing = source.outgoingEdges
+        let outgoing = source.outgoingEdges ?? []
         for edge in outgoing {
             guard let other = edge.target else {
                 context.delete(edge)
@@ -101,7 +104,7 @@ final class GraphNodeStore {
         }
 
         // incoming edges を target に付け替え
-        let incoming = source.incomingEdges
+        let incoming = source.incomingEdges ?? []
         for edge in incoming {
             guard let other = edge.source else {
                 context.delete(edge)
@@ -132,10 +135,10 @@ final class GraphNodeStore {
         let label = edge.label
         // 既存重複 edge を探す
         let duplicate: GraphEdge? = isOutgoing
-            ? newSource.outgoingEdges.first { e in
+            ? (newSource.outgoingEdges ?? []).first { e in
                 e.id != edge.id && e.target?.id == otherEnd.id && e.label == label
             }
-            : newSource.incomingEdges.first { e in
+            : (newSource.incomingEdges ?? []).first { e in
                 e.id != edge.id && e.source?.id == otherEnd.id && e.label == label
             }
 

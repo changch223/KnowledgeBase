@@ -252,8 +252,8 @@ final class MockArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
             status: status,
             essence: output.essence,
             summary: output.summary,
-            factCount: output.keyFacts.count,
-            entityCount: output.entities.count
+            factCount: (output.keyFacts ?? []).count,
+            entityCount: (output.entities ?? []).count
         ))
     }
 

@@ -28,9 +28,9 @@ struct KnowledgeClipCard: View {
             summary: digest.summary,
             topKeyFacts: digest.topKeyFacts,
             topEntityNames: digest.topEntityNames,
-            sourceArticleCount: digest.sourceArticles.count,
-            latestArticleSavedAt: digest.sourceArticles.map(\.savedAt).max(),
-            firstOgImageURL: digest.sourceArticles.compactMap(\.enrichment?.ogImageURL).first
+            sourceArticleCount: (digest.sourceArticles ?? []).count,
+            latestArticleSavedAt: (digest.sourceArticles ?? []).map(\.savedAt).max(),
+            firstOgImageURL: (digest.sourceArticles ?? []).compactMap(\.enrichment?.ogImageURL).first
         )
     }
 

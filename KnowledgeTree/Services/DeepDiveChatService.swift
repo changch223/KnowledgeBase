@@ -107,7 +107,7 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
         try context.save()
 
         // 2. 会話履歴を含む tutor prompt 構築
-        let history = session.messages.sorted { $0.timestamp < $1.timestamp }
+        let history = (session.messages ?? []).sorted { $0.timestamp < $1.timestamp }
         let prompt = buildContinuationPrompt(card: card, history: history)
 
         // 3. AI 応答生成
@@ -193,7 +193,7 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
                     .joined(separator: "\n")
                 parts.append("【主な知見】\n\(bullets)")
             }
-            let articleTitles = page.relatedArticles
+            let articleTitles = (page.relatedArticles ?? [])
                 .sorted { $0.savedAt > $1.savedAt }
                 .prefix(2)
                 .map { "  - \($0.title.prefix(60))" }

@@ -43,7 +43,7 @@ struct UserTopicDetailView: View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             Text(topic.name)
                 .font(DS.Typography.sectionTitle)
-            Text("clip.topics.meta.articleCount \(topic.articles.count)")
+            Text("clip.topics.meta.articleCount \((topic.articles ?? []).count)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -54,7 +54,7 @@ struct UserTopicDetailView: View {
         return Group {
             if !facts.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    Text("clip.detail.keyFacts.title")
+                    Text("clip.(detail.keyFacts ?? []).title")
                         .font(DS.Typography.sectionTitle)
                     ForEach(Array(facts.enumerated()), id: \.offset) { _, fact in
                         Text("・\(fact)")
@@ -71,7 +71,7 @@ struct UserTopicDetailView: View {
         return Group {
             if !entities.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    Text("clip.detail.entities.title")
+                    Text("clip.(detail.entities ?? []).title")
                         .font(DS.Typography.sectionTitle)
                     FlowLayout(spacing: DS.Spacing.sm) {
                         ForEach(entities, id: \.self) { name in
@@ -92,10 +92,10 @@ struct UserTopicDetailView: View {
 
     private func articlesSection(topic: UserTopic) -> some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("clip.detail.articles.title")
+            Text("clip.(detail.articles ?? []).title")
                 .font(DS.Typography.sectionTitle)
             // 最新順
-            let sorted = topic.articles.sorted { $0.savedAt > $1.savedAt }
+            let sorted = (topic.articles ?? []).sorted { $0.savedAt > $1.savedAt }
             ForEach(sorted) { article in
                 NavigationLink(value: article) {
                     ArticleRow(article: article)
@@ -111,7 +111,7 @@ struct UserTopicDetailView: View {
     static func aggregatedKeyFacts(topic: UserTopic) -> [String] {
         // 全 Article から KeyFact statement を集約、上位 5 件 (重複除去 + 出現数順)
         var counts: [String: Int] = [:]
-        for article in topic.articles {
+        for article in (topic.articles ?? []) {
             for fact in article.extractedKnowledge?.keyFacts ?? [] {
                 counts[fact.statement, default: 0] += 1
             }
@@ -121,7 +121,7 @@ struct UserTopicDetailView: View {
 
     static func aggregatedEntities(topic: UserTopic) -> [String] {
         var counts: [String: Int] = [:]
-        for article in topic.articles {
+        for article in (topic.articles ?? []) {
             for entity in article.extractedKnowledge?.entities ?? [] {
                 counts[entity.name, default: 0] += 1
             }

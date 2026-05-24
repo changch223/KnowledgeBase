@@ -163,7 +163,7 @@ struct TopicClusteringServiceTests {
         let clusters = TopicClusteringService.kmeans(entries: entries, k: 2, maxIterations: 50)
         // K-means は初期 centroid がランダムなので cluster 数は 1〜2 (non-deterministic)
         #expect(clusters.count >= 1)
-        let totalAssigned = clusters.reduce(0) { $0 + $1.articles.count }
+        let totalAssigned = clusters.reduce(0) { $0 + ($1.articles ?? []).count }
         #expect(totalAssigned == 6)
     }
 

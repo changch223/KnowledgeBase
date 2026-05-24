@@ -46,7 +46,7 @@ struct KnowledgeMapBuilderTests {
         for i in 0..<articleCount {
             let article = Article(url: "https://example.com/\(name)/\(i)", title: "\(name) #\(i)")
             context.insert(article)
-            article.tags.append(tag)
+            article.tags?.append(tag)
             if !entityNames.isEmpty {
                 let knowledge = ExtractedKnowledge(article: article, status: .succeeded)
                 context.insert(knowledge)
@@ -60,7 +60,7 @@ struct KnowledgeMapBuilderTests {
                         order: idx
                     )
                     context.insert(entity)
-                    knowledge.entities.append(entity)
+                    knowledge.entities?.append(entity)
                 }
             }
         }

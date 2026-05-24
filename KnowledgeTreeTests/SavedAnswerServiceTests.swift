@@ -73,7 +73,7 @@ struct SavedAnswerServiceTests {
         let s = saved[0]
         #expect(s.question == "Apple Vision Pro について教えて")
         #expect(s.answer.count == 80)
-        #expect(s.citedArticles.count == 2)
+        #expect((s.citedArticles ?? []).count == 2)
         #expect(s.savedAutomatically == true)
         #expect(s.chatSessionID != nil)
     }

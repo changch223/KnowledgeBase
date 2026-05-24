@@ -137,7 +137,7 @@ enum ChunkedKnowledgeAggregator {
         var seen: Set<String> = []
         var deduped: [KeyFactOutput] = []
         for output in outputs {
-            for fact in output.keyFacts {
+            for fact in (output.keyFacts ?? []) {
                 let key = fact.statement.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !key.isEmpty, !seen.contains(key) else { continue }
                 seen.insert(key)
@@ -151,7 +151,7 @@ enum ChunkedKnowledgeAggregator {
     private static func mergeEntities(from outputs: [ExtractedKnowledgeOutput]) -> [KnowledgeEntityOutput] {
         var grouped: [String: [KnowledgeEntityOutput]] = [:]
         for output in outputs {
-            for entity in output.entities {
+            for entity in (output.entities ?? []) {
                 let key = entity.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !key.isEmpty else { continue }
                 grouped[key, default: []].append(entity)

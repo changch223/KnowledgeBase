@@ -198,7 +198,7 @@ private struct RelatedConceptsChips: View {
         let citedIDSet = Set(articleIDs.compactMap(UUID.init(uuidString:)))
         guard !citedIDSet.isEmpty else { return [] }
         let scored = allConceptPages.compactMap { page -> (ConceptPage, Int)? in
-            let overlap = page.relatedArticles.filter { citedIDSet.contains($0.id) }.count
+            let overlap = (page.relatedArticles ?? []).filter { citedIDSet.contains($0.id) }.count
             return overlap > 0 ? (page, overlap) : nil
         }
         return scored

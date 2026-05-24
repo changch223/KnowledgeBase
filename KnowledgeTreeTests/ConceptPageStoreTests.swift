@@ -146,7 +146,7 @@ struct ConceptPageStoreTests {
         let pages = try context.fetch(FetchDescriptor<ConceptPage>())
         #expect(pages.count == 1)
         #expect(pages[0].id == target.id)
-        #expect(pages[0].relatedArticles.count == 3)  // article1, article2, article3 (重複除外)
+        #expect((pages[0].relatedArticles ?? []).count == 3)  // article1, article2, article3 (重複除外)
         #expect(pages[0].isStale == true)
         #expect(pages[0].isFollowing == true)  // OR
         #expect(pages[0].nameAliases.contains("アップル"))

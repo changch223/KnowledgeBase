@@ -26,24 +26,32 @@ private struct TagFilteredListContent: View {
     init(tagName: String) {
         self.tagName = tagName
         let normalized = tagName
+        // spec 051 Phase A: tags が Optional 化されたが SwiftData #Predicate は
+        // `?? []` を受け付けない。`tags?.contains` でも predicate macro 解析失敗するため、
+        // 全件 fetch + in-memory filter にする (Tag フィルタ画面は記事数 100-1000 想定で OK)。
         _articles = Query(
-            filter: #Predicate<Article> { article in
-                article.tags.contains(where: { $0.name == normalized })
-            },
             sort: \Article.savedAt,
             order: .reverse
         )
     }
 
+    /// spec 051 Phase A: in-memory filter (predicate を使わなくなったため必要)。
+    private var filteredArticles: [Article] {
+        let name = tagName
+        return articles.filter { article in
+            article.tags?.contains(where: { $0.name == name }) ?? false
+        }
+    }
+
     var body: some View {
         Group {
-            if articles.isEmpty {
+            if filteredArticles.isEmpty {
                 ContentUnavailableView(
                     "tag.filtered.empty.title",
                     systemImage: "tag.slash"
                 )
             } else {
-                List(articles) { article in
+                List(filteredArticles) { article in
                     Button {
                         selectedArticle = article
                     } label: {

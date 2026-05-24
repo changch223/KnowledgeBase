@@ -34,7 +34,7 @@ struct KnowledgeDigestServiceTests {
 
         let tag = Tag(name: "tag-\(url)", categoryRaw: categoryRaw)
         context.insert(tag)
-        article.tags.append(tag)
+        article.tags?.append(tag)
 
         if let essence {
             let knowledge = ExtractedKnowledge(
@@ -85,7 +85,7 @@ struct KnowledgeDigestServiceTests {
 
         #expect(digests.count == 1)
         #expect(digests.first?.summary == "テクノロジーの最近トピック")
-        #expect(digests.first?.sourceArticles.count == 2)
+        #expect((digests.first?.sourceArticles ?? []).count == 2)
         #expect(digests.first?.topKeyFacts.count == 3)
     }
 

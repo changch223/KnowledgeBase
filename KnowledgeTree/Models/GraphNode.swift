@@ -40,15 +40,15 @@ final class GraphNode {
 
     /// この node を source とする edges (deleteRule: cascade)
     @Relationship(deleteRule: .cascade, inverse: \GraphEdge.source)
-    var outgoingEdges: [GraphEdge] = []
+    var outgoingEdges: [GraphEdge]? = []
 
     /// この node を target とする edges (deleteRule: cascade)
     @Relationship(deleteRule: .cascade, inverse: \GraphEdge.target)
-    var incomingEdges: [GraphEdge] = []
+    var incomingEdges: [GraphEdge]? = []
 
     /// この entity が出現した記事 (deleteRule: nullify、記事削除で relationship 解除のみ)
     @Relationship(deleteRule: .nullify)
-    var articles: [Article] = []
+    var articles: [Article]? = []
 
     init(
         id: UUID = UUID(),
@@ -80,7 +80,8 @@ extension GraphNode {
     }
 
     /// 次数 (degree) = outgoing + incoming edge 数 (中心 entity 選択用)
+    /// spec 051 Phase A: Array @Relationship Optional 化、`?? []` で safe unwrap。
     var degree: Int {
-        outgoingEdges.count + incomingEdges.count
+        (outgoingEdges ?? []).count + (incomingEdges ?? []).count
     }
 }

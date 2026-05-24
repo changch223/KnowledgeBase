@@ -54,33 +54,31 @@ struct KnowledgeTreeApp: App {
             // 以降の session は前回選択タブを尊重する (本 spec で複雑な persistence を入れない)
             UserDefaults.standard.set(true, forKey: migrationKey)
         }
-        // spec 051 Phase A → V2.5 deferred: iCloud sync は未完成 (Array<X>? refactor 200+ touch points 残)。
-        // spike 中に toggle を ON にしたユーザー (UserDefaults `icloud_sync_enabled = true`) を強制 false。
-        // V2.5 で完成版を release する時に新規 toggle UI で再 opt-in してもらう。
-        if UserDefaults.standard.bool(forKey: SharedSchema.iCloudSyncFlagKey) {
-            UserDefaults.standard.set(false, forKey: SharedSchema.iCloudSyncFlagKey)
-            NSLog("spec 051 cleanup: forced icloud_sync_enabled=false (V2.5 で完成版 release 予定)")
-        }
+        // spec 051 Phase A 完成: iCloud toggle が有効 (forced reset 削除)。
     }
 
     var sharedModelContainer: ModelContainer = {
-        // CoreData / SwiftData が ApplicationSupport directory を自動 create する前に
-        // 先回りで作成しておく。実機初回起動時の "Sandbox access denied" recovery ログ
-        // を抑止するため。
         AppGroup.ensureContainerDirectoryExists()
 
-        // spec 005: SharedSchema 経由で Share Extension と完全に同一定義を使う。
-        // spec 051 V2.5 deferred: 現状の schema は CloudKit 互換性が不完全
-        // (全 Array @Relationship を `[X]?` Optional 化 + 6 件 inverse 追加 + 6 件 to-one optional 化
-        // が未完)。V2.5 で proper に CloudKit 対応するまで **無条件 local-only** で init。
-        // この closure は struct init() より先に実行されるため UserDefaults cleanup より早く動く、
-        // よって flag を読まずに local 固定とすることで余分な CloudKit error log を出さない。
+        // spec 051 Phase A 完成: UserDefaults `icloud_sync_enabled` flag を読んで
+        // CloudKit private DB と App Group を同時指定。CloudKit 失敗時は local-only fallback。
         do {
             return try ModelContainer(
                 for: SharedSchema.all,
-                configurations: [SharedSchema.sharedConfiguration(cloudKitEnabled: false)]
+                configurations: [SharedSchema.sharedConfiguration()]
             )
         } catch {
+            if SharedSchema.isCloudKitEnabledByUser {
+                NSLog("⚠️ CloudKit ModelContainer init failed, falling back to local-only: \(error)")
+                do {
+                    return try ModelContainer(
+                        for: SharedSchema.all,
+                        configurations: [SharedSchema.sharedConfiguration(cloudKitEnabled: false)]
+                    )
+                } catch {
+                    fatalError("Could not create local ModelContainer fallback: \(error)")
+                }
+            }
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()

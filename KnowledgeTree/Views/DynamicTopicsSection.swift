@@ -101,7 +101,7 @@ struct DynamicTopicsSection: View {
                             Text(topic.name)
                                 .font(.body)
                                 .foregroundStyle(.primary)
-                            Text("clip.topics.meta.articleCount \(topic.articles.count)")
+                            Text("clip.topics.meta.articleCount \((topic.articles ?? []).count)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

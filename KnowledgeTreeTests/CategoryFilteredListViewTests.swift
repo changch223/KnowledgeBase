@@ -52,7 +52,7 @@ struct CategoryFilteredListViewTests {
                 article = Article(url: url, title: url, savedAt: savedAt)
                 context.insert(article)
             }
-            article.tags.append(tag)
+            article.tags?.append(tag)
         }
         return tag
     }

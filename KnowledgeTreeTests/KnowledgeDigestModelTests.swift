@@ -40,7 +40,7 @@ struct KnowledgeDigestModelTests {
         context.insert(digest)
         try context.save()
 
-        #expect(digest.sourceArticles.count == 1)
+        #expect((digest.sourceArticles ?? []).count == 1)
 
         // Article 削除
         context.delete(article)
@@ -51,7 +51,7 @@ struct KnowledgeDigestModelTests {
         let remaining = try context.fetch(descriptor)
         #expect(remaining.count == 1)
         // sourceArticles から記事が外れる (.nullify)
-        #expect(remaining.first?.sourceArticles.count == 0)
+        #expect((remaining.first?.sourceArticles ?? []).count == 0)
     }
 
     @Test func testIsStaleDefaultsFalse() throws {

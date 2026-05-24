@@ -21,7 +21,7 @@ struct MapNode: Identifiable, Hashable, Sendable {
     let id: String
     /// force-directed 後の最終位置 (Canvas 座標系、単位 pt)
     var position: CGPoint
-    /// 円のサイズ (40-100pt、tag.articles.count 対数スケール)
+    /// 円のサイズ (40-100pt、(tag.articles ?? []).count 対数スケール)
     var radius: CGFloat
     /// 表示用 (VoiceOver / Tooltip 対応)
     let articleCount: Int
@@ -153,8 +153,8 @@ enum KnowledgeMapBuilder {
             return MapNode(
                 id: tag.name,
                 position: CGPoint(x: center.x + dx, y: center.y + dy),
-                radius: nodeRadius(for: tag.articles.count),
-                articleCount: tag.articles.count
+                radius: nodeRadius(for: (tag.articles ?? []).count),
+                articleCount: (tag.articles ?? []).count
             )
         }
 
@@ -261,9 +261,9 @@ enum KnowledgeMapBuilder {
         var entitySetByTag: [String: Set<String>] = [:]
         for tag in tags {
             var set = Set<String>()
-            for article in tag.articles {
+            for article in (tag.articles ?? []) {
                 guard let knowledge = article.extractedKnowledge else { continue }
-                for entity in knowledge.entities {
+                for entity in (knowledge.entities ?? []) {
                     let normalized = entity.name
                         .lowercased()
                         .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -362,7 +362,7 @@ enum RecentActivitySnapshotBuilder {
         var seen = Set<UUID>()
         var count = 0
         for tag in tags {
-            for article in tag.articles {
+            for article in (tag.articles ?? []) {
                 guard !seen.contains(article.id) else { continue }
                 seen.insert(article.id)
                 if article.savedAt > sevenDaysAgo {
@@ -379,7 +379,7 @@ enum RecentActivitySnapshotBuilder {
         sevenDaysAgo: Date
     ) -> [RecentActivitySnapshot.GrowingTag] {
         let counts: [(name: String, count: Int)] = tags.compactMap { tag in
-            let recent = tag.articles.filter { $0.savedAt > sevenDaysAgo }.count
+            let recent = (tag.articles ?? []).filter { $0.savedAt > sevenDaysAgo }.count
             return recent > 0 ? (tag.name, recent) : nil
         }
         return counts
@@ -406,7 +406,7 @@ enum RecentActivitySnapshotBuilder {
                 .lowercased()
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             guard !normalized.isEmpty else { continue }
-            let savedAt = entity.knowledge.article.savedAt
+            guard let savedAt = entity.knowledge?.article?.savedAt else { continue }
             if var existing = groups[normalized] {
                 if savedAt < existing.earliestDate {
                     existing.earliestDate = savedAt

@@ -67,9 +67,9 @@ struct GraphNodeDetailView: View {
 
     @ViewBuilder
     private var outgoingEdgesSection: some View {
-        if !node.outgoingEdges.isEmpty {
+        if !(node.outgoingEdges ?? []).isEmpty {
             Section("関係 (→)") {
-                ForEach(node.outgoingEdges) { edge in
+                ForEach(node.outgoingEdges ?? []) { edge in
                     Button {
                         presentedEdgeForEdit = edge
                     } label: {
@@ -83,9 +83,9 @@ struct GraphNodeDetailView: View {
 
     @ViewBuilder
     private var incomingEdgesSection: some View {
-        if !node.incomingEdges.isEmpty {
+        if !(node.incomingEdges ?? []).isEmpty {
             Section("関係 (←)") {
-                ForEach(node.incomingEdges) { edge in
+                ForEach(node.incomingEdges ?? []) { edge in
                     Button {
                         presentedEdgeForEdit = edge
                     } label: {
@@ -131,9 +131,9 @@ struct GraphNodeDetailView: View {
 
     @ViewBuilder
     private var articlesSection: some View {
-        if !node.articles.isEmpty {
-            Section("関連記事 (\(node.articles.count))") {
-                ForEach(node.articles.sorted(by: { $0.savedAt > $1.savedAt }), id: \.id) { article in
+        if !(node.articles ?? []).isEmpty {
+            Section("関連記事 (\((node.articles ?? []).count))") {
+                ForEach((node.articles ?? []).sorted(by: { $0.savedAt > $1.savedAt }), id: \.id) { article in
                     Button {
                         presentedArticle = article
                     } label: {

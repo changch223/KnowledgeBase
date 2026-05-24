@@ -19,7 +19,7 @@ import SwiftData
 @Model
 final class ExtractedKnowledge {
     var id: UUID = UUID()
-    var article: Article
+    var article: Article?
     var statusRaw: String = ""
     var essence: String?
     var summary: String?
@@ -38,14 +38,14 @@ final class ExtractedKnowledge {
     var skippedTailChars: Int = 0
 
     @Relationship(deleteRule: .cascade, inverse: \KeyFact.knowledge)
-    var keyFacts: [KeyFact] = []
+    var keyFacts: [KeyFact]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \KnowledgeEntity.knowledge)
-    var entities: [KnowledgeEntity] = []
+    var entities: [KnowledgeEntity]? = []
 
     /// spec 009: chunked summarization の各 chunk 完了結果。完了で cleanup される。
     @Relationship(deleteRule: .cascade, inverse: \KnowledgeChunkProgress.knowledge)
-    var chunkProgress: [KnowledgeChunkProgress] = []
+    var chunkProgress: [KnowledgeChunkProgress]? = []
 
     init(
         id: UUID = UUID(),
@@ -99,7 +99,7 @@ extension ExtractedKnowledge {
 @Model
 final class KeyFact {
     var id: UUID = UUID()
-    var knowledge: ExtractedKnowledge
+    var knowledge: ExtractedKnowledge?
     var statement: String = ""
     var typeRaw: String = ""
     var order: Int = 0
@@ -138,7 +138,7 @@ extension KeyFact {
 @Model
 final class KnowledgeEntity {
     var id: UUID = UUID()
-    var knowledge: ExtractedKnowledge
+    var knowledge: ExtractedKnowledge?
     var name: String = ""
     var typeRaw: String = ""
     var salience: Int = 0

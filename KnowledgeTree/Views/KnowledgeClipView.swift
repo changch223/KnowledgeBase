@@ -17,19 +17,23 @@ struct KnowledgeClipView: View {
     @Query private var allArticles: [Article]
     /// spec 042: 関連記事 1+ 件の ConceptPage を fetch、updatedAt desc。
     /// isFollowing 優先ソートは body 内で in-memory sort (SortDescriptor は Bool 非対応)。
+    // spec 051 Phase A: relatedArticles を Optional 化したため predicate を書き換え。
+    // 全件 fetch して in-memory filter (@Query は計算量変わらず、SwiftData predicate の Optional 制約回避)。
     @Query(
-        filter: #Predicate<ConceptPage> { !$0.relatedArticles.isEmpty },
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)],
         animation: .default
     )
     private var allConceptPagesRaw: [ConceptPage]
 
     /// isFollowing 優先 + updatedAt desc の最終順序。
+    /// spec 051 Phase A: relatedArticles が Optional 化されたため、関連記事 1+ 件のみに in-memory filter。
     private var allConceptPages: [ConceptPage] {
-        allConceptPagesRaw.sorted { lhs, rhs in
-            if lhs.isFollowing != rhs.isFollowing { return lhs.isFollowing }
-            return lhs.updatedAt > rhs.updatedAt
-        }
+        allConceptPagesRaw
+            .filter { !(($0.relatedArticles) ?? []).isEmpty }
+            .sorted { lhs, rhs in
+                if lhs.isFollowing != rhs.isFollowing { return lhs.isFollowing }
+                return lhs.updatedAt > rhs.updatedAt
+            }
     }
     @Environment(ServiceContainer.self) private var services
     @Environment(ProcessingMonitor.self) private var monitor
@@ -134,7 +138,7 @@ struct KnowledgeClipView: View {
     private var filteredDigests: [KnowledgeDigest] {
         guard let cutoff = period.cutoffDate else { return allDigests }
         return allDigests.filter { digest in
-            digest.sourceArticles.contains { $0.savedAt >= cutoff }
+            (digest.sourceArticles ?? []).contains { $0.savedAt >= cutoff }
         }
     }
 
@@ -148,11 +152,11 @@ struct KnowledgeClipView: View {
             }
             .sorted { lhs, rhs in
                 let lhsLatest = lhs.1
-                    .flatMap(\.sourceArticles)
+                    .flatMap { $0.sourceArticles ?? [] }
                     .map(\.savedAt)
                     .max() ?? .distantPast
                 let rhsLatest = rhs.1
-                    .flatMap(\.sourceArticles)
+                    .flatMap { $0.sourceArticles ?? [] }
                     .map(\.savedAt)
                     .max() ?? .distantPast
                 return lhsLatest > rhsLatest
@@ -346,13 +350,12 @@ struct ConceptPageDetailLoader: View {
 /// 「+N すべて見る」遷移先の全 ConceptPage 一覧画面 (LazyVStack)。
 struct ConceptPageListView: View {
     @Query(
-        filter: #Predicate<ConceptPage> { !$0.relatedArticles.isEmpty },
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
     )
     private var allPagesRaw: [ConceptPage]
 
     private var allPages: [ConceptPage] {
-        allPagesRaw.sorted { lhs, rhs in
+        allPagesRaw.filter { !(($0.relatedArticles) ?? []).isEmpty }.sorted { lhs, rhs in
             if lhs.isFollowing != rhs.isFollowing { return lhs.isFollowing }
             return lhs.updatedAt > rhs.updatedAt
         }

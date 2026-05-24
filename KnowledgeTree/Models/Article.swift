@@ -33,11 +33,11 @@ final class Article {
     /// spec 008: Article ↔ Tag 多対多。Tag 側 inverse は Tag.articles。
     /// Article 削除時は relationship のみ解除され Tag は残る。
     /// 孤児タグの削除は TagStore が責任を持つ。
-    @Relationship var tags: [Tag] = []
+    @Relationship var tags: [Tag]? = []
 
     /// spec 018: KnowledgeDigest への inverse (Digest 側 sourceArticles の inverse)。
     /// Article 削除時は Digest 側 sourceArticles から null 化、Digest 自体は残る。
-    @Relationship var digests: [KnowledgeDigest] = []
+    @Relationship var digests: [KnowledgeDigest]? = []
 
     /// spec 021: 文章 embedding (NLEmbedding.sentenceEmbedding(for: .japanese) 経由、
     /// L2 正規化済み Float Array の byte 表現)。AI Chat retrieval で cosine similarity 計算に使う。
@@ -49,6 +49,35 @@ final class Article {
     /// KnowledgeDigest 生成時に「過去」併記 or skip される。
     /// ライブラリ表示は維持 (ユーザーは見られる)。
     var isObsolete: Bool = false
+
+    // MARK: - spec 051 Phase A: missing inverse 追加 (CloudKit 互換)
+    // 元々「片方向 @Relationship」だった 6 件に Article 側の inverse プロパティ追加。
+    // CloudKit は全 @Relationship に inverse を要求する。
+    // これらは Article schema を膨らませるが、Article 削除時 nullify で対象側 relationship が自動 nullify されるため安全。
+
+    /// spec 042: ConceptPage.relatedArticles の inverse
+    @Relationship(inverse: \ConceptPage.relatedArticles)
+    var relatedConcepts: [ConceptPage]? = []
+
+    /// spec 037: ConflictProposal.newArticle の inverse
+    @Relationship(inverse: \ConflictProposal.newArticle)
+    var conflictsAsNew: [ConflictProposal]? = []
+
+    /// spec 037: ConflictProposal.oldArticle の inverse
+    @Relationship(inverse: \ConflictProposal.oldArticle)
+    var conflictsAsOld: [ConflictProposal]? = []
+
+    /// spec 040: GraphNode.articles の inverse
+    @Relationship(inverse: \GraphNode.articles)
+    var graphNodes: [GraphNode]? = []
+
+    /// spec 043: SavedAnswer.citedArticles の inverse
+    @Relationship(inverse: \SavedAnswer.citedArticles)
+    var savedAnswers: [SavedAnswer]? = []
+
+    /// spec 036: UserTopic.articles の inverse
+    @Relationship(inverse: \UserTopic.articles)
+    var userTopics: [UserTopic]? = []
 
     init(id: UUID = UUID(), url: String, title: String, savedAt: Date = Date()) {
         self.id = id

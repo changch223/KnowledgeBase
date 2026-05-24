@@ -151,7 +151,7 @@ struct ConceptPageDetailView: View {
                     .padding(.horizontal, DS.Spacing.md)
                     .padding(.vertical, DS.Spacing.xxs)
                     .background(DS.Color.tagFill, in: Capsule())
-                Text(String(format: String(localized: "ConceptPage.card.relatedCount"), conceptPage.relatedArticles.count))
+                Text(String(format: String(localized: "ConceptPage.card.relatedCount"), (conceptPage.relatedArticles ?? []).count))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("·")
@@ -216,14 +216,14 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var relatedArticlesSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text(String(format: String(localized: "ConceptPage.detail.relatedArticles.title") + " (%lld)", conceptPage.relatedArticles.count))
+            Text(String(format: String(localized: "ConceptPage.(detail.relatedArticles ?? []).title") + " (%lld)", (conceptPage.relatedArticles ?? []).count))
                 .font(.title3.bold())
-            if conceptPage.relatedArticles.isEmpty {
+            if (conceptPage.relatedArticles ?? []).isEmpty {
                 Text("ConceptPage.detail.emptyRelatedArticles")
                     .font(.body)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(conceptPage.relatedArticles.sorted(by: { $0.savedAt > $1.savedAt }), id: \.id) { article in
+                ForEach((conceptPage.relatedArticles ?? []).sorted(by: { $0.savedAt > $1.savedAt }), id: \.id) { article in
                     NavigationLink(value: article) {
                         VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                             Text(article.title)

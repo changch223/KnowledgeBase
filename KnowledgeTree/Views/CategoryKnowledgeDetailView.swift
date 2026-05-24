@@ -70,7 +70,7 @@ struct CategoryKnowledgeDetailView: View {
     private var articlesForCategory: [Article] {
         allArticles
             .filter { article in
-                article.tags.contains { $0.categoryRaw == category.name }
+                article.tags?.contains { $0.categoryRaw == category.name } ?? false
             }
             .sorted { $0.savedAt > $1.savedAt }
     }
@@ -123,7 +123,7 @@ struct CategoryKnowledgeDetailView: View {
         let facts = topKeyFactsAggregated
         if !facts.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("clip.detail.keyFacts.title")
+                Text("clip.(detail.keyFacts ?? []).title")
                     .font(DS.Typography.sectionTitle)
                 ForEach(Array(facts.enumerated()), id: \.offset) { _, entry in
                     HStack(alignment: .top, spacing: DS.Spacing.sm) {
@@ -149,7 +149,7 @@ struct CategoryKnowledgeDetailView: View {
         let entities = topEntitiesAggregated
         if !entities.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("clip.detail.entities.title")
+                Text("clip.(detail.entities ?? []).title")
                     .font(DS.Typography.sectionTitle)
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: DS.Spacing.sm) {
@@ -172,7 +172,7 @@ struct CategoryKnowledgeDetailView: View {
     private var articlesListSection: some View {
         if !articlesForCategory.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("clip.detail.articles.title")
+                Text("clip.(detail.articles ?? []).title")
                     .font(DS.Typography.sectionTitle)
                 ForEach(articlesForCategory, id: \.id) { article in
                     Button {

@@ -25,7 +25,7 @@ final class KnowledgeDigest {
     var isStale: Bool = false
 
     @Relationship(deleteRule: .nullify, inverse: \Article.digests)
-    var sourceArticles: [Article] = []
+    var sourceArticles: [Article]? = []
 
     init(
         id: UUID = UUID(),

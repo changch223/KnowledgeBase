@@ -38,8 +38,8 @@ enum AutoTagApplier {
         guard limit > 0 else { return }
 
         // FR-006 / US2: 既存タグあり → 完全スキップ
-        guard article.tags.isEmpty else {
-            logger.debug("auto-tag skipped: existing tags=\(article.tags.count)")
+        guard (article.tags ?? []).isEmpty else {
+            logger.debug("auto-tag skipped: existing tags=\((article.tags ?? []).count)")
             return
         }
 

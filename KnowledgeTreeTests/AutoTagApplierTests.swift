@@ -58,7 +58,7 @@ struct AutoTagApplierTests {
                 order: index
             )
             context.insert(entity)
-            knowledge.entities.append(entity)
+            knowledge.entities?.append(entity)
         }
         return article
     }
@@ -78,8 +78,8 @@ struct AutoTagApplierTests {
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == 5)
-        let tagNames = Set(article.tags.map(\.name))
+        #expect((article.tags ?? []).count == 5)
+        let tagNames = Set((article.tags ?? []).map(\.name))
         #expect(tagNames == Set(["alpha", "beta", "gamma", "delta", "epsilon"]))
         #expect(!tagNames.contains("zeta"))  // salience=3 は除外
     }
@@ -97,12 +97,12 @@ struct AutoTagApplierTests {
 
         // 手動タグを 1 件先に付与
         _ = try tagStore.addTag(rawName: "manual-tag", to: article)
-        #expect(article.tags.count == 1)
+        #expect((article.tags ?? []).count == 1)
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == 1, "auto-apply should skip when manual tags exist")
-        #expect(article.tags.first?.name == "manual-tag")
+        #expect((article.tags ?? []).count == 1, "auto-apply should skip when manual tags exist")
+        #expect((article.tags ?? []).first?.name == "manual-tag")
     }
 
     @Test func testSkipsWhenKnowledgeStatusIsFailed() throws {
@@ -118,7 +118,7 @@ struct AutoTagApplierTests {
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == 0)
+        #expect((article.tags ?? []).count == 0)
     }
 
     @Test func testSkipsWhenKnowledgeStatusIsPending() throws {
@@ -134,7 +134,7 @@ struct AutoTagApplierTests {
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == 0)
+        #expect((article.tags ?? []).count == 0)
     }
 
     @Test func testIdempotentOnDoubleInvocation() throws {
@@ -149,13 +149,13 @@ struct AutoTagApplierTests {
         let tagStore = TagStore(context: context)
 
         AutoTagApplier.apply(to: article, using: tagStore)
-        let firstCount = article.tags.count
-        let firstNames = Set(article.tags.map(\.name))
+        let firstCount = (article.tags ?? []).count
+        let firstNames = Set((article.tags ?? []).map(\.name))
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == firstCount)
-        #expect(Set(article.tags.map(\.name)) == firstNames)
+        #expect((article.tags ?? []).count == firstCount)
+        #expect(Set((article.tags ?? []).map(\.name)) == firstNames)
     }
 
     @Test func testReappliesAfterAllTagsRemoved() throws {
@@ -170,19 +170,19 @@ struct AutoTagApplierTests {
         let tagStore = TagStore(context: context)
 
         AutoTagApplier.apply(to: article, using: tagStore)
-        let firstNames = Set(article.tags.map(\.name))
+        let firstNames = Set((article.tags ?? []).map(\.name))
         #expect(firstNames.count == 5)
 
         // 全削除
         for name in firstNames {
             try tagStore.removeTag(normalizedName: name, from: article)
         }
-        #expect(article.tags.count == 0)
+        #expect((article.tags ?? []).count == 0)
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == 5)
-        #expect(Set(article.tags.map(\.name)) == firstNames)
+        #expect((article.tags ?? []).count == 5)
+        #expect(Set((article.tags ?? []).map(\.name)) == firstNames)
     }
 
     @Test func testEmptyEntitiesNoTagsApplied() throws {
@@ -197,6 +197,6 @@ struct AutoTagApplierTests {
 
         AutoTagApplier.apply(to: article, using: tagStore)
 
-        #expect(article.tags.count == 0)
+        #expect((article.tags ?? []).count == 0)
     }
 }

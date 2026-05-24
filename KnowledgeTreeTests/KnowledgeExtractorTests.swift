@@ -60,8 +60,8 @@ struct KnowledgeExtractorTests {
         let output = try await extractor.extract(extractedText: "本文")
         #expect(output.essence.isEmpty)
         #expect(output.summary.isEmpty)
-        #expect(output.keyFacts.isEmpty)
-        #expect(output.entities.isEmpty)
+        #expect((output.keyFacts ?? []).isEmpty)
+        #expect((output.entities ?? []).isEmpty)
     }
 
     @Test func extractReturnsPartialOutput() async throws {
@@ -77,8 +77,8 @@ struct KnowledgeExtractorTests {
         let output = try await extractor.extract(extractedText: "本文")
         #expect(!output.essence.isEmpty)
         #expect(!output.summary.isEmpty)
-        #expect(output.keyFacts.isEmpty)
-        #expect(output.entities.isEmpty)
+        #expect((output.keyFacts ?? []).isEmpty)
+        #expect((output.entities ?? []).isEmpty)
     }
 
     @Test func buildPromptIncludesText() {

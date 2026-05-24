@@ -20,7 +20,7 @@ struct AIInsightCard: View {
             CategorySeed.category(for: $0.categoryRaw)
         }
         let entries = grouped.map { (category, tagsInCategory) -> (Category, Int) in
-            let articleIDs = Set(tagsInCategory.flatMap { $0.articles.map(\.id) })
+            let articleIDs = Set(tagsInCategory.flatMap { ($0.articles ?? []).map(\.id) })
             return (category, articleIDs.count)
         }
         .filter { $0.1 > 0 }

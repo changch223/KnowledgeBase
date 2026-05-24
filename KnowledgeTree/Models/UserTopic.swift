@@ -30,7 +30,7 @@ final class UserTopic {
     @Attribute(.externalStorage) var clusterCentroid: Data?
 
     /// 構成記事 (deleteRule: .nullify、Article 削除時は relationship 解除)
-    @Relationship(deleteRule: .nullify) var articles: [Article] = []
+    @Relationship(deleteRule: .nullify) var articles: [Article]? = []
 
     init(
         id: UUID = UUID(),
@@ -63,9 +63,11 @@ extension UserTopic {
     }
 
     /// 重要度スコア = 構成記事数 × 最新性 (簡易、上位 N で並べ替え用)
+    /// spec 051 Phase A: articles が Optional 化、`?? []` で safe unwrap。
     var importanceScore: Double {
-        let count = Double(articles.count)
-        guard let latestSavedAt = articles.map({ $0.savedAt }).max() else {
+        let arts = articles ?? []
+        let count = Double(arts.count)
+        guard let latestSavedAt = arts.map({ $0.savedAt }).max() else {
             return count
         }
         // 最新性: 7 日以内 = 1.0、30 日以内 = 0.5、それ以上 = 0.2

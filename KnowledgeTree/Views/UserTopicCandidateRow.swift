@@ -21,13 +21,13 @@ struct UserTopicCandidateRow: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("clip.topics.meta.articleCount \(topic.articles.count)")
+                Text("clip.topics.meta.articleCount \((topic.articles ?? []).count)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             // 代表記事 3 件 (savedAt 降順)
-            let sortedArticles = topic.articles.sorted { $0.savedAt > $1.savedAt }.prefix(3)
+            let sortedArticles = (topic.articles ?? []).sorted { $0.savedAt > $1.savedAt }.prefix(3)
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(Array(sortedArticles), id: \.id) { article in
                     Text("• \(article.title)")

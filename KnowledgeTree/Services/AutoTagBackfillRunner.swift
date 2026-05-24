@@ -65,7 +65,7 @@ final class AutoTagBackfillRunner {
 
         // 3. 候補 filter (tags 空 + knowledge succeeded/partiallySucceeded)
         let candidates: [Article] = allArticles.filter { article in
-            guard article.tags.isEmpty else { return false }
+            guard (article.tags ?? []).isEmpty else { return false }
             guard let knowledge = article.extractedKnowledge else { return false }
             return knowledge.status == .succeeded
                 || knowledge.status == .partiallySucceeded

@@ -30,7 +30,7 @@ struct AIBrainView: View {
         }
         let entries: [CategoryListEntry] = grouped.compactMap { (category, tagsInCategory) in
             // Category 内の article 重複排除集計
-            let articleIDs = Set(tagsInCategory.flatMap { $0.articles.map(\.id) })
+            let articleIDs = Set(tagsInCategory.flatMap { ($0.articles ?? []).map(\.id) })
             let count = articleIDs.count
             guard count > 0 else { return nil }
             return CategoryListEntry(

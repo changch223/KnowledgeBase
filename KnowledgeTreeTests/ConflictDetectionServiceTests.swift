@@ -39,7 +39,7 @@ struct ConflictDetectionServiceTests {
                 order: i
             )
             context.insert(entity)
-            knowledge.entities.append(entity)
+            knowledge.entities?.append(entity)
         }
         context.insert(knowledge)
         article.extractedKnowledge = knowledge
@@ -267,7 +267,7 @@ struct ConflictDetectionServiceTests {
         let techTag = KnowledgeTree.Tag(name: "Apple")
         techTag.categoryRaw = "テクノロジー"
         context.insert(techTag)
-        article.tags.append(techTag)
+        article.tags?.append(techTag)
 
         // GraphNode: Apple + Tim Cook + X 氏
         let apple = GraphNode(name: "Apple", categoryRaw: "テクノロジー", salience: 5, mentionCount: 2)
@@ -324,7 +324,7 @@ struct ConflictDetectionServiceTests {
         let tag = KnowledgeTree.Tag(name: "Apple")
         tag.categoryRaw = "テクノロジー"
         context.insert(tag)
-        article.tags.append(tag)
+        article.tags?.append(tag)
 
         let apple = GraphNode(name: "Apple", categoryRaw: "テクノロジー")
         let n1 = GraphNode(name: "N1", categoryRaw: "テクノロジー")

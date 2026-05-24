@@ -21,9 +21,9 @@ struct ArticleSavingServiceTests {
             Issue.record("Expected .saved, got \(result)")
             return
         }
-        #expect(store.articles.count == 1)
-        #expect(store.articles.first?.title == "Example Article")
-        #expect(store.articles.first?.url == url.absoluteString)
+        #expect((store.articles ?? []).count == 1)
+        #expect((store.articles ?? []).first?.title == "Example Article")
+        #expect((store.articles ?? []).first?.url == url.absoluteString)
     }
 
     @Test func returnsMissingURLWhenURLIsNil() async {
@@ -31,7 +31,7 @@ struct ArticleSavingServiceTests {
         let service = DefaultArticleSavingService(store: store)
         let result = await service.save(url: nil, suppliedTitle: "Anything")
         #expect(result == .missingURL)
-        #expect(store.articles.isEmpty)
+        #expect((store.articles ?? []).isEmpty)
     }
 
     @Test func returnsUnsupportedSchemeForNonHTTP() async {
@@ -40,7 +40,7 @@ struct ArticleSavingServiceTests {
         let url = URL(string: "mailto:foo@bar.com")!
         let result = await service.save(url: url, suppliedTitle: nil)
         #expect(result == .unsupportedScheme)
-        #expect(store.articles.isEmpty)
+        #expect((store.articles ?? []).isEmpty)
     }
 
     @Test func usesHostFallbackWhenTitleIsEmpty() async {
@@ -52,7 +52,7 @@ struct ArticleSavingServiceTests {
             Issue.record("Expected .saved, got \(result)")
             return
         }
-        #expect(store.articles.first?.title == "example.com")
+        #expect((store.articles ?? []).first?.title == "example.com")
     }
 
     @Test func usesHostFallbackWhenTitleIsNil() async {
@@ -64,7 +64,7 @@ struct ArticleSavingServiceTests {
             Issue.record("Expected .saved, got \(result)")
             return
         }
-        #expect(store.articles.first?.title == "example.com")
+        #expect((store.articles ?? []).first?.title == "example.com")
     }
 
     @Test func detectsDuplicateOnSecondSave() async {
@@ -74,7 +74,7 @@ struct ArticleSavingServiceTests {
         _ = await service.save(url: url, suppliedTitle: "First")
         let second = await service.save(url: url, suppliedTitle: "Second")
         #expect(second == .duplicate)
-        #expect(store.articles.count == 1)
+        #expect((store.articles ?? []).count == 1)
     }
 
     @Test func duplicateDoesNotChangeSavedAt() async throws {
@@ -82,10 +82,10 @@ struct ArticleSavingServiceTests {
         let service = DefaultArticleSavingService(store: store)
         let url = URL(string: "https://example.com/article")!
         _ = await service.save(url: url, suppliedTitle: "First")
-        let originalSavedAt = store.articles.first!.savedAt
+        let originalSavedAt = (store.articles ?? []).first!.savedAt
         try await Task.sleep(for: .milliseconds(20))
         _ = await service.save(url: url, suppliedTitle: "Second")
-        #expect(store.articles.first?.savedAt == originalSavedAt)
+        #expect((store.articles ?? []).first?.savedAt == originalSavedAt)
     }
 
     @Test func returnsPersistenceFailureWhenStoreThrows() async {

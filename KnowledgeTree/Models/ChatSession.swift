@@ -19,7 +19,7 @@ final class ChatSession {
     var title: String = ""
 
     @Relationship(deleteRule: .cascade, inverse: \ChatMessage.session)
-    var messages: [ChatMessage] = []
+    var messages: [ChatMessage]? = []
 
     init(
         id: UUID = UUID(),

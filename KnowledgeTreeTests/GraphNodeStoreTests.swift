@@ -133,8 +133,8 @@ struct GraphNodeStoreTests {
         let article2 = Article(url: "https://b", title: "A2")
         context.insert(article1)
         context.insert(article2)
-        source.articles.append(article1)
-        target.articles.append(article2)
+        source.articles?.append(article1)
+        target.articles?.append(article2)
 
         // source → other (edge to be reassigned)
         makeEdge(source: source, target: other, label: "rel1", in: context)
@@ -151,12 +151,12 @@ struct GraphNodeStoreTests {
         #expect(!nodes.contains(where: { $0.id == source.id }))
 
         // target に articles が合算
-        #expect(target.articles.count == 2)
+        #expect((target.articles ?? []).count == 2)
 
         // target → other の edge が 1 本残る、self-loop は破棄
-        #expect(target.outgoingEdges.count == 1)
-        #expect(target.outgoingEdges.first?.target?.id == other.id)
-        #expect(target.outgoingEdges.first?.label == "rel1")
+        #expect((target.outgoingEdges ?? []).count == 1)
+        #expect((target.outgoingEdges ?? []).first?.target?.id == other.id)
+        #expect((target.outgoingEdges ?? []).first?.label == "rel1")
     }
 
     // MARK: - 6. merge: 重複 edge は weight 加算で統合
@@ -176,7 +176,7 @@ struct GraphNodeStoreTests {
         try store.merge(source: source, into: target)
 
         // target → other の edge は 1 本に統合、weight = 3 + 2 = 5
-        let outgoing = target.outgoingEdges.filter { $0.target?.id == other.id }
+        let outgoing = (target.outgoingEdges ?? []).filter { $0.target?.id == other.id }
         #expect(outgoing.count == 1)
         #expect(outgoing.first?.weight == 5)
         // confidence は max(0.7, 0.9) = 0.9

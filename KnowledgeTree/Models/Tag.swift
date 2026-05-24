@@ -14,7 +14,7 @@ import SwiftData
 @Model
 final class Tag {
     var name: String = ""
-    @Relationship(inverse: \Article.tags) var articles: [Article] = []
+    @Relationship(inverse: \Article.tags) var articles: [Article]? = []
 
     /// spec 015: AutoCategoryClassifier で 1 回推論された Category 名 (CategorySeed.allSeeds のいずれか)。
     /// nil = 未分類 (新規 Tag 直後 / Foundation Models 利用不可時の初期状態)。

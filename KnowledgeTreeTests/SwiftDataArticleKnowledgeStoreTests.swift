@@ -66,8 +66,8 @@ struct SwiftDataArticleKnowledgeStoreTests {
         #expect(article.extractedKnowledge != nil)
         #expect(article.extractedKnowledge?.status == .succeeded)
         #expect(article.extractedKnowledge?.essence?.isEmpty == false)
-        #expect(article.extractedKnowledge?.keyFacts.count == 3)
-        #expect(article.extractedKnowledge?.entities.count == 5)
+        #expect((article.extractedKnowledge?.keyFacts ?? []).count == 3)
+        #expect((article.extractedKnowledge?.entities ?? []).count == 5)
     }
 
     @Test func upsertSucceededReplacesExistingChildren() throws {
@@ -80,7 +80,7 @@ struct SwiftDataArticleKnowledgeStoreTests {
             article: article, status: .succeeded,
             output: .fixture(), modelVersion: nil, durationMs: nil
         )
-        #expect(article.extractedKnowledge?.keyFacts.count == 3)
+        #expect((article.extractedKnowledge?.keyFacts ?? []).count == 3)
 
         // 新規 output で上書き (1 fact + 1 entity に縮小)
         try store.upsertSucceeded(
@@ -94,8 +94,8 @@ struct SwiftDataArticleKnowledgeStoreTests {
             modelVersion: nil, durationMs: nil
         )
 
-        #expect(article.extractedKnowledge?.keyFacts.count == 1)
-        #expect(article.extractedKnowledge?.entities.count == 1)
+        #expect((article.extractedKnowledge?.keyFacts ?? []).count == 1)
+        #expect((article.extractedKnowledge?.entities ?? []).count == 1)
         #expect(article.extractedKnowledge?.essence == "新しい essence")
     }
 

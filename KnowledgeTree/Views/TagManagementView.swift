@@ -23,8 +23,8 @@ struct TagManagementView: View {
             : candidates.filter { $0.name.lowercased().contains(trimmed) }
         // article count desc、同数なら name asc
         return matched.sorted { lhs, rhs in
-            if lhs.articles.count != rhs.articles.count {
-                return lhs.articles.count > rhs.articles.count
+            if (lhs.articles ?? []).count != (rhs.articles ?? []).count {
+                return (lhs.articles ?? []).count > (rhs.articles ?? []).count
             }
             return lhs.name < rhs.name
         }
@@ -86,7 +86,7 @@ private struct TagRow: View {
                 }
             }
             Spacer()
-            Text("tag.management.row.articleCount \(tag.articles.count)")
+            Text("tag.management.row.articleCount \((tag.articles ?? []).count)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Image(systemName: "chevron.right")

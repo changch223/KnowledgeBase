@@ -51,10 +51,10 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
     func detect(article: Article) async {
         guard availability.isAvailable else { return }
         guard let knowledge = article.extractedKnowledge,
-              !knowledge.entities.isEmpty else { return }
+              !(knowledge.entities ?? []).isEmpty else { return }
 
         // top N entities (salience 高い順)
-        let topEntities = knowledge.entities
+        let topEntities = (knowledge.entities ?? [])
             .sorted { $0.salience > $1.salience }
             .prefix(topEntityCount)
 
@@ -150,13 +150,13 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
 
     func detectGraphConflicts(article: Article) {
         // article が紐づく Category を解決 (categoryRaw は Tag で optional)
-        let resolvedCategory: String? = article.tags.lazy
+        let resolvedCategory: String? = (article.tags ?? []).lazy
             .compactMap { $0.categoryRaw }
             .first(where: { !$0.isEmpty })
         guard let categoryRaw = resolvedCategory else { return }
 
         // article の entities → GraphNode 解決
-        let entityNames: [String] = article.extractedKnowledge?.entities.map { $0.name } ?? []
+        let entityNames: [String] = article.extractedKnowledge?.entities?.map { $0.name } ?? []
         guard !entityNames.isEmpty else { return }
         let normalized = Set(entityNames
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
@@ -173,7 +173,7 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
 
         for node in articleNodes {
             // ラベル付き outgoing edges を label でグループ化、target が複数あれば衝突候補
-            let labeledEdges = node.outgoingEdges.filter { $0.label != nil && $0.target?.isActive == true }
+            let labeledEdges = (node.outgoingEdges ?? []).filter { $0.label != nil && $0.target?.isActive == true }
             let groupedByLabel = Dictionary(grouping: labeledEdges, by: { $0.label ?? "" })
             for (label, edges) in groupedByLabel where edges.count >= 2 {
                 // updatedAt 降順で sort、最新 / 1 つ前を比較
@@ -222,8 +222,8 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
     static func buildPrompt(newArticle: Article, oldArticle: Article, entityName: String) -> String {
         let newEssence = newArticle.extractedKnowledge?.essence ?? ""
         let oldEssence = oldArticle.extractedKnowledge?.essence ?? ""
-        let newKeyFacts = newArticle.extractedKnowledge?.keyFacts.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
-        let oldKeyFacts = oldArticle.extractedKnowledge?.keyFacts.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
+        let newKeyFacts = newArticle.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
+        let oldKeyFacts = oldArticle.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
 
         return """
         以下の 2 記事は同じ entity「\(entityName)」について書かれています。

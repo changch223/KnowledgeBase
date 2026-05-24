@@ -45,7 +45,7 @@ enum SearchPredicate {
            facts.contains(where: { $0.statement.localizedStandardContains(q) }) { return true }
         if let entities = article.extractedKnowledge?.entities,
            entities.contains(where: { $0.name.localizedStandardContains(q) }) { return true }
-        if article.tags.contains(where: { $0.name.localizedStandardContains(q) }) { return true }
+        if article.tags?.contains(where: { $0.name.localizedStandardContains(q) }) ?? false { return true }
         return false
     }
 }

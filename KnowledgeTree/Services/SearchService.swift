@@ -109,7 +109,7 @@ enum SearchService {
                 score += 20
                 matched.insert(.entity)
             }
-            if article.tags.contains(where: { $0.name.localizedStandardContains(q) }) {
+            if article.tags?.contains(where: { $0.name.localizedStandardContains(q) }) ?? false {
                 score += 20
                 matched.insert(.tag)
             }
@@ -194,7 +194,7 @@ enum SearchService {
             if ans.answer.localizedStandardContains(q) {
                 score += 20
             }
-            if ans.citedArticles.contains(where: { $0.title.localizedStandardContains(q) }) {
+            if ans.citedArticles?.contains(where: { $0.title.localizedStandardContains(q) }) ?? false {
                 score += 10
             }
             if score > 0 {

@@ -161,7 +161,7 @@ final class DefaultSavedAnswerService: SavedAnswerServiceProtocol {
         let articleID = article.id
         let allPages = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
         let affectedPages = allPages.filter { page in
-            page.relatedArticles.contains(where: { $0.id == articleID })
+            page.relatedArticles?.contains(where: { $0.id == articleID }) ?? false
         }
         guard !affectedPages.isEmpty else { return }
         let pageIDs = Set(affectedPages.map(\.id))
@@ -265,7 +265,7 @@ final class DefaultSavedAnswerService: SavedAnswerServiceProtocol {
         let citedIDs = Set(citedArticles.map(\.id))
         let allPages: [ConceptPage] = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
         let scored: [(UUID, Int)] = allPages.compactMap { page in
-            let overlap = page.relatedArticles.filter { citedIDs.contains($0.id) }.count
+            let overlap = (page.relatedArticles ?? []).filter { citedIDs.contains($0.id) }.count
             return overlap > 0 ? (page.id, overlap) : nil
         }
         return scored

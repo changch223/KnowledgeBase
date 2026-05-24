@@ -46,7 +46,7 @@ struct RecentActivitySnapshotBuilderTests {
             savedAt: savedAt
         )
         context.insert(article)
-        article.tags.append(tag)
+        article.tags?.append(tag)
         if !entities.isEmpty {
             let knowledge = ExtractedKnowledge(article: article, status: .succeeded)
             context.insert(knowledge)
@@ -60,7 +60,7 @@ struct RecentActivitySnapshotBuilderTests {
                     order: idx
                 )
                 context.insert(entity)
-                knowledge.entities.append(entity)
+                knowledge.entities?.append(entity)
             }
         }
         return article
