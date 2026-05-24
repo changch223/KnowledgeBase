@@ -35,6 +35,8 @@
 		57D1488D2FC2A74E00E101FE /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57D1488C2FC2A74E00E101FE /* SwiftUI.framework */; };
 		57D1489E2FC2A75000E101FE /* iKnowWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 57D148892FC2A74E00E101FE /* iKnowWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		57EC37E62FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5B1D2E3F4A5C6D7E8F901A03 /* KnowledgeTree/Models/LintLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B1D2E3F4A5C6D7E8F901A02 /* KnowledgeTree/Models/LintLog.swift */; };
+		5B1D2E3F4A5C6D7E8F901A04 /* KnowledgeTree/Models/LintLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B1D2E3F4A5C6D7E8F901A02 /* KnowledgeTree/Models/LintLog.swift */; };
 		5D7819A59A205721B458C074 /* EnrichmentStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB42EA8727F0B7A33E4346F9 /* EnrichmentStatusBadge.swift */; };
 		62930BEAB8C65E831132C3A0 /* ArticleEnrichmentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FFD46C1B8D9C6D97E83F1F /* ArticleEnrichmentService.swift */; };
 		6BD1C875EE9DC1EBD1B78EDD /* EntityChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E458F44B8183F000D16663 /* EntityChip.swift */; };
@@ -192,6 +194,7 @@
 		57D148A32FC2A7BA00E101FE /* iKnowWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iKnowWidgetExtension.entitlements; sourceTree = "<group>"; };
 		57EC37CE2FAAE47500B958B7 /* KnowledgeTreeSafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KnowledgeTreeSafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A76D763DA21F392E28BC29E /* ThumbnailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailView.swift; sourceTree = "<group>"; };
+		5B1D2E3F4A5C6D7E8F901A02 /* KnowledgeTree/Models/LintLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/LintLog.swift; sourceTree = SOURCE_ROOT; };
 		65C204DC081527C3310E6D86 /* MetadataParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataParserTests.swift; sourceTree = "<group>"; };
 		65FB1B29BE5A72166EBF5A01 /* SaveArticleUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SaveArticleUITests.swift; sourceTree = "<group>"; };
 		6B000B33C3242BBD6F87F234 /* SwiftDataArticleBodyStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SwiftDataArticleBodyStoreTests.swift; sourceTree = "<group>"; };
@@ -263,6 +266,7 @@
 				Models/GraphNode.swift,
 				Models/KnowledgeChunkProgress.swift,
 				Models/KnowledgeDigest.swift,
+				Models/LintLog.swift,
 				Models/SavedAnswer.swift,
 				Models/Tag.swift,
 				Models/UnderstandingInteraction.swift,
@@ -400,6 +404,7 @@
 				4F9A7B23E61C8DA9F5A9C388 /* KnowledgeTree/Models/ConceptPage.swift */,
 				4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */,
 				4F9A7B23E61C8DA9F5A9C38A /* KnowledgeTree/Models/UnderstandingInteraction.swift */,
+				5B1D2E3F4A5C6D7E8F901A02 /* KnowledgeTree/Models/LintLog.swift */,
 				F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */,
 				B1C2D3E4F506A7B8C9D0E1F2 /* KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements */,
 			);
@@ -876,6 +881,7 @@
 				ABF8B2C3D4E5F6A7B8C9D0F2 /* KnowledgeTree/Models/ConceptPage.swift in Sources */,
 				ABF8B2C3D4E5F6A7B8C9D0F3 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */,
 				ABF8B2C3D4E5F6A7B8C9D0F4 /* KnowledgeTree/Models/UnderstandingInteraction.swift in Sources */,
+				5B1D2E3F4A5C6D7E8F901A03 /* KnowledgeTree/Models/LintLog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -906,6 +912,7 @@
 				D81C5EB872CA418D5BA6F298 /* KnowledgeTree/Models/ConceptPage.swift in Sources */,
 				D81C5EB872CA418D5BA6F299 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */,
 				D81C5EB872CA418D5BA6F29A /* KnowledgeTree/Models/UnderstandingInteraction.swift in Sources */,
+				5B1D2E3F4A5C6D7E8F901A04 /* KnowledgeTree/Models/LintLog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

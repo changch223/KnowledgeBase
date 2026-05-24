@@ -74,9 +74,7 @@ struct KnowledgeClipView: View {
             .navigationDestination(for: UnderstandingCardListDestination.self) { _ in
                 UnderstandingCardListView()
             }
-            .navigationDestination(for: ActionItemsReviewDestination.self) { _ in
-                ActionItemsReviewView()
-            }
+            // spec 058: ActionItemsReviewView 削除 (Confirm UX 廃止、AI 自動採用に移行)
             // spec 044: 学習タブ root 削除後の DeepDiveChatView 動線継続 (UnderstandingCard 経由)
             .navigationDestination(for: UnderstandingCard.self) { card in
                 DeepDiveChatView(card: card)

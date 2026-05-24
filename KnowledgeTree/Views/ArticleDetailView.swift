@@ -173,6 +173,9 @@ struct ArticleDetailView: View {
                 // spec 042: この記事から派生した概念ページ (relatedArticles に含む ConceptPage)
                 derivedConceptPagesSection
 
+                // spec 058: 過去の見解 DisclosureGroup (ConflictProposal 経由で関連する古い Article)
+                ConflictHistoryDisclosure(currentArticle: article)
+
                 openOriginalButton
             }
             .padding(.horizontal, DS.Spacing.xxxl)

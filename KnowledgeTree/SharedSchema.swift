@@ -40,6 +40,7 @@ enum SharedSchema {
             ConceptPage.self,                      // spec 042
             SavedAnswer.self,                      // spec 043
             UnderstandingInteraction.self,         // spec 044
+            LintLog.self,                          // spec 058
         ])
     }
 

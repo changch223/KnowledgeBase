@@ -4073,6 +4073,17 @@
           }
         }
       }
+    },
+    "conflict.pastViews.label %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去の見解 (%lld)"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

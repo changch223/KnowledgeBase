@@ -88,7 +88,8 @@ struct ConflictDetectionServiceTests {
         let proposals = try context.fetch(FetchDescriptor<ConflictProposal>())
         #expect(proposals.count == 1)
         #expect(proposals.first?.entityName == "〇〇店")
-        #expect(proposals.first?.status == ConflictStatus.pending.rawValue)
+        // spec 058: 新規生成時は autoResolved (Confirm UX 廃止)
+        #expect(proposals.first?.status == ConflictStatus.autoResolved.rawValue)
         _ = oldArticle
     }
 

@@ -72,8 +72,11 @@ final class ConflictProposal {
 
 /// ConflictProposal.status の許容値。
 enum ConflictStatus: String {
-    case pending     // ユーザー未確認
-    case overwrite   // ユーザーが「上書き」採用 (oldArticle.isObsolete = true)
-    case keepBoth    // ユーザーが「両方残す」採用
-    case dismissed   // ユーザーが「却下」(矛盾ではないと判断)
+    case pending      // ユーザー未確認 (spec 058 で廃止、新規生成しない)
+    case overwrite    // ユーザーが「上書き」採用 (oldArticle.isObsolete = true)
+    case keepBoth     // ユーザーが「両方残す」採用
+    case dismissed    // ユーザーが「却下」(矛盾ではないと判断)
+    /// spec 058: AI 自動採用 (両方残す、UI 通知なし、ArticleDetailView「過去の見解」で閲覧可能)。
+    /// oldArticle.isObsolete = false (両方主表示、ArticleDetailView 末尾の DisclosureGroup で hidden)。
+    case autoResolved
 }

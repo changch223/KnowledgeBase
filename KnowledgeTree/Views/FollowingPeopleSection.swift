@@ -18,28 +18,11 @@ struct FollowingPeopleSection: View {
     )
     private var followingPages: [ConceptPage]
 
-    @Query(
-        filter: #Predicate<ConflictProposal> { $0.status == "pending" }
-    )
-    private var pendingConflicts: [ConflictProposal]
-
-    @Query(
-        filter: #Predicate<SavedAnswer> { $0.isStale == true }
-    )
-    private var staleAnswers: [SavedAnswer]
-
     private var topPages: [ConceptPage] {
         Array(followingPages.prefix(5))
     }
 
     private var totalCount: Int { followingPages.count }
-
-    private var badgeData: ActionItemBadgeData {
-        ActionItemBadgeData(
-            conflictCount: pendingConflicts.count,
-            staleSavedAnswerCount: staleAnswers.count
-        )
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
@@ -57,27 +40,7 @@ struct FollowingPeopleSection: View {
             }
             .padding(.horizontal, DS.Spacing.xxl)
 
-            // ⚠️ 更新が必要 badge
-            if badgeData.shouldShow {
-                NavigationLink(value: ActionItemsReviewDestination()) {
-                    HStack(spacing: DS.Spacing.sm) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text("knowledgeClip.actionItems.needsUpdate \(badgeData.total)")
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(DS.Spacing.md)
-                    .background(Color.orange.opacity(0.1), in: .rect(cornerRadius: DS.Radius.chip))
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, DS.Spacing.xxl)
-                .accessibilityIdentifier("following.actionItemsBadge")
-            }
+            // spec 058: ⚠️ 「更新が必要」 badge 削除 (Confirm UX 廃止、AI 自動採用に移行)
 
             if topPages.isEmpty {
                 ContentUnavailableView(
@@ -103,14 +66,7 @@ struct FollowingPeopleSection: View {
     }
 }
 
-/// ⚠️ 更新が必要 badge の表示判定 + 件数。
-struct ActionItemBadgeData {
-    let conflictCount: Int
-    let staleSavedAnswerCount: Int
-
-    var total: Int { conflictCount + staleSavedAnswerCount }
-    var shouldShow: Bool { total > 0 }
-}
+// spec 058: ActionItemBadgeData 削除 (⚠️ badge 廃止に伴い)
 
 private struct FollowingConceptPageRow: View {
     let page: ConceptPage
