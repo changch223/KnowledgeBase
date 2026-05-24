@@ -37,6 +37,8 @@ struct KnowledgeTreeApp: App {
     /// spec 035 で `.knowledgeClip` を default にしていた既存ユーザーも、
     /// UserDefaults `spec044_learningTabMigrated` キーで 1 回限り強制 `.learning`。
     @State private var selectedTab: AppTab = .learning
+    /// spec 049: 初回起動時の onboarding 表示。
+    @State private var showOnboarding: Bool = !OnboardingFlagStore.shared.hasCompleted
 
     @MainActor
     init() {
@@ -136,6 +138,10 @@ struct KnowledgeTreeApp: App {
                 if new != nil {
                     selectedTab = .chat
                 }
+            }
+            // spec 049: 初回起動 onboarding (fullScreenCover)
+            .fullScreenCover(isPresented: $showOnboarding) {
+                OnboardingView(isPresented: $showOnboarding)
             }
         }
         .modelContainer(sharedModelContainer)
@@ -360,6 +366,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.understandingTrackerService = understandingTrackerService      // spec 044
         serviceContainer.deepDiveChatStarter = deepDiveChatStarter                      // spec 044 (旧、互換)
         serviceContainer.deepDiveChatService = deepDiveChatService                      // spec 044 brushup
+        serviceContainer.availabilityChecker = availability                             // spec 048 (UI banner 表示用)
 
         // 既存記事の backfill (順次): enrichment → body → knowledge
         await enrichmentService.backfillAll()

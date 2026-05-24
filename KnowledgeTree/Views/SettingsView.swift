@@ -8,7 +8,7 @@
 //  Chrome iOS の x-callback-url が「現在のタブ URL」を返さない技術制約により実用化不可。
 //  Chrome は Share Extension (spec 001) のみで運用、Setup Guide は SettingsView から撤去。
 //  AppIntent / AppShortcutsProvider 実装は Safari Web Extension が ArticleSavingActor に
-//  依存するため残置 (副作用で Shortcuts.app に「知積に保存」アクションは登録される)。
+//  依存するため残置 (副作用で Shortcuts.app に「iKnow に保存」アクションは登録される)。
 //
 
 import SwiftUI
@@ -19,6 +19,15 @@ struct SettingsView: View {
     @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
     @Environment(ServiceContainer.self) private var serviceContainer
     @State private var showDeleteChatConfirm: Bool = false
+    /// spec 049: onboarding 再表示用
+    @State private var showOnboardingReplay: Bool = false
+
+    /// spec 050: App Store 表示用 version (CFBundleShortVersionString + CFBundleVersion)
+    private var appVersionString: String {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        return "\(v) (\(b))"
+    }
 
     var body: some View {
         Form {
@@ -133,6 +142,92 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.savedAnswerHistory.entry")
             }
 
+            // spec 049: onboarding 再表示
+            Section {
+                Button {
+                    OnboardingFlagStore.shared.reset()
+                    showOnboardingReplay = true
+                } label: {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "sparkles")
+                            .frame(width: 24)
+                        Text("はじめての方への説明をもう一度見る")
+                    }
+                }
+                .accessibilityIdentifier("settings.onboarding.replay")
+            }
+
+            // spec 050: iCloud sync (近日対応 placeholder、v2.0 で実装予定)
+            Section {
+                HStack(spacing: DS.Spacing.lg) {
+                    Image(systemName: "icloud")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("iCloud で同期")
+                        Text("近日対応 — 複数の端末で同じ知識ベースを共有")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .accessibilityIdentifier("settings.icloud.placeholder")
+            } footer: {
+                Text("現在は全てこの端末内に保存されます。iCloud 同期は次のバージョンで予定しています。")
+                    .font(.caption)
+            }
+
+            // spec 050: プライバシー + サポート
+            Section {
+                if let url = URL(string: "https://github.com/changch223/KnowledgeTree/blob/main/PRIVACY.md") {
+                    Link(destination: url) {
+                        HStack(spacing: DS.Spacing.lg) {
+                            Image(systemName: "lock.shield")
+                                .foregroundStyle(DS.Color.actionBlue)
+                                .frame(width: 24)
+                            Text("プライバシーポリシー")
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .foregroundStyle(.tertiary)
+                                .font(.caption)
+                        }
+                    }
+                    .accessibilityIdentifier("settings.privacy")
+                }
+                if let url = URL(string: "https://github.com/changch223/KnowledgeTree/issues") {
+                    Link(destination: url) {
+                        HStack(spacing: DS.Spacing.lg) {
+                            Image(systemName: "questionmark.bubble")
+                                .foregroundStyle(DS.Color.actionBlue)
+                                .frame(width: 24)
+                            Text("不具合の報告 / 要望")
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .foregroundStyle(.tertiary)
+                                .font(.caption)
+                        }
+                    }
+                    .accessibilityIdentifier("settings.support")
+                }
+            } header: {
+                Text("情報")
+            }
+
+            // spec 050: バージョン情報 (App Store 表示用)
+            Section {
+                HStack(spacing: DS.Spacing.lg) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+                    Text("バージョン")
+                    Spacer()
+                    Text(appVersionString)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                .accessibilityIdentifier("settings.version")
+            }
+
             // spec 021: AI チャット履歴削除
             Section {
                 Button(role: .destructive) {
@@ -146,6 +241,9 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.chat.deleteHistory")
             }
+        }
+        .fullScreenCover(isPresented: $showOnboardingReplay) {
+            OnboardingView(isPresented: $showOnboardingReplay)
         }
         .navigationTitle("settings.title")
         .navigationBarTitleDisplayMode(.inline)
