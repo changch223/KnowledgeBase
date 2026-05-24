@@ -12,7 +12,7 @@ import SwiftData
 
 @Model
 final class ConflictProposal {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// 新しい記事 (この記事の事実を採用するかが論点)
     @Relationship(deleteRule: .nullify) var newArticle: Article?
@@ -21,21 +21,21 @@ final class ConflictProposal {
     @Relationship(deleteRule: .nullify) var oldArticle: Article?
 
     /// 矛盾検出のトリガとなった entity 名 (例: "〇〇店")
-    var entityName: String
+    var entityName: String = ""
 
     /// AI 生成の矛盾内容説明 (20-50 字、UI に表示)
-    var conflictDescription: String
+    var conflictDescription: String = ""
 
     /// 新記事側の事実 (1 文)
-    var newFact: String
+    var newFact: String = ""
 
     /// 旧記事側の事実 (1 文)
-    var oldFact: String
+    var oldFact: String = ""
 
     /// 状態: "pending" / "overwrite" / "keepBoth" / "dismissed"
-    var status: String
+    var status: String = ""
 
-    var createdAt: Date
+    var createdAt: Date = Date.now
     var resolvedAt: Date?
 
     /// spec 041: graph 衝突の場合に該当 GraphEdge.id を保持。

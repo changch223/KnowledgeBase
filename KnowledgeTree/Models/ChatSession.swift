@@ -13,10 +13,10 @@ import SwiftData
 
 @Model
 final class ChatSession {
-    @Attribute(.unique) var id: UUID
-    var createdAt: Date
-    var lastMessageAt: Date
-    var title: String
+    var id: UUID = UUID()
+    var createdAt: Date = Date.now
+    var lastMessageAt: Date = Date.now
+    var title: String = ""
 
     @Relationship(deleteRule: .cascade, inverse: \ChatMessage.session)
     var messages: [ChatMessage] = []

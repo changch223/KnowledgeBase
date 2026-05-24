@@ -42,7 +42,8 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     private let logger = Logger(subsystem: "app.KnowledgeTree", category: "deepdive")
 
     /// chat 履歴 prompt に含める直近メッセージ数 (token 節約)。
-    private let historyWindow: Int = 6
+    /// spec 051 spike で 6 → 4 (家庭教師 chat 遅延 fix、最近 2 ペアまで context 維持)。
+    private let historyWindow: Int = 4
 
     init(
         context: ModelContext,
@@ -64,10 +65,12 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
         try context.save()
 
         let replyText = await generateInitialQuestion(for: card)
+        // spec 051 spike: cancellation 時は fallback を使う (初回 AI 発話ゼロだと UI が空っぽで困るため)
+        let safeReply = replyText.isEmpty ? fallbackInitial(for: card) : replyText
         let assistantMessage = ChatMessage(
             session: chatSession,
             role: ChatMessageRole.assistant.rawValue,
-            text: replyText
+            text: safeReply
         )
         context.insert(assistantMessage)
         chatSession.lastMessageAt = .now
@@ -109,6 +112,12 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
 
         // 3. AI 応答生成
         let replyText = await generateReply(prompt: prompt, fallbackHint: fallbackContinuation(for: card))
+
+        // spec 051 spike: cancellation 時は empty 返却 → assistant message 永続化スキップ
+        // (画面遷移で task cancel された場合、空 message を作らず user message だけ残す)
+        guard !replyText.isEmpty else {
+            throw DeepDiveChatError.cancelled
+        }
 
         // 4. assistant message 永続化
         let assistantMessage = ChatMessage(
@@ -167,33 +176,36 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     }
 
     /// concept / saved answer の補助情報を block 化。
+    /// spec 051 spike で context 縮小: summary 400→200, insight 150→80×2件, 関連記事 80→60×2件。
+    /// 家庭教師 chat 遅延 fix (token 削減で AI 応答 5-8s 短縮)。
     private func buildContextBlock(for card: UnderstandingCard) -> String {
         switch card.kind {
         case .conceptPage(let page):
             var parts: [String] = []
             if !page.summary.isEmpty {
-                parts.append("【概念サマリ】\n\(page.summary.prefix(400))")
+                parts.append("【概念サマリ】\n\(page.summary.prefix(200))")
             }
             if !page.crossSourceInsights.isEmpty {
                 let bullets = page.crossSourceInsights
-                    .prefix(3)
+                    .prefix(2)
                     .enumerated()
-                    .map { i, s in "  \(i + 1). \(s.prefix(150))" }
+                    .map { i, s in "  \(i + 1). \(s.prefix(80))" }
                     .joined(separator: "\n")
                 parts.append("【主な知見】\n\(bullets)")
             }
             let articleTitles = page.relatedArticles
                 .sorted { $0.savedAt > $1.savedAt }
-                .prefix(3)
-                .map { "  - \($0.title.prefix(80))" }
+                .prefix(2)
+                .map { "  - \($0.title.prefix(60))" }
                 .joined(separator: "\n")
             if !articleTitles.isEmpty {
-                parts.append("【参考記事 (上位 3)】\n\(articleTitles)")
+                parts.append("【参考記事】\n\(articleTitles)")
             }
             return parts.isEmpty ? "" : parts.joined(separator: "\n\n")
         case .savedAnswer(let answer):
-            let q = answer.question.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200)
-            let a = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300)
+            // spec 051 spike: 200/300 → 120/180 に縮小
+            let q = answer.question.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120)
+            let a = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).prefix(180)
             return """
             【前回の質問】
             \(q)
@@ -237,6 +249,11 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
                 return fallbackHint
             }
             return trimmed
+        } catch is CancellationError {
+            // spec 051 spike: ユーザーが画面遷移 / app background で task が cancel されたケース
+            // → silent (error log なし)、empty 文字列返却で UI は何も追加しない
+            logger.notice("generateTutorReply cancelled (user navigated away)")
+            return ""
         } catch {
             logger.error("generateTutorReply failed: \(String(describing: error), privacy: .public)")
             return fallbackHint
@@ -268,4 +285,6 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
 
 enum DeepDiveChatError: Error {
     case emptyInput
+    /// spec 051 spike: ユーザーが画面遷移 / app background で AI 応答が cancel されたケース
+    case cancelled
 }

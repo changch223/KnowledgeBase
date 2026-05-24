@@ -12,12 +12,12 @@ import SwiftData
 
 @Model
 final class UserTopic {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// AI が命名したトピック名 (5-20 字、日本語)
-    var name: String
+    var name: String = ""
 
-    var createdAt: Date
+    var createdAt: Date = Date.now
 
     /// ユーザーが「採用」した時刻。nil = まだ候補。
     var acceptedAt: Date?

@@ -13,7 +13,7 @@ import SwiftData
 
 @Model
 final class Tag {
-    @Attribute(.unique) var name: String
+    var name: String = ""
     @Relationship(inverse: \Article.tags) var articles: [Article] = []
 
     /// spec 015: AutoCategoryClassifier で 1 回推論された Category 名 (CategorySeed.allSeeds のいずれか)。

@@ -15,12 +15,12 @@ import SwiftData
 
 @Model
 final class ChatMessage {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var session: ChatSession?
-    var role: String
-    var text: String
-    var citedArticleIDs: [String]
-    var timestamp: Date
+    var role: String = ""
+    var text: String = ""
+    var citedArticleIDs: [String] = []
+    var timestamp: Date = Date.now
 
     init(
         id: UUID = UUID(),
@@ -28,7 +28,7 @@ final class ChatMessage {
         role: String,
         text: String,
         citedArticleIDs: [String] = [],
-        timestamp: Date = .now
+        timestamp: Date = Date.now
     ) {
         self.id = id
         self.session = session

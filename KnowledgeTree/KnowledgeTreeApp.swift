@@ -54,6 +54,13 @@ struct KnowledgeTreeApp: App {
             // 以降の session は前回選択タブを尊重する (本 spec で複雑な persistence を入れない)
             UserDefaults.standard.set(true, forKey: migrationKey)
         }
+        // spec 051 Phase A → V2.5 deferred: iCloud sync は未完成 (Array<X>? refactor 200+ touch points 残)。
+        // spike 中に toggle を ON にしたユーザー (UserDefaults `icloud_sync_enabled = true`) を強制 false。
+        // V2.5 で完成版を release する時に新規 toggle UI で再 opt-in してもらう。
+        if UserDefaults.standard.bool(forKey: SharedSchema.iCloudSyncFlagKey) {
+            UserDefaults.standard.set(false, forKey: SharedSchema.iCloudSyncFlagKey)
+            NSLog("spec 051 cleanup: forced icloud_sync_enabled=false (V2.5 で完成版 release 予定)")
+        }
     }
 
     var sharedModelContainer: ModelContainer = {
@@ -63,10 +70,15 @@ struct KnowledgeTreeApp: App {
         AppGroup.ensureContainerDirectoryExists()
 
         // spec 005: SharedSchema 経由で Share Extension と完全に同一定義を使う。
+        // spec 051 V2.5 deferred: 現状の schema は CloudKit 互換性が不完全
+        // (全 Array @Relationship を `[X]?` Optional 化 + 6 件 inverse 追加 + 6 件 to-one optional 化
+        // が未完)。V2.5 で proper に CloudKit 対応するまで **無条件 local-only** で init。
+        // この closure は struct init() より先に実行されるため UserDefaults cleanup より早く動く、
+        // よって flag を読まずに local 固定とすることで余分な CloudKit error log を出さない。
         do {
             return try ModelContainer(
                 for: SharedSchema.all,
-                configurations: [SharedSchema.sharedConfiguration()]
+                configurations: [SharedSchema.sharedConfiguration(cloudKitEnabled: false)]
             )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")

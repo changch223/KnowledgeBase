@@ -19,27 +19,27 @@ import SwiftUI
 
 @Model
 final class UnderstandingInteraction {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// 対象 entity 種別。`Kind.rawValue` のいずれか。
-    var targetKind: String
+    var targetKind: String = ""
 
     /// 対象 entity の id (ConceptPage.id / SavedAnswer.id / Article.id)。
     /// 弱結合 (Relationship なし)、参照先削除後の孤立残存は許容。
-    var targetID: UUID
+    var targetID: UUID = UUID()
 
     /// ユーザー操作種別。`Action.rawValue` のいずれか。
-    var action: String
+    var action: String = ""
 
     /// 行動発生時刻 (sort key + 集計の cutoff date 用)。
-    var occurredAt: Date
+    var occurredAt: Date = Date.now
 
     init(
         id: UUID = UUID(),
         targetKind: String,
         targetID: UUID,
         action: String,
-        occurredAt: Date = .now
+        occurredAt: Date = Date.now
     ) {
         self.id = id
         self.targetKind = targetKind
@@ -74,7 +74,7 @@ extension UnderstandingInteraction {
         kind: Kind,
         targetID: UUID,
         action: Action,
-        occurredAt: Date = .now
+        occurredAt: Date = Date.now
     ) {
         self.init(
             targetKind: kind.rawValue,

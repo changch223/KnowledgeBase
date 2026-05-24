@@ -15,28 +15,28 @@ import SwiftData
 
 @Model
 final class GraphNode {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// Entity 名 (KnowledgeEntity.name と同じ、Category 内で unique)
-    var name: String
+    var name: String = ""
 
     /// 所属 Category (Tag.categoryRaw と整合、Article の Category 解決経路と同じ)
-    var categoryRaw: String
+    var categoryRaw: String = ""
 
     /// Entity 種別 (EntityTypeStored.rawValue: person / organization / location / concept / product / work)
-    var entityType: String
+    var entityType: String = ""
 
     /// 重要度 1-5 (1 が最低)、元 KnowledgeEntity.salience の集約平均 (round)
-    var salience: Int
+    var salience: Int = 0
 
     /// この entity が出現した記事数 (Category 内、deactivate 判定に使う)
-    var mentionCount: Int
+    var mentionCount: Int = 0
 
     /// Category 内 30 node 上限超過で false に。再度 mention されたら自動 true 復帰。
-    var isActive: Bool
+    var isActive: Bool = false
 
-    var createdAt: Date
-    var updatedAt: Date
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
 
     /// この node を source とする edges (deleteRule: cascade)
     @Relationship(deleteRule: .cascade, inverse: \GraphEdge.source)
@@ -59,7 +59,7 @@ final class GraphNode {
         mentionCount: Int = 0,
         isActive: Bool = true,
         createdAt: Date = .now,
-        updatedAt: Date = .now
+        updatedAt: Date = Date.now
     ) {
         self.id = id
         self.name = name

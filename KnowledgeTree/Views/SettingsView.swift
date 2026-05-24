@@ -17,7 +17,6 @@ struct SettingsView: View {
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
     /// spec 041: ナレッジグラフ表示 toggle (default OFF、Phase B でユーザー判断)
     @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
-
     @Environment(ServiceContainer.self) private var serviceContainer
     @State private var showDeleteChatConfirm: Bool = false
     /// spec 049: onboarding 再表示用
@@ -32,6 +31,38 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            // spec 051 Phase A 部分実装 (V2.5 で完成予定):
+            // 19 model schema は CloudKit 互換に prep 済 (`@Attribute(.unique)` 削除 + defaults)、
+            // ただし全 Array @Relationship を `[X]?` Optional 化する大規模 refactor (200+ touch points) が
+            // V1.0 timeline 圧迫のため V2.5 へ deferred。toggle は disabled placeholder で展示のみ。
+            Section {
+                HStack(spacing: DS.Spacing.lg) {
+                    Image(systemName: "icloud")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("iCloud で同期")
+                            .foregroundStyle(.secondary)
+                        Text("V2.5 で対応予定 — 複数の端末で同じ知識ベースを共有")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("近日対応")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, DS.Spacing.md)
+                        .padding(.vertical, DS.Spacing.xs)
+                        .background(Color.secondary.opacity(0.15))
+                        .foregroundStyle(.secondary)
+                        .clipShape(Capsule())
+                }
+                .accessibilityIdentifier("settings.icloud.placeholder")
+            } header: {
+                Text("同期")
+            } footer: {
+                Text("現在は全てこの端末内に保存されます。iCloud 同期は次のメジャーアップデートで予定しています。")
+            }
+
             // spec 041: ナレッジグラフ表示 toggle
             Section {
                 Toggle(isOn: $graphVisible) {

@@ -12,9 +12,9 @@ import SwiftData
 
 @Model
 final class BackgroundExtractionQueueEntry {
-    @Attribute(.unique) var id: UUID
-    var articleID: UUID
-    var queuedAt: Date
+    var id: UUID = UUID()
+    var articleID: UUID = UUID()
+    var queuedAt: Date = Date.now
 
     init(id: UUID = UUID(), articleID: UUID, queuedAt: Date = Date()) {
         self.id = id

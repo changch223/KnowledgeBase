@@ -14,10 +14,12 @@ import SwiftData
 
 @Model
 final class Article {
-    @Attribute(.unique) var id: UUID
-    var url: String
-    var title: String
-    var savedAt: Date
+    // spec 051 Phase A: CloudKit sync 互換のため `@Attribute(.unique)` 削除 +
+    // 全 non-optional / non-Array に default 追加。重複防止は ArticleStore で app-level dedup。
+    var id: UUID = UUID()
+    var url: String = ""
+    var title: String = ""
+    var savedAt: Date = Date.now
 
     @Relationship(deleteRule: .cascade, inverse: \ArticleEnrichment.article)
     var enrichment: ArticleEnrichment?

@@ -136,15 +136,22 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// hierarchical パスに切り替える関連記事数閾値 (3+ 件で chunked パス)。
     /// 実機ログ (2026-05-23) で 4 件 article + 長い essence/KeyFact が 4090 token に達して
     /// Foundation Models の 4096 制限を overflow したため、5→3 に下げて安全側に。
+    /// spec 042 brushup で 5 → 3、spec 051 spike で再確認 (維持)。
+    /// 3 件以上で hierarchical 経路、各 chunk は chunkSize=1 (1 article ずつ) で安全側に振る。
     static let hierarchicalThreshold = 3
     /// hierarchical の chunk size (research.md R5)。
-    static let chunkSize = 2
+    /// spec 042 brushup で 4 → 2、spec 051 spike で 2 → 1 に再縮小。
+    /// hierarchical 経路 = 1 article ずつ chunk 化 + meta-summary で統合。
+    /// @Generable schema + FM overhead で 3000+ tokens 消費するため、user 入力余地 ~1000 tokens に圧縮必須。
+    static let chunkSize = 1
     /// 各 article の essence を prompt に含める最大文字数 (token 超過対策、2026-05-23 fix: 300→200)。
-    static let perArticleEssenceMaxChars = 200
+    /// spec 042 brushup で 300 → 200、spec 051 spike で 200 → 150。
+    static let perArticleEssenceMaxChars = 150
     /// 各 article から prompt に含める KeyFact 件数 (2026-05-23 fix: 3→2)。
     static let perArticleKeyFactCount = 2
     /// 1 件あたり KeyFact 文字数上限 (2026-05-23 fix: 100→60)。
-    static let perKeyFactMaxChars = 60
+    /// spec 042 brushup で 100 → 60、spec 051 spike で 60 → 40。
+    static let perKeyFactMaxChars = 40
     /// 各 article の title 上限 (2026-05-23 新規、長文 title 対策)。
     static let perArticleTitleMaxChars = 80
 

@@ -18,7 +18,7 @@ import SwiftData
 
 @Model
 final class GraphEdge {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// source ノード (relationship、inverse: GraphNode.outgoingEdges)
     var source: GraphNode?
@@ -30,19 +30,19 @@ final class GraphEdge {
     var label: String?
 
     /// AI が triple 抽出した時の確信度 (0.0-1.0)、共起は 0.0
-    var confidence: Float
+    var confidence: Float = 0
 
     /// 0.5 <= confidence < 0.7 で true (Phase B の UI で「不確実」マーク)
-    var isUncertain: Bool
+    var isUncertain: Bool = false
 
     /// この triple が observed された回数 (同 triple を複数記事で発見 → weight 増加)
-    var weight: Int
+    var weight: Int = 0
 
     /// 所属 Category (source/target と同じ、Category 内 query 用)
-    var categoryRaw: String
+    var categoryRaw: String = ""
 
-    var createdAt: Date
-    var updatedAt: Date
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
 
     init(
         id: UUID = UUID(),
@@ -54,7 +54,7 @@ final class GraphEdge {
         weight: Int = 1,
         categoryRaw: String,
         createdAt: Date = .now,
-        updatedAt: Date = .now
+        updatedAt: Date = Date.now
     ) {
         self.id = id
         self.source = source
