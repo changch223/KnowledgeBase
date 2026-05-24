@@ -11,12 +11,12 @@ import SwiftData
 
 @Model
 final class KnowledgeChunkProgress {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var knowledge: ExtractedKnowledge
-    var chunkIndex: Int
+    var chunkIndex: Int = 0
     /// ExtractedKnowledgeOutput を Codable で encode した JSON 文字列
-    var chunkOutputJSON: String
-    var savedAt: Date
+    var chunkOutputJSON: String = ""
+    var savedAt: Date = Date.now
 
     init(
         id: UUID = UUID(),

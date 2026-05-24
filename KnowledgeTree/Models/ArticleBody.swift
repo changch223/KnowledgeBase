@@ -10,11 +10,11 @@ import SwiftData
 
 @Model
 final class ArticleBody {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var article: Article
-    var statusRaw: String
+    var statusRaw: String = ""
     var extractedText: String?
-    var extractionVersion: Int
+    var extractionVersion: Int = 0
     var lastExtractedAt: Date?
 
     init(

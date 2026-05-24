@@ -18,13 +18,13 @@ import SwiftData
 
 @Model
 final class SavedAnswer {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// ユーザー入力 question (trim 済で保存、50-2000 字想定)。重複防止 key としても使う。
-    var question: String
+    var question: String = ""
 
     /// AI 答え本文 (3 段落以内、50-5000 字想定、UUID strip 済)
-    var answer: String
+    var answer: String = ""
 
     /// 引用 Article。`@Relationship(deleteRule: .nullify)` で Article 側に inverse property を追加せず、
     /// Article 削除時には relationship のみ自動 nullify され Article 自体は残る。
@@ -33,27 +33,27 @@ final class SavedAnswer {
 
     /// 引用記事から resolve した関連 ConceptPage の id 配列 (overlap 数 desc top 5)。
     /// @Relationship ではなく ID 配列で弱結合、将来 spec 044+ で community-based 拡張時の migration 負担を回避。
-    var relatedConceptIDs: [UUID]
+    var relatedConceptIDs: [UUID] = []
 
     /// 元 ChatSession.id (nullable)。ChatSession が削除されても SavedAnswer は残る (履歴保護)。
     var chatSessionID: UUID?
 
     /// ユーザー手動ピン (履歴画面 / ConceptPage 詳細セクションで上位表示)。
-    var isPinned: Bool
+    var isPinned: Bool = false
 
     /// 新記事 ingest で関連 ConceptPage が isStale 化されたとき true。
     /// 本 spec では DB 仕込みのみ、UI 表示は将来 spec (WikiLint 拡張) で扱う。
-    var isStale: Bool
+    var isStale: Bool = false
 
     /// 保存日時 (履歴 sort key)。
-    var savedAt: Date
+    var savedAt: Date = Date.now
 
     /// 更新日時 (pin / isStale 化 / delete で更新)。
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
 
     /// true = ChatService hook 経由 auto-save、false = (将来) 手動保存。
     /// 現状は auto-save のみ、metric / WikiLint 分析用に保持。
-    var savedAutomatically: Bool
+    var savedAutomatically: Bool = false
 
     init(
         id: UUID = UUID(),

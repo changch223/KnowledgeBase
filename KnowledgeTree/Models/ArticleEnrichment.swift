@@ -10,20 +10,20 @@ import SwiftData
 
 @Model
 final class ArticleEnrichment {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var article: Article
-    var statusRaw: String
+    var statusRaw: String = ""
     var canonicalTitle: String?
     var summary: String?
     var ogImageURL: String?
     var rawHTML: String?
     var lastFetchedAt: Date?
-    var retryCount: Int
+    var retryCount: Int = 0
 
     /// spec 007: 実際に取得したページ数 (1 = 単一ページ、2-5 = マルチページ追跡)。
-    var pageCountFetched: Int
+    var pageCountFetched: Int = 0
     /// spec 007: 上限到達 / fetch エラーで打ち切ったページの推定残数。
-    var pageCountSkipped: Int
+    var pageCountSkipped: Int = 0
 
     init(
         id: UUID = UUID(),

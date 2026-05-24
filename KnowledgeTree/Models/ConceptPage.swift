@@ -18,25 +18,25 @@ import SwiftData
 
 @Model
 final class ConceptPage {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
 
     /// 表示用「主名」(例: "Apple"、"Tim Cook"、"Foundation Models")
-    var name: String
+    var name: String = ""
 
     /// 同義語 / 別名 (例: ["アップル", "Apple Inc."])。merge 時に source.name + source.nameAliases を吸収。
     /// 大文字小文字無視同一視 (searchableNames) で利用。
-    var nameAliases: [String]
+    var nameAliases: [String] = []
 
     /// 所属カテゴリー (spec 015 CategorySeed と同 vocab、`category.name` 文字列)
-    var categoryRaw: String
+    var categoryRaw: String = ""
 
     /// AI 合成「今わかっていること」、200-400 字目標 (Service post-process で 500 chars 超は trim)。
     /// 初期値 ""、isStale=true な間は「整理中…」placeholder を表示する判定に使う。
-    var summary: String
+    var summary: String = ""
 
     /// 複数記事を横断して見える知見 bullet 配列、最大 7 件 (Service post-process で truncate)。
     /// 各 50-150 字想定。
-    var crossSourceInsights: [String]
+    var crossSourceInsights: [String] = []
 
     /// 原典 Article への参照 (片方向、deleteRule: .nullify で Article 側に影響ゼロ)。
     /// Article 削除時は relationship が自動 nullify、ConceptPage 側 relatedArticles からは除外される。
@@ -46,17 +46,17 @@ final class ConceptPage {
     /// graph 経由で関連が判明した他 ConceptPage の id 配列。
     /// @Relationship ではなく ID 配列とすることで、将来 spec 045 (Community) /
     /// spec 047 (WikiLint) でのスキーマ進化に柔軟に対応する。
-    var relatedConceptIDs: [UUID]
+    var relatedConceptIDs: [UUID] = []
 
     /// ユーザー理解度 0-5 (本 spec では永続化のみ実装、surface は spec 049 = Understanding Chat)。
-    var userUnderstanding: Int
+    var userUnderstanding: Int = 0
 
     /// ピン (フォロー) 状態。知識 Clip タブの上位 5 件で `isFollowing` 優先表示。
-    var isFollowing: Bool
+    var isFollowing: Bool = false
 
     /// BGTask 再合成フラグ。初期値 true (= 未合成)、再合成完了で false。
     /// 新記事 ingest で関連 ConceptPage は true に戻る。
-    var isStale: Bool
+    var isStale: Bool = false
 
     /// summary の embedding (NLEmbedding.sentenceEmbedding(for: .japanese) 経由、L2 正規化済 [Float])。
     /// 検索拡張 (spec 044) で使う。`@Attribute(.externalStorage)` で SQLite から外出し。
@@ -64,8 +64,8 @@ final class ConceptPage {
     @Attribute(.externalStorage)
     var embedding: Data?
 
-    var createdAt: Date
-    var updatedAt: Date
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
 
     init(
         id: UUID = UUID(),
@@ -81,7 +81,7 @@ final class ConceptPage {
         isStale: Bool = true,
         embedding: Data? = nil,
         createdAt: Date = .now,
-        updatedAt: Date = .now
+        updatedAt: Date = Date.now
     ) {
         self.id = id
         self.name = name

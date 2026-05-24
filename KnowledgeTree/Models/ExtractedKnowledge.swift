@@ -18,24 +18,24 @@ import SwiftData
 
 @Model
 final class ExtractedKnowledge {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var article: Article
-    var statusRaw: String
+    var statusRaw: String = ""
     var essence: String?
     var summary: String?
     var generatedAt: Date?
     var modelVersion: String?
-    var extractionVersion: Int
+    var extractionVersion: Int = 0
     var generationDurationMs: Int?
     var failureReason: String?
 
     /// spec 006: chunked summarization で実際に成功した chunk 数 (含 meta-summary)。
     /// 単発パス (本文 ≤ 1000 文字) では 1。chunked パスでは N+1 (chunk N 個 + meta 1 個)。
-    var chunkProcessedCount: Int
+    var chunkProcessedCount: Int = 0
     /// spec 006: 総 chunk 数 (chunks + meta-summary)。単発パスでは 1。
-    var chunkTotalCount: Int
+    var chunkTotalCount: Int = 0
     /// spec 006: 10 chunk 上限超過で要約対象外となった末尾文字数。0 〜 (text.count - 10000)。
-    var skippedTailChars: Int
+    var skippedTailChars: Int = 0
 
     @Relationship(deleteRule: .cascade, inverse: \KeyFact.knowledge)
     var keyFacts: [KeyFact] = []
@@ -98,11 +98,11 @@ extension ExtractedKnowledge {
 
 @Model
 final class KeyFact {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var knowledge: ExtractedKnowledge
-    var statement: String
-    var typeRaw: String
-    var order: Int
+    var statement: String = ""
+    var typeRaw: String = ""
+    var order: Int = 0
 
     init(
         id: UUID = UUID(),
@@ -137,12 +137,12 @@ extension KeyFact {
 
 @Model
 final class KnowledgeEntity {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var knowledge: ExtractedKnowledge
-    var name: String
-    var typeRaw: String
-    var salience: Int
-    var order: Int
+    var name: String = ""
+    var typeRaw: String = ""
+    var salience: Int = 0
+    var order: Int = 0
 
     init(
         id: UUID = UUID(),

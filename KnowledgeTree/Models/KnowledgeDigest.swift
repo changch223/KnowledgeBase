@@ -15,14 +15,14 @@ import SwiftData
 
 @Model
 final class KnowledgeDigest {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var categoryRaw: String              // CategorySeed.allSeeds.name
     var cardIndex: Int                   // 0 (単独) / 0,1,2 (マルチカード)
     var summary: String                  // AI 統合要約 (~150 字)
     var topKeyFacts: [String]            // 統合 KeyFact (3 個)
     var topEntityNames: [String]         // 関連エンティティ (3 個)
-    var generatedAt: Date
-    var isStale: Bool
+    var generatedAt: Date = Date.now
+    var isStale: Bool = false
 
     @Relationship(deleteRule: .nullify, inverse: \Article.digests)
     var sourceArticles: [Article] = []
