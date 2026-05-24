@@ -25,31 +25,26 @@ struct FollowingPeopleSection: View {
     private var totalCount: Int { followingPages.count }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            HStack {
-                Text("knowledgeClip.section.following")
-                    .font(.headline)
-                Spacer()
-                if totalCount > 5 {
-                    NavigationLink(value: ConceptPageListDestination()) {
-                        Text("knowledgeClip.moreLink")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+        // spec 058 polish: 0 件なら section 全体を隠す (Apple Photos 風 calm UX)
+        // ユーザーが ConceptPage 詳細画面で明示的に「フォロー」した時のみ表示。
+        if topPages.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                HStack {
+                    Text("knowledgeClip.section.following")
+                        .font(.headline)
+                    Spacer()
+                    if totalCount > 5 {
+                        NavigationLink(value: ConceptPageListDestination()) {
+                            Text("knowledgeClip.moreLink")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
-            }
-            .padding(.horizontal, DS.Spacing.xxl)
+                .padding(.horizontal, DS.Spacing.xxl)
 
-            // spec 058: ⚠️ 「更新が必要」 badge 削除 (Confirm UX 廃止、AI 自動採用に移行)
-
-            if topPages.isEmpty {
-                ContentUnavailableView(
-                    "knowledgeClip.empty.following",
-                    systemImage: "star",
-                    description: Text("knowledgeClip.empty.following.body")
-                )
-                .padding(.vertical, DS.Spacing.xxl)
-            } else {
                 LazyVStack(spacing: DS.Spacing.md) {
                     ForEach(topPages) { page in
                         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
@@ -61,8 +56,8 @@ struct FollowingPeopleSection: View {
                 }
                 .padding(.horizontal, DS.Spacing.xxl)
             }
+            .accessibilityIdentifier("section.following")
         }
-        .accessibilityIdentifier("section.following")
     }
 }
 

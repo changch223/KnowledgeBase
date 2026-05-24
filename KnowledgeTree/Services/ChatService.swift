@@ -216,6 +216,8 @@ final class ChatService: ChatServiceProtocol {
         - 情報不足なら「私の理解では」「一般的には」「あくまで概要として」等の hedge を使う
         - askClarification の suggestions は厳密に 3 つ、各 30 字以内
         - 「保存した記事」「あの記事」「私の」等のキーワードがあれば searchArticles を選ぶ
+        - **「〇〇分野」「〇〇カテゴリ」「テクノロジー」「経済」「健康」「デザイン」「学術」「アート」「ニュース」「スポーツ」「エンタメ」等の Category 名のキーワードがあれば必ず searchArticles を選んで、Category 名を query として渡す**
+        - 「最近」「今週」「今月」のキーワード + Category なら、その Category の最近記事の要点まとめを期待していると判断
         \(forceClause)
         \(contextLines.isEmpty ? "" : "## 直前の会話\n\(contextLines)\n")
         ## 質問
@@ -232,6 +234,22 @@ final class ChatService: ChatServiceProtocol {
         contextMessages: [ChatMessage],
         in session: ChatSession
     ) async throws -> ChatMessage {
+        // spec 058 polish: Category 名キーワード検出 → category filter 経路
+        // 例: 「テクノロジー分野で何があった?」 → テクノロジー Tag を持つ記事のみで answer 生成
+        if let category = Self.detectCategoryKeyword(in: searchQuestion) {
+            let categoryArticles = fetchArticlesInCategory(category)
+            if !categoryArticles.isEmpty {
+                logger.notice("ChatService: category filter hit, category=\(category, privacy: .public), articles=\(categoryArticles.count)")
+                let aboveThreshold = categoryArticles.prefix(5).map { ($0, Float(1.0)) }  // category filter は全件 high score 扱い
+                return try await executeFullRAGAnswer(
+                    originalQuestion: originalQuestion,
+                    aboveThreshold: Array(aboveThreshold),
+                    contextMessages: contextMessages,
+                    in: session
+                )
+            }
+        }
+
         // 2. retrieval
         let retrieval = await retrieve(question: searchQuestion)
         let retrievedArticles = retrieval.articles
@@ -268,6 +286,32 @@ final class ChatService: ChatServiceProtocol {
         質問: \(question)
         """
         return try? await session.generateTutorReply(prompt: prompt)
+    }
+
+    /// spec 058 polish: 質問内に Category 名キーワード (テクノロジー / 経済 等) が含まれていれば返す。
+    /// CategorySeed.allSeeds の name を順に substring match。最初に hit したものを返す。
+    static func detectCategoryKeyword(in question: String) -> String? {
+        let lower = question.lowercased()
+        for category in CategorySeed.allSeeds {
+            let name = category.name
+            if lower.contains(name.lowercased()) {
+                return name
+            }
+        }
+        return nil
+    }
+
+    /// 指定 Category の Tag を持つ Article を最新 savedAt desc で fetch (上限 10 件)。
+    private func fetchArticlesInCategory(_ categoryName: String) -> [Article] {
+        // 全 Article 取得 → in-memory filter (Article.tags は Optional Array、predicate 複雑回避)
+        var descriptor = FetchDescriptor<Article>(
+            sortBy: [SortDescriptor(\.savedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 50  // 50 件 fetch して filter
+        let all = (try? context.fetch(descriptor)) ?? []
+        return all.filter { article in
+            (article.tags ?? []).contains { ($0.categoryRaw ?? "") == categoryName }
+        }
     }
 
     /// 元の RAG 答え生成パス (Foundation Models + post-process)。

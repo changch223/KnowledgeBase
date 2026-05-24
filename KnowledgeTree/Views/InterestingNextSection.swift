@@ -2,10 +2,9 @@
 //  InterestingNextSection.swift
 //  KnowledgeTree
 //
-//  spec 056 — 知識 Clip タブ 2 番目セクション「続きが気になるもの」(For You)。
-//  ConceptPage 深掘りカード (UnderstandingCardSurfaceService 経由) +
-//  Topic Dashboard カード (KnowledgeDigest 統合) を MixedSurfaceCard で
-//  1 list 内に混在表示。
+//  spec 056 + spec 058 polish — 知識 Clip タブ 2 番目セクション「分野ごとの活動」。
+//  Category 単位で「記事数 + 最新更新日」を card 表示、記事数多い順。
+//  tap で CategoryFilteredListView (既存 spec 016) へ遷移。
 //
 
 import SwiftUI
@@ -13,128 +12,126 @@ import SwiftData
 
 struct InterestingNextSection: View {
     @Environment(\.modelContext) private var context
-    @Environment(ServiceContainer.self) private var services
     @Environment(RefreshTrigger.self) private var refreshTrigger
 
-    @Query(
-        sort: [SortDescriptor(\KnowledgeDigest.generatedAt, order: .reverse)]
-    )
-    private var allDigests: [KnowledgeDigest]
+    /// Tag.categoryRaw でグループ化するため、全 Article を取得。
+    @Query(sort: [SortDescriptor(\Article.savedAt, order: .reverse)])
+    private var allArticles: [Article]
 
-    @State private var understandingCards: [UnderstandingCard] = []
-    @State private var isLoading: Bool = false
-
-    /// 上位 5 件 (混在ソート、priorityScore 降順)。
-    private var topCards: [MixedSurfaceCard] {
-        let understanding = understandingCards.map { MixedSurfaceCard.understanding($0) }
-        let digests = allDigests.prefix(10).map { MixedSurfaceCard.digest($0) }
-        let combined = (understanding + digests)
-            .sorted { $0.priorityScore > $1.priorityScore }
-        return Array(combined.prefix(5))
+    /// (Category 名, 記事数, 最新 savedAt) を記事数多い順で算出。
+    private var categoryStats: [(category: String, count: Int, latest: Date)] {
+        // 各 Article の主 Category を解決 (Tag.categoryRaw 優先、なければ「未分類」)
+        var grouped: [String: (count: Int, latest: Date)] = [:]
+        for article in allArticles {
+            let cat = primaryCategory(for: article)
+            if let existing = grouped[cat] {
+                grouped[cat] = (existing.count + 1, max(existing.latest, article.savedAt))
+            } else {
+                grouped[cat] = (1, article.savedAt)
+            }
+        }
+        return grouped
+            .map { (category: $0.key, count: $0.value.count, latest: $0.value.latest) }
+            .sorted { $0.count > $1.count }
     }
 
-    private var totalCount: Int {
-        understandingCards.count + allDigests.count
+    private var topCategories: [(category: String, count: Int, latest: Date)] {
+        Array(categoryStats.prefix(5))
     }
+
+    private var totalCategoryCount: Int { categoryStats.count }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            HStack {
-                Text("knowledgeClip.section.interestingNext")
-                    .font(.headline)
-                Spacer()
-                if totalCount > 5 {
-                    NavigationLink(value: UnderstandingCardListDestination()) {
-                        Text("knowledgeClip.moreLink")
+        if categoryStats.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                HStack {
+                    Text("knowledgeClip.section.categories")
+                        .font(.headline)
+                    Spacer()
+                    if totalCategoryCount > 5 {
+                        Text("knowledgeClip.categories.allCount \(totalCategoryCount)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
-            }
-            .padding(.horizontal, DS.Spacing.xxl)
+                .padding(.horizontal, DS.Spacing.xxl)
 
-            if topCards.isEmpty {
-                if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, DS.Spacing.xxl)
-                } else {
-                    ContentUnavailableView(
-                        "knowledgeClip.empty.interestingNext",
-                        systemImage: "lightbulb",
-                        description: Text("knowledgeClip.empty.interestingNext.body")
-                    )
-                    .padding(.vertical, DS.Spacing.xxl)
-                }
-            } else {
                 LazyVStack(spacing: DS.Spacing.md) {
-                    ForEach(topCards) { card in
-                        navigationLinkForCard(card)
+                    ForEach(topCategories, id: \.category) { stat in
+                        navigationLinkForCategory(stat)
                     }
                 }
                 .padding(.horizontal, DS.Spacing.xxl)
             }
-        }
-        .accessibilityIdentifier("section.interestingNext")
-        .task {
-            await refresh()
-        }
-        .onChange(of: refreshTrigger.version) { _, _ in
-            Task { await refresh() }
+            .accessibilityIdentifier("section.categories")
         }
     }
 
     @ViewBuilder
-    private func navigationLinkForCard(_ card: MixedSurfaceCard) -> some View {
-        switch card {
-        case .understanding(let understandingCard):
-            NavigationLink(value: understandingCard) {
-                MixedSurfaceCardRow(card: card)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("interestingNext.card.understanding.\(understandingCard.id.uuidString)")
-
-        case .digest(let digest):
-            let category = CategorySeed.category(for: digest.categoryRaw)
-            NavigationLink(value: CategoryDigestDetailDestination(category: category)) {
-                MixedSurfaceCardRow(card: card)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("interestingNext.card.digest.\(digest.id.uuidString)")
+    private func navigationLinkForCategory(_ stat: (category: String, count: Int, latest: Date)) -> some View {
+        let category = CategorySeed.category(for: stat.category)
+        NavigationLink(value: CategoryFilteredDestination(category: category)) {
+            CategoryStatRow(categoryName: stat.category, count: stat.count, latest: stat.latest)
         }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("category.card.\(stat.category)")
     }
 
-    private func refresh() async {
-        guard let surface = services.understandingCardSurfaceService else { return }
-        isLoading = true
-        defer { isLoading = false }
-        understandingCards = await surface.surfaceTopCards(limit: 10)
+    /// Article の主 Category を解決 (関連 Tag の categoryRaw 中で最初の non-empty)。
+    private func primaryCategory(for article: Article) -> String {
+        let tags = article.tags ?? []
+        for tag in tags {
+            if let cat = tag.categoryRaw, !cat.isEmpty {
+                return cat
+            }
+        }
+        return "未分類"
     }
 }
 
-private struct MixedSurfaceCardRow: View {
-    let card: MixedSurfaceCard
+private struct CategoryStatRow: View {
+    let categoryName: String
+    let count: Int
+    let latest: Date
+
+    private var relativeLatest: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter.localizedString(for: latest, relativeTo: .now)
+    }
+
+    private var iconName: String {
+        // CategorySeed から symbolName 取得 (既存実装)
+        CategorySeed.category(for: categoryName).symbolName
+    }
 
     var body: some View {
         HStack(spacing: DS.Spacing.md) {
-            Image(systemName: card.iconName)
+            Image(systemName: iconName)
                 .font(.title3)
                 .foregroundStyle(.tint)
                 .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                Text(card.displayTitle)
+                Text(categoryName)
                     .font(.headline)
                     .lineLimit(1)
-                if !card.displaySubtitle.isEmpty {
-                    Text(card.displaySubtitle)
+
+                HStack(spacing: DS.Spacing.sm) {
+                    Text("category.row.articleCount \(count)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    Text("·")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Text("category.row.latestUpdate \(relativeLatest)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
                 }
-                Text(card.labelText)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
             }
 
             Spacer(minLength: 0)

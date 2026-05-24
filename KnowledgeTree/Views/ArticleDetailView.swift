@@ -190,7 +190,7 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("(detail.tags ?? []).heading")
+            Text("detail.tags.heading")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 

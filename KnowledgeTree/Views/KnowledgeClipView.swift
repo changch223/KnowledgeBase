@@ -79,6 +79,10 @@ struct KnowledgeClipView: View {
             .navigationDestination(for: UnderstandingCard.self) { card in
                 DeepDiveChatView(card: card)
             }
+            // spec 058 polish: 「分野ごとの活動」section から Category 詳細遷移
+            .navigationDestination(for: CategoryFilteredDestination.self) { dest in
+                CategoryFilteredListView(category: dest.category)
+            }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()
             }
