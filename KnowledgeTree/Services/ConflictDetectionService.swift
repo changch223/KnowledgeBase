@@ -109,17 +109,20 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
             guard output.hasConflict,
                   !output.conflictDescription.isEmpty else { return }
 
+            // spec 058: AI 自動採用 (autoResolved status)、両方残す、ユーザー confirm なし
             let proposal = ConflictProposal(
                 newArticle: newArticle,
                 oldArticle: oldArticle,
                 entityName: entityName,
                 conflictDescription: output.conflictDescription,
                 newFact: output.newFact,
-                oldFact: output.oldFact
+                oldFact: output.oldFact,
+                status: ConflictStatus.autoResolved.rawValue
             )
+            proposal.resolvedAt = .now
             context.insert(proposal)
             try? context.save()
-            logger.notice("conflict detected: \(entityName, privacy: .public) for new=\(newArticle.url, privacy: .public) vs old=\(oldArticle.url, privacy: .public)")
+            logger.notice("conflict auto-resolved (両方残す): \(entityName, privacy: .public) for new=\(newArticle.url, privacy: .public) vs old=\(oldArticle.url, privacy: .public)")
         } catch {
             // silent fail (calm UX)
             logger.error("conflict detection failed: \(String(describing: error), privacy: .public)")
@@ -187,6 +190,7 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
                 // 既存 ConflictProposal (同 graphEdgeID) は skip
                 if hasGraphProposalForEdge(edgeID: newest.id) { continue }
 
+                // spec 058: AI 自動採用 (autoResolved status)、両方残す、ユーザー confirm なし
                 let description = "「\(node.name)」の「\(label)」が更新されています"
                 let proposal = ConflictProposal(
                     newArticle: article,
@@ -195,8 +199,10 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
                     conflictDescription: description,
                     newFact: "\(node.name) は \(label): \(newestTarget.name)",
                     oldFact: "\(node.name) は \(label): \(olderTarget.name)",
+                    status: ConflictStatus.autoResolved.rawValue,
                     graphEdgeID: newest.id
                 )
+                proposal.resolvedAt = .now
                 context.insert(proposal)
             }
         }

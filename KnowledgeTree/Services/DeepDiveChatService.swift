@@ -42,8 +42,8 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     private let logger = Logger(subsystem: "app.KnowledgeTree", category: "deepdive")
 
     /// chat 履歴 prompt に含める直近メッセージ数 (token 節約)。
-    /// spec 051 spike で 6 → 4 (家庭教師 chat 遅延 fix、最近 2 ペアまで context 維持)。
-    private let historyWindow: Int = 4
+    /// spec 051 spike: 6 → 4 / V3.0 polish: 4 → 2 (4096 token 超過 fix、直前 1 ペアのみ)。
+    private let historyWindow: Int = 2
 
     init(
         context: ModelContext,
@@ -60,7 +60,7 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     // MARK: - startTutorSession
 
     func startTutorSession(for card: UnderstandingCard) async throws -> ChatSession {
-        let chatSession = ChatSession(title: card.deepDiveTitle)
+        let chatSession = ChatSession(title: card.deepDiveTitle, modeRaw: ChatSessionMode.deepDive.rawValue)
         context.insert(chatSession)
         try context.save()
 
@@ -176,36 +176,29 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     }
 
     /// concept / saved answer の補助情報を block 化。
-    /// spec 051 spike で context 縮小: summary 400→200, insight 150→80×2件, 関連記事 80→60×2件。
-    /// 家庭教師 chat 遅延 fix (token 削減で AI 応答 5-8s 短縮)。
+    /// V3.0 polish: 4096 token 連発 fix のため更に圧縮。
+    /// summary 200→120, insight 80×2→60×1, 関連記事 60×2→50×1。
     private func buildContextBlock(for card: UnderstandingCard) -> String {
         switch card.kind {
         case .conceptPage(let page):
             var parts: [String] = []
             if !page.summary.isEmpty {
-                parts.append("【概念サマリ】\n\(page.summary.prefix(200))")
+                parts.append("【概念サマリ】\n\(page.summary.prefix(120))")
             }
-            if !page.crossSourceInsights.isEmpty {
-                let bullets = page.crossSourceInsights
-                    .prefix(2)
-                    .enumerated()
-                    .map { i, s in "  \(i + 1). \(s.prefix(80))" }
-                    .joined(separator: "\n")
-                parts.append("【主な知見】\n\(bullets)")
+            if let first = page.crossSourceInsights.first {
+                parts.append("【主な知見】\n  \(first.prefix(60))")
             }
-            let articleTitles = (page.relatedArticles ?? [])
-                .sorted { $0.savedAt > $1.savedAt }
-                .prefix(2)
-                .map { "  - \($0.title.prefix(60))" }
-                .joined(separator: "\n")
-            if !articleTitles.isEmpty {
-                parts.append("【参考記事】\n\(articleTitles)")
+            if let latest = (page.relatedArticles ?? [])
+                .sorted(by: { $0.savedAt > $1.savedAt })
+                .first
+            {
+                parts.append("【参考記事】\n  - \(latest.title.prefix(50))")
             }
             return parts.isEmpty ? "" : parts.joined(separator: "\n\n")
         case .savedAnswer(let answer):
-            // spec 051 spike: 200/300 → 120/180 に縮小
-            let q = answer.question.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120)
-            let a = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).prefix(180)
+            // V3.0 polish: 120/180 → 80/120 に再圧縮
+            let q = answer.question.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)
+            let a = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120)
             return """
             【前回の質問】
             \(q)

@@ -52,6 +52,17 @@ protocol SavedAnswerServiceProtocol: AnyObject {
         citedArticleIDs: [String],
         sessionID: UUID?
     ) async
+
+    /// spec 057: 明示的に SavedAnswer を作成 (auto-save 廃止後の手動保存経路)。
+    /// long press menu「保存」から呼ばれる。citations 不要、50 字以上で受付。
+    /// 重複時は既存 SavedAnswer を返す (新規 insert しない)。
+    @discardableResult
+    func saveExplicit(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) throws -> SavedAnswer
 }
 
 // MARK: - Default 実装
@@ -256,6 +267,57 @@ final class DefaultSavedAnswerService: SavedAnswerServiceProtocol {
         } catch {
             logger.error("captureIfWorthyOrReplaceStale save failed: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    // MARK: - spec 057: saveExplicit (long press menu「保存」)
+
+    @discardableResult
+    func saveExplicit(
+        question: String,
+        answer: String,
+        citedArticleIDs: [String],
+        sessionID: UUID?
+    ) throws -> SavedAnswer {
+        let trimmedQ = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedA = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQ.isEmpty, !trimmedA.isEmpty else {
+            throw NSError(domain: "SavedAnswerService", code: 1, userInfo: [NSLocalizedDescriptionKey: "question or answer is empty"])
+        }
+
+        // 重複判定: 同 question 既存あれば既存を返す (新規 insert しない)
+        let dupDescriptor = FetchDescriptor<SavedAnswer>(
+            predicate: #Predicate { $0.question == trimmedQ }
+        )
+        if let existing = (try? context.fetch(dupDescriptor))?.first {
+            return existing
+        }
+
+        // citedArticleIDs (String) → UUID → Article 解決
+        let uuids = citedArticleIDs.compactMap { UUID(uuidString: $0) }
+        let articles: [Article] = uuids.compactMap { id in
+            let desc = FetchDescriptor<Article>(predicate: #Predicate { $0.id == id })
+            return try? context.fetch(desc).first
+        }
+        let relatedConceptIDs = resolveTopConceptIDs(citedArticles: articles)
+
+        // 新規 SavedAnswer 作成 (savedAutomatically=false で「明示保存」と区別)
+        let newAnswer = SavedAnswer(
+            question: trimmedQ,
+            answer: trimmedA,
+            citedArticles: articles,
+            relatedConceptIDs: relatedConceptIDs,
+            chatSessionID: sessionID,
+            isPinned: false,
+            isStale: false,
+            savedAt: .now,
+            updatedAt: .now,
+            savedAutomatically: false
+        )
+        context.insert(newAnswer)
+        try context.save()
+        refreshTrigger?.bump()
+        logger.notice("saveExplicit: new SavedAnswer inserted (manual): \(trimmedQ.prefix(40), privacy: .public)")
+        return newAnswer
     }
 
     // MARK: - Private

@@ -69,6 +69,14 @@ final class ServiceContainer {
     /// KnowledgeTreeApp.onOpenURL がセット → selectedTab=.learning に切替 →
     /// UnderstandingTabView が観測して DeepDiveChatView を push → consume して nil に戻す。
     var pendingDeepLinkCardID: UUID?
+    /// spec 056: 「最近の記事」セクションの差分判定 + cache 維持 service
+    var recentArticlesService: RecentArticlesServiceProtocol?
+    /// spec 056: AI チャット空状態の suggested prompts 動的生成 service
+    var suggestedPromptGenerator: SuggestedPromptGeneratorProtocol?
+    /// spec 058: Lint loop 6 step を週 1 BGTask + 「今すぐ整理」 button から実行
+    var lintEngine: LintEngineProtocol?
+    /// spec 058: 健全性スコア計算 service (Settings 表示用)
+    var healthScoreService: HealthScoreServiceProtocol?
 }
 
 /// spec 045: 「再生成」trigger payload。

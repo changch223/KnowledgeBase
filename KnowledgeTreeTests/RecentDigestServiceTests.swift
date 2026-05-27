@@ -18,6 +18,14 @@ struct RecentDigestServiceTests {
         return try ModelContainer(for: SharedSchema.all, configurations: configuration)
     }
 
+    /// V3.0 polish: 各テストで isolated UserDefaults を作る (cache test 間で漏れないように)
+    private func makeIsolatedDefaults() -> UserDefaults {
+        let suite = "RecentDigestServiceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite) ?? .standard
+        defaults.removePersistentDomain(forName: suite)
+        return defaults
+    }
+
     @discardableResult
     private func makeArticle(
         title: String,
@@ -36,21 +44,82 @@ struct RecentDigestServiceTests {
         return article
     }
 
-    // MARK: - 1. since 以降の記事 0 件 → empty
+    // MARK: - 1. 4 tier fallback 階層 (V3.0 polish 2026-05-27)
+    // Tier 1: since 以降あり + AI 生成成功 → cache 保存
+    // Tier 2: since 以降 0 件 → 前回 cache 復元
+    // Tier 3: cache 無し → 最新 1 件の essence を headline 化
+    // Tier 4: 記事ゼロ → empty
 
-    @Test func testGenerateReturnsEmptyWhenNoArticlesAfterSince() async throws {
+    /// Tier 3: since 以降 0 件 + cache 無し → 全 Article 最新 1 件の essence を headline 化
+    @Test func testTier3FallsBackToLatestArticleHeadline() async throws {
         let container = try makeContainer()
         let context = container.mainContext
 
         let oldDate = Date.now.addingTimeInterval(-86400 * 7) // 7 日前
-        makeArticle(title: "old", savedAt: oldDate, essence: "old essence", in: context)
+        makeArticle(title: "古い記事タイトル", savedAt: oldDate, essence: "古い記事のエッセンス", in: context)
         try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = false
+
+        let service = RecentDigestService(
+            session: mockSession,
+            availability: availability,
+            userDefaults: makeIsolatedDefaults()  // cache 無し state を保証
+        )
+        let result = try await service.generate(since: Date.now, in: context)
+
+        #expect(!result.isEmpty)
+        #expect(result.articleCount == 1)
+        // headline = essence、theme = title prefix (or entity)
+        #expect(result.paragraphs.first == "古い記事のエッセンス")
+    }
+
+    /// Tier 2: 1 回目で cache 保存、2 回目 since 以降 0 件 → cache から復元
+    @Test func testTier2RestoresFromCacheWhenSinceIsEmpty() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let defaults = makeIsolatedDefaults()
+
+        // 1 回目: since 以降の記事 1 件 + availability=true + Mock の AI 成功
+        let recent = Date.now.addingTimeInterval(-3600)  // 1 時間前
+        makeArticle(title: "新記事", savedAt: recent, essence: "新エッセンス", in: context)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextRecentDigestResult = .success(
+            RecentDigestOutput(paragraphs: ["AI ヘッドライン", "テーマ A", "テーマ B", "テーマ C"])
+        )
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = RecentDigestService(session: mockSession, availability: availability, userDefaults: defaults)
+
+        let firstSince = Date.now.addingTimeInterval(-86400)  // 1 日前 (新記事は since 以降)
+        let firstResult = try await service.generate(since: firstSince, in: context)
+        #expect(firstResult.paragraphs.first == "AI ヘッドライン")  // cache 保存される
+
+        // 2 回目: since を「今」にして since 以降 0 件 → Tier 2 cache restore
+        let secondResult = try await service.generate(since: Date.now, in: context)
+        #expect(secondResult.paragraphs.first == "AI ヘッドライン")
+        #expect(secondResult.paragraphs.count == 4)  // cache の paragraphs と一致
+    }
+
+    /// Tier 4: 記事ゼロ → empty
+    @Test func testTier4EmptyWhenNoArticlesAtAll() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
 
         let mockSession = MockLanguageModelSession()
         let availability = MockAvailabilityChecker()
         availability.isAvailable = true
 
-        let service = RecentDigestService(session: mockSession, availability: availability)
+        let service = RecentDigestService(
+            session: mockSession,
+            availability: availability,
+            userDefaults: makeIsolatedDefaults()
+        )
         let result = try await service.generate(since: Date.now, in: context)
 
         #expect(result.isEmpty)
@@ -159,15 +228,63 @@ struct RecentDigestServiceTests {
     }
 
     // MARK: - 6. fallbackParagraphs ユーティリティ
+    // V3.0 polish (2026-05-26): 「3 段落 80-150 字」→「ヘッドライン 1 文 + テーマ 3 個」に変更。
+    // paragraphs[0] = ヘッドライン、paragraphs[1..3] = テーマ (各 10-20 字、最大 3 件)。
 
-    @Test func testFallbackParagraphsGroupsArticles() {
+    @Test func testFallbackParagraphsReturnsHeadlinePlusThemes() {
         let now = Date.now
         let articles: [Article] = (0..<6).map { i in
             let a = Article(url: "https://example.com/\(i)", title: "記事 \(i)", savedAt: now)
             return a
         }
         let paragraphs = RecentDigestService.fallbackParagraphs(articles: articles)
-        #expect(paragraphs.count <= 3)
+        // 上限 4 件 (ヘッドライン 1 + テーマ 3)
+        #expect(paragraphs.count <= 4)
+        // ヘッドラインは必須、テーマは最大 3
+        #expect(!paragraphs.isEmpty)
         #expect(paragraphs.allSatisfy { !$0.isEmpty })
+    }
+
+    @Test func testFallbackParagraphsHeadlineMentionsCount() {
+        let now = Date.now
+        let articles: [Article] = (0..<3).map { i in
+            Article(url: "https://example.com/\(i)", title: "記事 \(i)", savedAt: now)
+        }
+        let paragraphs = RecentDigestService.fallbackParagraphs(articles: articles)
+        // 記事 2 件以上ならヘッドラインに件数 (「3 件」) が出現
+        #expect(paragraphs.first?.contains("3") == true)
+    }
+
+    @Test func testFallbackParagraphsEmptyForNoArticles() {
+        let paragraphs = RecentDigestService.fallbackParagraphs(articles: [])
+        #expect(paragraphs.isEmpty)
+    }
+
+    // MARK: - V3.0 polish: firstCompleteSentence (Tier 3 文字切れ対策)
+
+    @Test func testFirstCompleteSentenceCutsAtPeriod() {
+        let input = "AI エージェントは効率を高める。次の話題はここから先。"
+        let result = RecentDigestService.firstCompleteSentence(input)
+        #expect(result == "AI エージェントは効率を高める。")
+    }
+
+    @Test func testFirstCompleteSentenceCutsAtNewline() {
+        let input = "見出し的な 1 行\n本文がここから始まる"
+        let result = RecentDigestService.firstCompleteSentence(input)
+        #expect(result.contains("見出し的な 1 行"))
+        #expect(!result.contains("本文"))
+    }
+
+    @Test func testFirstCompleteSentenceKeepsShortTextWhole() {
+        let input = "短い 1 文"  // 終端なし、100 字以下
+        let result = RecentDigestService.firstCompleteSentence(input)
+        #expect(result == "短い 1 文")
+    }
+
+    @Test func testFirstCompleteSentenceTruncatesLongWithoutTerminator() {
+        let input = String(repeating: "あ", count: 150)  // 終端なし、100 字超
+        let result = RecentDigestService.firstCompleteSentence(input)
+        #expect(result.hasSuffix("…"))
+        #expect(result.count == 101)  // 100 + "…"
     }
 }

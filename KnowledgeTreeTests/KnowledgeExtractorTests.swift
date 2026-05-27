@@ -88,6 +88,62 @@ struct KnowledgeExtractorTests {
         #expect(prompt.contains("# 元記事本文"))
     }
 
+    @Test func buildPromptIncludesKeyFactsCapAndCodeRule() {
+        let prompt = KnowledgeExtractor.buildPrompt(text: "本文")
+        #expect(prompt.contains("最大 10 件"))
+        #expect(prompt.contains("コード"))
+    }
+
+    // MARK: - V3.0 polish: コードブロックを抽出 prompt に流さない
+
+    @Test func stripCodeBlocksRemovesFencedBlock() {
+        let input = """
+        前段の説明文です。
+
+        ```swift
+        let value = 42
+        print(value)
+        ```
+
+        後段の説明文です。
+        """
+        let result = KnowledgeExtractor.stripCodeBlocks(from: input)
+        #expect(result.contains("前段の説明文"))
+        #expect(result.contains("後段の説明文"))
+        #expect(!result.contains("let value = 42"))
+        #expect(!result.contains("```"))
+    }
+
+    @Test func stripCodeBlocksRemovesIndentedBlock() {
+        let input = """
+        概要を述べます。
+            indented = code_block
+            another_line()
+        本文に戻ります。
+        """
+        let result = KnowledgeExtractor.stripCodeBlocks(from: input)
+        #expect(result.contains("概要"))
+        #expect(result.contains("本文に戻ります"))
+        #expect(!result.contains("indented = code_block"))
+        #expect(!result.contains("another_line"))
+    }
+
+    @Test func stripCodeBlocksRemovesInlineCode() {
+        let input = "API は `fetch(url:)` を呼びます。戻り値は Response 型です。"
+        let result = KnowledgeExtractor.stripCodeBlocks(from: input)
+        #expect(result.contains("API は"))
+        #expect(result.contains("戻り値"))
+        #expect(!result.contains("fetch(url:)"))
+        #expect(!result.contains("`"))
+    }
+
+    @Test func stripCodeBlocksKeepsPlainText() {
+        let input = "コードを含まない普通の文章。改行も含む。\n\n2 段落目。"
+        let result = KnowledgeExtractor.stripCodeBlocks(from: input)
+        #expect(result.contains("普通の文章"))
+        #expect(result.contains("2 段落目"))
+    }
+
     // MARK: - spec 042: 翻訳前処理
 
     /// 日本語入力 → 翻訳 call は呼ばれない、既存挙動を維持
@@ -221,6 +277,14 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var tutorReplyCallCount = 0
     var lastTutorReplyPrompt: String?
 
+    /// spec 057: Agentic Chat 用 AgentAction sequence (FIFO で消費)。
+    /// nextAgentActions が空のとき、`defaultAgentAction` を返す。
+    var nextAgentActions: [AgentAction] = []
+    var defaultAgentAction: AgentAction = .immediate(answer: "Mock default agent answer")
+    var agentActionCallCount = 0
+    var lastAgentActionPrompt: String?
+    var agentActionError: Error?
+
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
@@ -318,6 +382,19 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         case .success(let output): return output
         case .failure(let error): throw error
         }
+    }
+
+    func generateAgentAction(prompt: String) async throws -> AgentAction {
+        agentActionCallCount += 1
+        lastAgentActionPrompt = prompt
+        if let error = agentActionError {
+            agentActionError = nil
+            throw error
+        }
+        if !nextAgentActions.isEmpty {
+            return nextAgentActions.removeFirst()
+        }
+        return defaultAgentAction
     }
 }
 

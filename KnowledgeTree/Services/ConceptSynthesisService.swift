@@ -92,15 +92,19 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
     }
 
     func resynthesizeAllStale() async {
-        let descriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.isStale == true },
-            sortBy: [SortDescriptor(\.updatedAt)]
+        // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
+        // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
+        let allDescriptor = FetchDescriptor<ConceptPage>(
+            predicate: #Predicate { $0.isStale == true }
         )
-        var bounded = descriptor
-        bounded.fetchLimit = 5
+        guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
 
-        guard let pages = try? context.fetch(bounded) else { return }
-        for page in pages {
+        let sorted = allStale.sorted { lhs, rhs in
+            let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            return lhsLatest > rhsLatest
+        }
+        for page in sorted.prefix(5) {
             await resynthesize(page)
         }
     }
@@ -144,16 +148,16 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// hierarchical 経路 = 1 article ずつ chunk 化 + meta-summary で統合。
     /// @Generable schema + FM overhead で 3000+ tokens 消費するため、user 入力余地 ~1000 tokens に圧縮必須。
     static let chunkSize = 1
-    /// 各 article の essence を prompt に含める最大文字数 (token 超過対策、2026-05-23 fix: 300→200)。
-    /// spec 042 brushup で 300 → 200、spec 051 spike で 200 → 150。
-    static let perArticleEssenceMaxChars = 150
-    /// 各 article から prompt に含める KeyFact 件数 (2026-05-23 fix: 3→2)。
-    static let perArticleKeyFactCount = 2
-    /// 1 件あたり KeyFact 文字数上限 (2026-05-23 fix: 100→60)。
-    /// spec 042 brushup で 100 → 60、spec 051 spike で 60 → 40。
-    static let perKeyFactMaxChars = 40
-    /// 各 article の title 上限 (2026-05-23 新規、長文 title 対策)。
-    static let perArticleTitleMaxChars = 80
+    /// 各 article の essence を prompt に含める最大文字数 (token 超過対策)。
+    /// spec 042: 300 → 200 → 150 → V3.0 polish: 150 → 80。
+    /// 実機ログで articles=2 でも `concept synthesis failed: 4090 tokens` で破綻、更に圧縮。
+    static let perArticleEssenceMaxChars = 80
+    /// 各 article から prompt に含める KeyFact 件数。3 → 2 → V3.0 polish: 2 → 1。
+    static let perArticleKeyFactCount = 1
+    /// 1 件あたり KeyFact 文字数上限。100 → 60 → 40 → V3.0 polish: 40 → 30。
+    static let perKeyFactMaxChars = 30
+    /// 各 article の title 上限 (長文 title 対策)。V3.0 polish: 80 → 50。
+    static let perArticleTitleMaxChars = 50
 
     init(
         session: LanguageModelSessionProtocol,
@@ -246,15 +250,19 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     }
 
     func resynthesizeAllStale() async {
-        let descriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.isStale == true },
-            sortBy: [SortDescriptor(\.updatedAt)]
+        // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
+        // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
+        let allDescriptor = FetchDescriptor<ConceptPage>(
+            predicate: #Predicate { $0.isStale == true }
         )
-        var bounded = descriptor
-        bounded.fetchLimit = 5
+        guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
 
-        guard let pages = try? context.fetch(bounded) else { return }
-        for page in pages {
+        let sorted = allStale.sorted { lhs, rhs in
+            let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+            return lhsLatest > rhsLatest
+        }
+        for page in sorted.prefix(5) {
             await resynthesize(page)
         }
     }
@@ -402,9 +410,14 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     ) -> String {
         let aliasesText = conceptPage.nameAliases.isEmpty ? "(なし)" : conceptPage.nameAliases.joined(separator: "、")
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
-        let chunkText = chunkSummaries.isEmpty
+
+        // V3.0 polish (2026-05-28): 4096 token 超過 fix。
+        // 7 chunks × 150 字 = 1050 字 + Generable schema overhead で 4089-4091 tokens に達していた。
+        // 最大 5 件 + 各 100 字に圧縮 (500 字 + schema で margin 確保)。
+        let cappedChunks = chunkSummaries.prefix(5).map { String($0.prefix(100)) }
+        let chunkText = cappedChunks.isEmpty
             ? "(中間要約が生成できませんでした)"
-            : chunkSummaries.enumerated().map { idx, summary in "## チャンク \(idx + 1)\n\(summary)" }.joined(separator: "\n\n")
+            : cappedChunks.enumerated().map { idx, summary in "## チャンク \(idx + 1)\n\(summary)" }.joined(separator: "\n\n")
 
         return """
         あなたは複数の記事チャンク要約を統合して「\(conceptPage.name)」について「今わかっていること」を書く役割です。
@@ -414,12 +427,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         別名: \(aliasesText)
         カテゴリー: \(categoryDisplay)
 
-        ## 記事チャンク要約 (元 \(totalArticles) 件記事)
+        ## 記事チャンク要約 (元 \(totalArticles) 件記事、上位 \(cappedChunks.count) チャンク)
         \(chunkText)
 
         ## 出力要件
         - summary: 200〜400 字、チャンク要約のみから統合、推測禁止、断定調
-        - crossSourceInsights: 最大 7 件、各 50〜150 字、チャンクを横断して見える知見
+        - crossSourceInsights: 最大 5 件、各 50〜100 字、チャンクを横断して見える知見
         """
     }
 

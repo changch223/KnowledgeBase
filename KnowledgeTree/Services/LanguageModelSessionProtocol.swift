@@ -23,7 +23,7 @@ struct ExtractedKnowledgeOutput: Codable {
     @Guide(description: "2-3 文 / 300 字以内 / 元記事の構造を維持した説明的要約 / 推測禁止")
     let summary: String
 
-    @Guide(description: "3-5 件、元記事に明示されている事実のみ")
+    @Guide(description: "最大 10 件、重要度が高い順、元記事に明示されている事実のみ。コード断片や関数呼び出しは含めない。")
     let keyFacts: [KeyFactOutput]
 
     @Guide(description: "5-10 件、重要な固有名詞")
@@ -97,7 +97,9 @@ struct DigestCardOutput: Codable {
 
 @Generable
 struct RecentDigestOutput: Codable {
-    @Guide(description: "最近の記事を統合した自然な日本語の 3 段落要約。各段落 80-150 字。読み手は『最近の自分が学んだこと』を一目で把握できるように。")
+    /// V3.0 polish: 「3 段落 80-150 字」→「ヘッドライン 1 文 + テーマ 3 個」に変更。
+    /// paragraphs[0] = 60-100 字のヘッドライン、paragraphs[1..3] = 各 10-20 字のテーマ名詞句。
+    @Guide(description: "4 件の文字列を順に入れる。[0]=60-100 字の見出し (テーマを統合した日本語 1 文、断定調)、[1][2][3]=各 10-20 字の主要テーマ名詞句。読み手は『最近何を学んだか』を一目で把握できるように。")
     let paragraphs: [String]
 }
 
@@ -229,6 +231,11 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// Generable 制約なし、plain string 返却。prompt 内に instructions + concept context + 会話履歴 + user 入力を全て展開する。
     /// retrieval なし (ChatService の RAG 経路を経由しない、low-similarity 早期 return を避けるため)。
     func generateTutorReply(prompt: String) async throws -> String
+
+    /// spec 057: Agentic Chat 用、AgentAction Generable enum を生成。
+    /// LLM が agent loop の毎 turn で「immediate / askClarification / searchArticles / finalAnswer」のいずれかを返す。
+    /// Swift 側で switch 分岐して状態遷移する (Tool Use 不在の代替パターン)。
+    func generateAgentAction(prompt: String) async throws -> AgentAction
 }
 
 // MARK: - Apple Foundation Models 本番実装
@@ -354,6 +361,17 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
             prompt
         }
         return response.content
+    }
+
+    /// spec 057: Agentic Chat 用 AgentActionOutput Generable struct 生成 → AgentAction enum に変換。
+    func generateAgentAction(prompt: String) async throws -> AgentAction {
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            generating: AgentActionOutput.self
+        ) {
+            prompt
+        }
+        return AgentAction(from: response.content)
     }
 }
 

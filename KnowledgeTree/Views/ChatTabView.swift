@@ -102,6 +102,14 @@ struct ChatTabView: View {
                     .accessibilityIdentifier("chat.toolbar.sidebar")
                     .accessibilityLabel(Text("chat.sidebar.title"))
                 }
+                // spec 056: 📊 Knowledge Graph 全体画面アイコン
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(value: KnowledgeGraphFullScreenDestination()) {
+                        Image(systemName: "chart.dots.scatter")
+                    }
+                    .accessibilityIdentifier("toolbar.knowledgeGraph")
+                    .accessibilityLabel(Text("knowledgeGraph.fullScreen.title"))
+                }
             }
             .navigationDestination(for: Article.self) { article in
                 // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない (入れ子防止)
@@ -110,6 +118,10 @@ struct ChatTabView: View {
             // spec 047: chat 答えの関連 ConceptPage chips からの遷移先
             .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
                 ConceptPageDetailLoader(destinationID: dest.id)
+            }
+            // spec 056: AI チャット toolbar 📊 アイコン遷移先
+            .navigationDestination(for: KnowledgeGraphFullScreenDestination.self) { _ in
+                KnowledgeGraphFullScreenView()
             }
             .alert(
                 Text("chat.message.error"),
@@ -146,6 +158,11 @@ struct ChatTabView: View {
             .presentationDragIndicator(.visible)
         }
         .accessibilityIdentifier("chat.tab.root")
+        // spec 057: clarification chip tap → input field に auto-fill + 自動送信
+        .onReceive(ChatMessageRow.clarificationTapNotificationPublisher) { tappedChip in
+            inputText = tappedChip
+            Task { await sendQuestion() }
+        }
         // spec 045: SavedAnswer の「再生成」trigger を消費
         // - 新 ChatSession を作る + question を pin + 自動 send
         // - ChatService の hook 経由で captureIfWorthyOrReplaceStale が走り、新 SavedAnswer auto-save
@@ -176,16 +193,21 @@ struct ChatTabView: View {
     // MARK: - Subviews
 
     private var emptyStateView: some View {
-        VStack {
-            Spacer()
-            ContentUnavailableView(
-                "chat.empty.title",
-                systemImage: "bubble.left.and.bubble.right",
-                description: Text("chat.empty.subtitle")
-            )
-            Spacer()
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Spacing.xxxl) {
+                Text("chat.empty.placeholder")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, DS.Spacing.xxxl)
+                // spec 056: Suggested prompts (動的生成 3 件)
+                SuggestedPromptsSection { promptText in
+                    inputText = promptText
+                    Task { await sendQuestion() }
+                }
+            }
+            .padding(DS.Spacing.xxl)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var messageList: some View {

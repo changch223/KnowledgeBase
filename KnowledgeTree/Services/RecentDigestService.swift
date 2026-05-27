@@ -3,8 +3,13 @@
 //  KnowledgeTree
 //
 //  spec 035 — 「最近のあなた」差分 3 段落 AI 統合要約。
-//  前回開いた時刻 〜 now の Article を Foundation Models で 3 段落統合、
-//  Apple Intelligence 不可端末では Fallback (各記事 essence を順序通り並べる擬似 3 段落)。
+//  V3.0 polish (2026-05-27):
+//    - 出力を「3 段落 80-150 字」→「ヘッドライン 1 文 + テーマ 3 個」に変更
+//    - 4 tier fallback 階層を導入:
+//      Tier 1: since 以降の Article + AI 生成成功 → 表示 + UserDefaults cache 保存
+//      Tier 2: since 以降 0 件 → 前回 cache から復元 (古くても表示、calm UX)
+//      Tier 3: cache も無い (初回起動) → 全 Article 最新 1 件の essence を headline 化
+//      Tier 4: 記事ゼロ → empty
 //
 
 import Foundation
@@ -13,7 +18,8 @@ import os
 
 @MainActor
 protocol RecentDigestServiceProtocol: AnyObject {
-    /// 期間内の Article から 3 段落要約を生成。期間 0 件なら空配列を返す。
+    /// 期間内の Article から 1 文ヘッドライン + テーマ 3 個 を生成。
+    /// 4 tier fallback (Service ヘッダコメント参照) で常に「何かしらを表示する」設計。
     func generate(since: Date, in context: ModelContext) async throws -> RecentDigestResult
 }
 
@@ -33,33 +39,88 @@ final class RecentDigestService: RecentDigestServiceProtocol {
     private let logger = Logger(subsystem: "app.KnowledgeTree", category: "recent-digest")
     private let session: LanguageModelSessionProtocol
     private let availability: AvailabilityChecker
+    private let userDefaults: UserDefaults
 
     /// 上限件数 (これを超えたら最新優先で truncate)
     private let maxArticles = 30
 
+    /// V3.0 polish: 前回 AI 生成結果の cache キー (UserDefaults JSON encode)
+    private static let cacheKey = "spec056_recentDigest_cache_v3"
+
     init(
         session: LanguageModelSessionProtocol,
-        availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker()
+        availability: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
+        userDefaults: UserDefaults = .standard
     ) {
         self.session = session
         self.availability = availability
+        self.userDefaults = userDefaults
     }
 
     func generate(since: Date, in context: ModelContext) async throws -> RecentDigestResult {
-        // since 以降の Article を fetch
-        let descriptor = FetchDescriptor<Article>(
+        // Tier 1: since 以降の Article を fetch
+        let recentDescriptor = FetchDescriptor<Article>(
             predicate: #Predicate<Article> { $0.savedAt > since },
             sortBy: [SortDescriptor(\Article.savedAt, order: .reverse)]
         )
-        let candidates = (try? context.fetch(descriptor)) ?? []
-        let articles = Array(candidates.prefix(maxArticles))
+        let recentCandidates = (try? context.fetch(recentDescriptor)) ?? []
+        let recentArticles = Array(recentCandidates.prefix(maxArticles))
 
-        guard !articles.isEmpty else { return .empty }
+        if !recentArticles.isEmpty {
+            // since 以降の記事がある → AI 生成 (or fallback paragraphs)
+            let result = await tryGenerate(articles: recentArticles)
+            // 成功時のみ cache 保存 (失敗時の fallback は保存しない、次回は新規生成を試す)
+            if availability.isAvailable && !result.paragraphs.isEmpty {
+                saveCache(result)
+            }
+            return result
+        }
 
+        // Tier 2: since 以降 0 件 → 前回 cache から復元 (古くても OK)
+        if let cached = loadCache() {
+            logger.notice("recent digest: tier 2 cache restored, cachedAt=\(cached.cachedAt, privacy: .public)")
+            return RecentDigestResult(
+                paragraphs: cached.paragraphs,
+                articleCount: cached.articleCount,
+                earliestSavedAt: cached.earliestSavedAt,
+                latestSavedAt: cached.latestSavedAt
+            )
+        }
+
+        // Tier 3: cache も無い → 全 Article から最新 1 件で headline 抽出
+        let allDescriptor = FetchDescriptor<Article>(
+            sortBy: [SortDescriptor(\Article.savedAt, order: .reverse)]
+        )
+        var allBounded = allDescriptor
+        allBounded.fetchLimit = 1
+        let allArticles = (try? context.fetch(allBounded)) ?? []
+
+        if let latest = allArticles.first {
+            logger.notice("recent digest: tier 3 latest-article fallback, title=\(latest.title, privacy: .public)")
+            let headline = Self.headlineFromSingleArticle(latest)
+            let theme = Self.themeFromArticle(latest)
+            let result = RecentDigestResult(
+                paragraphs: [headline, theme],
+                articleCount: 1,
+                earliestSavedAt: latest.savedAt,
+                latestSavedAt: latest.savedAt
+            )
+            // V3.0 polish (2026-05-28): Tier 3 結果も cache 保存 → 連発の log 抑制 + 画面再表示で安定。
+            // Tier 1 AI 成功時に上書きされるので、後で AI 結果に置き換わる。
+            saveCache(result)
+            return result
+        }
+
+        // Tier 4: 記事ゼロ
+        return .empty
+    }
+
+    // MARK: - Private: AI 生成 + fallback paragraphs
+
+    private func tryGenerate(articles: [Article]) async -> RecentDigestResult {
         let earliest = articles.last?.savedAt
         let latest = articles.first?.savedAt
 
-        // Foundation Models 経路 / Fallback 経路 分岐
         if availability.isAvailable {
             do {
                 let prompt = Self.buildPrompt(articles: articles)
@@ -75,84 +136,162 @@ final class RecentDigestService: RecentDigestServiceProtocol {
                         latestSavedAt: latest
                     )
                 }
-                logger.notice("recent digest LM returned empty paragraphs, falling back")
+                logger.notice("recent digest LM returned empty paragraphs, falling back to essence-based")
             } catch {
-                logger.error("recent digest LM failed: \(String(describing: error), privacy: .public), falling back")
+                logger.error("recent digest LM failed: \(String(describing: error), privacy: .public), falling back to essence-based")
             }
         }
 
-        // Fallback: 各記事の essence (or title) を順序通り並べた擬似 3 段落
-        let fallbackParagraphs = Self.fallbackParagraphs(articles: articles)
+        // Fallback: essence ベースで 1 文ヘッドライン + テーマ 3 個 を擬似生成
         return RecentDigestResult(
-            paragraphs: fallbackParagraphs,
+            paragraphs: Self.fallbackParagraphs(articles: articles),
             articleCount: articles.count,
             earliestSavedAt: earliest,
             latestSavedAt: latest
         )
     }
 
+    // MARK: - Private: UserDefaults cache
+
+    private struct CachedDigest: Codable {
+        var paragraphs: [String]
+        var articleCount: Int
+        var earliestSavedAt: Date?
+        var latestSavedAt: Date?
+        var cachedAt: Date
+    }
+
+    private func saveCache(_ result: RecentDigestResult) {
+        let cached = CachedDigest(
+            paragraphs: result.paragraphs,
+            articleCount: result.articleCount,
+            earliestSavedAt: result.earliestSavedAt,
+            latestSavedAt: result.latestSavedAt,
+            cachedAt: Date.now
+        )
+        if let data = try? JSONEncoder().encode(cached) {
+            userDefaults.set(data, forKey: Self.cacheKey)
+        }
+    }
+
+    private func loadCache() -> CachedDigest? {
+        guard let data = userDefaults.data(forKey: Self.cacheKey),
+              let cached = try? JSONDecoder().decode(CachedDigest.self, from: data) else {
+            return nil
+        }
+        return cached
+    }
+
     // MARK: - Prompt
 
+    /// V3.0 polish: 「3 段落 80-150 字」→「1 文 60-100 字 ヘッドライン + テーマ 3 件」に変更。
+    /// 知識 Clip 最上部「最近の学び」セクションで、長い段落ではなく一目で読める 1 文要約 +
+    /// 主要テーマ 3 個を chips で並べる UI に統合。token も大幅削減。
+    /// 出力 (RecentDigestOutput.paragraphs) の構造:
+    ///   - [0] ヘッドライン本文 (60-100 字、テーマ統合の 1 文)
+    ///   - [1] テーマ 1 (10-20 字)
+    ///   - [2] テーマ 2 (10-20 字)
+    ///   - [3] テーマ 3 (10-20 字)
     static func buildPrompt(articles: [Article]) -> String {
         var prompt = """
-        あなたは iKnow の AI アシスタントです。ユーザーが最近保存した以下の記事の要点を、自然な日本語の 3 段落に統合してください。
+        あなたは iKnow の AI アシスタントです。ユーザーが最近保存した記事から、何を学んだかを「1 文の見出し + 主要テーマ 3 個」で伝えてください。
 
         ## ルール
-        1. 各段落は 80-150 字程度。
-        2. 記事を機械的に並べるのではなく、テーマごとに統合する。
-        3. ID や URL を本文に書かないでください。
-        4. 「私が読んだのは」のような視点ではなく、要点だけ書く。
-        5. 記事に答えがない / 内容が薄い場合は、無理に書かず短くまとめる。
+        1. ヘッドラインは 60〜100 字、自然な日本語、テーマを統合した断定調。
+           例: 「最近は AI エージェント設計と Claude Skills について 4 件読みました。」
+        2. テーマは各 10〜20 字の短い名詞句。記事横断で見える共通テーマを 3 個まで。
+           例: 「AI エージェント」「Claude Skills」「PM 効率化」。
+        3. ID や URL を本文に書かない、「私が読んだのは」のような視点も使わない。
 
         ## 最近保存した記事 (件数 \(articles.count))
         """
 
         for (i, article) in articles.enumerated() {
-            let essence = article.extractedKnowledge?.essence ?? ""
-            let keyFacts = article.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
+            let essence = (article.extractedKnowledge?.essence ?? "").prefix(60)
+            let firstFact = article.extractedKnowledge?.keyFacts?.first?.statement.prefix(30) ?? ""
             prompt += """
 
-            [\(i + 1)] タイトル: \(article.title)
+            [\(i + 1)] \(article.title.prefix(50))
             要点: \(essence)
-            主な事実: \(keyFacts)
+            事実: \(firstFact)
             """
         }
 
         prompt += """
 
         ## 出力形式
-        paragraphs フィールドに 3 つの段落 (String 3 件) を入れてください。
+        paragraphs フィールドに 4 件の文字列を順に入れてください:
+          [0] = ヘッドライン (60〜100 字)
+          [1] = テーマ 1 (10〜20 字)
+          [2] = テーマ 2 (10〜20 字)
+          [3] = テーマ 3 (10〜20 字)
         """
         return prompt
     }
 
-    // MARK: - Fallback (擬似 3 段落生成)
+    // MARK: - Fallback (Apple Intelligence 不可時の擬似生成)
 
+    /// V3.0 polish: 4 件 (ヘッドライン + テーマ 3) の擬似出力を生成。
+    /// ヘッドライン = 最初の記事 essence (or title) を抜粋、テーマ = 最新 3 件の title を圧縮。
     static func fallbackParagraphs(articles: [Article]) -> [String] {
-        // 記事を 3 グループに分けて、各グループ essence を結合
-        let total = articles.count
-        guard total > 0 else { return [] }
+        guard !articles.isEmpty else { return [] }
 
-        let groupSize = max(1, Int(ceil(Double(total) / 3.0)))
-        var paragraphs: [String] = []
+        let headlineSource = articles.first?.extractedKnowledge?.essence
+            ?? articles.first?.title
+            ?? ""
+        let headlineBase = headlineSource.trimmingCharacters(in: .whitespacesAndNewlines)
+        let headline = articles.count > 1
+            ? "最近 \(articles.count) 件保存しました。" + (headlineBase.count > 50 ? String(headlineBase.prefix(50)) + "…" : headlineBase)
+            : headlineBase
 
-        for groupIndex in 0..<3 {
-            let start = groupIndex * groupSize
-            guard start < total else { break }
-            let end = min(start + groupSize, total)
-            let group = articles[start..<end]
-            let essences = group.map { article -> String in
-                if let e = article.extractedKnowledge?.essence, !e.isEmpty {
-                    return e
-                }
-                return article.title
-            }
-            // 記事間は「。」or「 / 」で結合
-            let combined = essences.joined(separator: " / ")
-            // 200 字に truncate
-            let truncated = combined.count > 250 ? String(combined.prefix(250)) + "…" : combined
-            paragraphs.append(truncated)
+        let themes = articles.prefix(3).map { article -> String in
+            let title = article.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.count > 18 ? String(title.prefix(18)) + "…" : title
         }
-        return paragraphs
+
+        return [headline] + themes
+    }
+
+    // MARK: - Tier 3: 単一記事 headline 抽出
+
+    /// 全 Article fallback も cache も無い時、最新 1 件の essence を headline 化。
+    /// 「保存したばかり / 抽出中」記事でも何か出すよう、essence → title の順に fallback。
+    /// V3.0 polish (2026-05-28): essence が長い場合は最初の文で切る (「途中で切れる」見た目をなくす)。
+    static func headlineFromSingleArticle(_ article: Article) -> String {
+        if let essence = article.extractedKnowledge?.essence,
+           !essence.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return firstCompleteSentence(essence)
+        }
+        return article.title
+    }
+
+    /// テキストの最初の完結文を返す (「。」「.」「\n」終端で切る)。
+    /// 1 文も無いなら 100 字以下なら全文、超えれば prefix 100 で末尾「…」付ける。
+    static func firstCompleteSentence(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let terminators: Set<Character> = ["。", "．", ".", "\n"]
+        if let endIndex = trimmed.firstIndex(where: { terminators.contains($0) }) {
+            // 終端文字含めて返す (.「。」が自然)
+            let next = trimmed.index(after: endIndex)
+            return String(trimmed[..<next])
+        }
+        // 終端なし → 100 字以下なら全文、超えれば truncate
+        if trimmed.count <= 100 { return trimmed }
+        return String(trimmed.prefix(100)) + "…"
+    }
+
+    /// 単一記事からテーマ chip 用の短い名詞句を抽出。
+    /// KnowledgeEntity > KeyFact > title prefix の優先順位。
+    static func themeFromArticle(_ article: Article) -> String {
+        // 上位 entity (salience desc) があれば使う
+        if let entity = (article.extractedKnowledge?.entities ?? [])
+            .sorted(by: { $0.salience > $1.salience })
+            .first {
+            return entity.name
+        }
+        if let fact = article.extractedKnowledge?.keyFacts?.first?.statement {
+            return String(fact.prefix(18))
+        }
+        return String(article.title.prefix(18))
     }
 }

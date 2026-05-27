@@ -137,8 +137,8 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
         knowledge.chunkTotalCount = chunkTotalCount
         knowledge.skippedTailChars = skippedTailChars
 
-        // KeyFacts: order を生成順で付与
-        for (idx, factOutput) in (output.keyFacts ?? []).enumerated() {
+        // KeyFacts: order を生成順で付与、最大 10 件 (AI が指示を無視した場合の defensive truncate)
+        for (idx, factOutput) in (output.keyFacts ?? []).prefix(10).enumerated() {
             let fact = KeyFact(
                 knowledge: knowledge,
                 statement: factOutput.statement,

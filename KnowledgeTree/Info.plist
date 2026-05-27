@@ -6,6 +6,7 @@
 	<array>
 		<string>app.KnowledgeTree.chunkedKnowledgeExtraction</string>
 		<string>app.KnowledgeTree.conceptResynthesis</string>
+		<string>app.KnowledgeTree.weeklyLint</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

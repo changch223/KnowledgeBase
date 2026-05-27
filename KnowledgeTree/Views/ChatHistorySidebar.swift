@@ -22,6 +22,15 @@ struct ChatHistorySidebar: View {
     private var allSessions: [ChatSession]
     @Environment(ServiceContainer.self) private var serviceContainer
 
+    /// V3.0 polish (2026-05-24): 「深掘り」と「一般」で履歴を分けて表示。
+    private var generalSessions: [ChatSession] {
+        allSessions.filter { $0.mode == .general }
+    }
+
+    private var deepDiveSessions: [ChatSession] {
+        allSessions.filter { $0.mode == .deepDive }
+    }
+
     var body: some View {
         List {
             Section {
@@ -38,29 +47,24 @@ struct ChatHistorySidebar: View {
                 .accessibilityIdentifier("chat.sidebar.newButton")
             }
 
-            Section {
-                if allSessions.isEmpty {
+            // AI チャット (general mode) — タブから新規作成 + 通常質問
+            Section(header: Text("chat.sidebar.section.general")) {
+                if generalSessions.isEmpty {
                     Text("chat.sidebar.empty")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(allSessions) { session in
-                        Button {
-                            onSelect(session.id)
-                        } label: {
-                            ChatSessionRow(
-                                session: session,
-                                isActive: session.id == pinnedSessionID
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                deleteSession(session)
-                            } label: {
-                                Label("chat.sidebar.deleteAction", systemImage: "trash")
-                            }
-                        }
+                    ForEach(generalSessions) { session in
+                        sessionButton(session)
+                    }
+                }
+            }
+
+            // 学習チャット (deepDive mode) — 学習カードから起動した家庭教師 session
+            if !deepDiveSessions.isEmpty {
+                Section(header: Text("chat.sidebar.section.deepDive")) {
+                    ForEach(deepDiveSessions) { session in
+                        sessionButton(session)
                     }
                 }
             }
@@ -68,6 +72,26 @@ struct ChatHistorySidebar: View {
         .listStyle(.sidebar)
         .navigationTitle("chat.sidebar.title")
         .accessibilityIdentifier("chat.sidebar")
+    }
+
+    @ViewBuilder
+    private func sessionButton(_ session: ChatSession) -> some View {
+        Button {
+            onSelect(session.id)
+        } label: {
+            ChatSessionRow(
+                session: session,
+                isActive: session.id == pinnedSessionID
+            )
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                deleteSession(session)
+            } label: {
+                Label("chat.sidebar.deleteAction", systemImage: "trash")
+            }
+        }
     }
 
     private func deleteSession(_ session: ChatSession) {

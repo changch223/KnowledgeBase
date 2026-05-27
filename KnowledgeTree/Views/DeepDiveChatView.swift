@@ -62,13 +62,13 @@ struct DeepDiveChatView: View {
         if isInitializing {
             VStack {
                 Spacer()
-                ProgressView { Text("家庭教師を起動中…") }
+                ProgressView { Text("会話を準備しています…") }
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let startError {
             ContentUnavailableView(
-                "家庭教師を起動できませんでした",
+                "会話を始められませんでした",
                 systemImage: "exclamationmark.bubble",
                 description: Text("もう一度開いてみてください。")
             )
@@ -259,7 +259,7 @@ private struct DeepDiveMessageList: View {
                     if isThinking {
                         HStack(spacing: DS.Spacing.sm) {
                             ProgressView()
-                            Text("家庭教師が考えています…")
+                            Text("考えています…")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

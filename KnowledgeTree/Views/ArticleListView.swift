@@ -17,6 +17,8 @@ struct ArticleListView: View {
     @State private var searchQuery: String = ""
     @State private var selectedArticle: Article?
     @State private var refreshTick: Int = 0
+    /// spec 056 Phase B: FAB tap で URL 入力 sheet
+    @State private var showAddArticle: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -52,6 +54,16 @@ struct ArticleListView: View {
                 BottomStatusBar(monitor: monitor)
                     .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)
                     .animation(DS.Animation.statusBar, value: monitor.current?.id)
+            }
+            // spec 056 Phase B: FAB (+ 追加) を右下に配置
+            .overlay(alignment: .bottomTrailing) {
+                FABButton(icon: "plus") {
+                    showAddArticle = true
+                }
+                .accessibilityIdentifier("fab.addArticle.library")
+            }
+            .sheet(isPresented: $showAddArticle) {
+                AddArticleSheet()
             }
             .searchable(
                 text: $searchQuery,
@@ -141,39 +153,47 @@ private struct ArticleListContent: View {
                     )
                 }
             } else {
+                // spec 056 Phase B: 日付別 grouping (今日 / 昨日 / 今週 / 今月 / それ以前)
+                let grouped = LibraryDateGrouper.group(visible)
                 List {
-                    ForEach(visible) { article in
-                        Button {
-                            selectedArticle = article
-                        } label: {
-                            ArticleRow(
-                                article: article,
-                                refreshTick: refreshTick,
-                                searchQuery: searchQuery
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("articleListRow")
-                        .listRowSeparator(
-                            article.extractedKnowledge?.status == .succeeded ||
-                            article.extractedKnowledge?.status == .partiallySucceeded
-                                ? .hidden : .visible
-                        )
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                delete(article)
-                            } label: {
-                                Label("list.deleteAction", systemImage: "trash")
+                    ForEach(grouped, id: \.0) { (group, articlesInGroup) in
+                        Section {
+                            ForEach(articlesInGroup) { article in
+                                Button {
+                                    selectedArticle = article
+                                } label: {
+                                    ArticleRow(
+                                        article: article,
+                                        refreshTick: refreshTick,
+                                        searchQuery: searchQuery
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("articleListRow")
+                                .listRowSeparator(
+                                    article.extractedKnowledge?.status == .succeeded ||
+                                    article.extractedKnowledge?.status == .partiallySucceeded
+                                        ? .hidden : .visible
+                                )
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        delete(article)
+                                    } label: {
+                                        Label("list.deleteAction", systemImage: "trash")
+                                    }
+                                    .accessibilityIdentifier("articleDeleteAction")
+                                }
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        delete(article)
+                                    } label: {
+                                        Label("list.deleteAction", systemImage: "trash")
+                                    }
+                                }
                             }
-                            .accessibilityIdentifier("articleDeleteAction")
-                        }
-                        // spec 030: contextMenu (長押し) を併記、LazyVStack 系 view と UX 統一
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                delete(article)
-                            } label: {
-                                Label("list.deleteAction", systemImage: "trash")
-                            }
+                        } header: {
+                            Text(group.localizedTitle)
+                                .accessibilityIdentifier("library.dateGroup.\(group.rawValue)")
                         }
                     }
                 }

@@ -77,7 +77,7 @@ struct KnowledgeSummaryView: View {
             // 登場するもの
             if !sortedEntities.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    Text("(knowledge.entities ?? []).heading")
+                    Text("knowledge.entities.heading")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                     EntityChipFlow(entities: sortedEntities)

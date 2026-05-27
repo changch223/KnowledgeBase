@@ -17,6 +17,8 @@ final class BackgroundExtractionScheduler {
     static let taskIdentifier = "app.KnowledgeTree.chunkedKnowledgeExtraction"
     /// spec 042: ConceptPage 再合成専用 BGTask 識別子。chunkedKnowledgeExtraction と並行で動作。
     static let conceptResynthesisTaskIdentifier = "app.KnowledgeTree.conceptResynthesis"
+    /// spec 058: 週 1 Lint loop (整理 / 削除 / リンク強化 / 再分類 / SavedAnswer auto-refresh)。
+    static let weeklyLintTaskIdentifier = "app.KnowledgeTree.weeklyLint"
 
     private let logger = Logger(subsystem: "app.KnowledgeTree", category: "background")
 
@@ -25,9 +27,12 @@ final class BackgroundExtractionScheduler {
     var queueProvider: (@MainActor () -> BackgroundExtractionQueueProtocol?)?
     /// spec 042: ConceptSynthesisService の inject (resynthesizeAllStale を BGTask で呼ぶ)。
     var conceptSynthesisProvider: (@MainActor () -> ConceptSynthesisServiceProtocol?)?
+    /// spec 058: LintEngine の inject (週 1 Lint loop を BGTask で呼ぶ)。
+    var lintEngineProvider: (@MainActor () -> LintEngineProtocol?)?
 
     private var didRegister = false
     private var didRegisterConceptTask = false
+    private var didRegisterWeeklyLintTask = false
 
     private init() {}
 
@@ -70,6 +75,52 @@ final class BackgroundExtractionScheduler {
         }
 
         logger.notice("BG scheduler: registered handler for \(Self.conceptResynthesisTaskIdentifier, privacy: .public)")
+    }
+
+    /// spec 058: 週 1 Lint loop BGTask handler 登録。
+    /// App.init() で 1 回だけ呼ぶ。
+    /// 1 回の起動で 6 step Lint loop 全実行 (30 秒以内、1000 article 規模想定)。
+    func registerWeeklyLintHandler() {
+        guard !didRegisterWeeklyLintTask else { return }
+        didRegisterWeeklyLintTask = true
+
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.weeklyLintTaskIdentifier,
+            using: nil
+        ) { [weak self] task in
+            Task { @MainActor [weak self] in
+                await self?.handleWeeklyLintTask(task)
+            }
+        }
+
+        logger.notice("BG scheduler: registered handler for \(Self.weeklyLintTaskIdentifier, privacy: .public)")
+    }
+
+    /// spec 058: 次回週 1 Lint BGTask を「次の日曜 3 AM」に予約。
+    /// expirationHandler / 完了時に次回分を chain submit する。
+    func scheduleNextWeeklyLint() async {
+        let request = BGAppRefreshTaskRequest(identifier: Self.weeklyLintTaskIdentifier)
+        request.earliestBeginDate = Self.nextSundayAt3AM()
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            logger.notice("BG scheduler: submitted weekly lint request for \(request.earliestBeginDate?.description ?? "nil", privacy: .public)")
+        } catch {
+            logger.error("BG scheduler: weekly lint submit failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// 次の日曜日 3 AM (local time) を計算 (週 1 BGTask の earliestBeginDate)。
+    static func nextSundayAt3AM(now: Date = .now, calendar: Calendar = .current) -> Date {
+        var components = DateComponents()
+        components.weekday = 1  // Sunday (Gregorian)
+        components.hour = 3
+        components.minute = 0
+        components.second = 0
+        return calendar.nextDate(
+            after: now,
+            matching: components,
+            matchingPolicy: .nextTime
+        ) ?? now.addingTimeInterval(7 * 86400)
     }
 
     /// spec 042: 次回 ConceptPage 再合成 BGTask を 1 時間後に予約。
@@ -176,5 +227,33 @@ final class BackgroundExtractionScheduler {
 
         // 次回分を chain submit (stale ConceptPage が残っていれば次の slot で処理される)
         await scheduleNextConceptResynthesis()
+    }
+
+    /// spec 058: 週 1 Lint loop BGTask handler。
+    /// LintEngine.runFullLintLoop で 6 step 全実行、次回分を chain submit。
+    private func handleWeeklyLintTask(_ task: BGTask) async {
+        logger.notice("BG scheduler: weekly lint handler invoked")
+
+        guard let lintEngine = lintEngineProvider?() else {
+            logger.error("BG scheduler: lint engine not bound, completing with failure")
+            task.setTaskCompleted(success: false)
+            // 次回分は予約 (engine が後で bind される場合に備える)
+            await scheduleNextWeeklyLint()
+            return
+        }
+
+        task.expirationHandler = { [weak self] in
+            Task { @MainActor [weak self] in
+                await self?.scheduleNextWeeklyLint()
+                task.setTaskCompleted(success: false)
+            }
+        }
+
+        let result = await lintEngine.runFullLintLoop()
+        logger.notice("BG scheduler: weekly lint done, ops=\(result.totalOperations), elapsed=\(result.elapsedSeconds)s")
+        task.setTaskCompleted(success: true)
+
+        // 次回分を chain submit (来週の日曜 3 AM)
+        await scheduleNextWeeklyLint()
     }
 }

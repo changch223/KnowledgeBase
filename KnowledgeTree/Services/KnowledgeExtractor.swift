@@ -33,17 +33,19 @@ struct KnowledgeExtractor {
     private static let logger = Logger(subsystem: "app.KnowledgeTree", category: "extractor")
 
     /// 単発パス (本文 ≤ defaultMaxBodyChars) で使う上限。
-    /// spec 006 で 1,200 → 1,000、spec 051 spike で 1,000 → 600 に変更。
+    /// spec 006: 1,200 → 1,000 / spec 051 spike: 1,000 → 600 / V3.0 polish: 600 → 400。
     /// Foundation Models 4096 token 制限のうち @Generable schema serialization (~1500 tokens) +
     /// FM internal overhead (~1500 tokens) で実質 user 入力余地は ~1000 tokens のみ。
-    /// 600 Japanese chars ≈ 900 tokens、margin 確保。
-    static let defaultMaxBodyChars = 600
+    /// 実機ログで 600 字 chunked でも英語翻訳後 + Generable schema で 4089-4095 tokens 連発 →
+    /// 安全のため 400 字 ≈ 600 tokens まで下げる (margin 1.5x)。
+    static let defaultMaxBodyChars = 400
 
     func extract(
         extractedText: String,
         maxBodyChars: Int = KnowledgeExtractor.defaultMaxBodyChars
     ) async throws -> ExtractedKnowledgeOutput {
-        let truncated = Self.truncate(text: extractedText, maxChars: maxBodyChars)
+        let stripped = Self.stripCodeBlocks(from: extractedText)
+        let truncated = Self.truncate(text: stripped, maxChars: maxBodyChars)
         let prepared = await prepareForExtraction(truncated)
         let prompt = Self.buildPrompt(text: prepared)
         return try await session.generateKnowledge(prompt: prompt)
@@ -52,7 +54,8 @@ struct KnowledgeExtractor {
     /// spec 006: 1 chunk を Foundation Models に渡して結果を ChunkResult として返す。
     /// throw しない (失敗は ChunkResult.error に格納)。
     func extractFromChunk(_ chunk: Chunk) async -> ChunkResult {
-        let prepared = await prepareForExtraction(chunk.text)
+        let stripped = Self.stripCodeBlocks(from: chunk.text)
+        let prepared = await prepareForExtraction(stripped)
         let prompt = Self.buildPrompt(text: prepared)
         do {
             let output = try await session.generateKnowledge(prompt: prompt)
@@ -127,11 +130,63 @@ struct KnowledgeExtractor {
         - 推測・補完・常識による補強は行わないでください
         - 該当する事実が見つからない場合は空配列を返してください
         - essence と summary と key facts は互いに矛盾しないでください
+        - key facts は重要度が高い順に最大 10 件まで返してください
+        - コード片・関数呼び出し・コマンド出力は key facts に含めないでください (自然言語の事実のみ)
         - すべて日本語で出力してください
 
         # 元記事本文
         \(text)
         """
+    }
+
+    /// 記事本文からコードブロックを取り除く純粋関数。コード片混入は KeyFact の品質を下げ、
+    /// Foundation Models のトークンも食うため、抽出パイプ入口で削る。
+    /// 削るもの:
+    ///   - ``` fenced code block (3 個以上のバッククォートで囲まれた範囲、改行越え可)
+    ///   - ~~~ alternate fence
+    ///   - 連続するインデント (4 スペース or タブ始まり) 行ブロック
+    ///   - `inline code` (バッククォート 1 個で囲まれた単一行スパン、改行は跨がない)
+    /// 残すもの: バッククォートを含まない通常の文章 / 句読点 / 全角文字。
+    static func stripCodeBlocks(from text: String) -> String {
+        var working = text
+
+        // 1. ``` または ~~~ で囲まれた fenced block を改行越えで削除
+        if let regex = try? NSRegularExpression(
+            pattern: "(```|~~~)[\\s\\S]*?\\1",
+            options: []
+        ) {
+            let range = NSRange(working.startIndex..., in: working)
+            working = regex.stringByReplacingMatches(in: working, options: [], range: range, withTemplate: " ")
+        }
+
+        // 2. 行頭 4 スペース or タブで始まる連続行 (indented code block)
+        let lines = working.split(separator: "\n", omittingEmptySubsequences: false)
+        var keptLines: [String] = []
+        for line in lines {
+            let isIndentedCode = line.hasPrefix("    ") || line.hasPrefix("\t")
+            if isIndentedCode {
+                continue
+            }
+            keptLines.append(String(line))
+        }
+        working = keptLines.joined(separator: "\n")
+
+        // 3. inline `code` (改行を跨がないシングルバッククォート) は中身ごと削除
+        if let regex = try? NSRegularExpression(
+            pattern: "`[^`\\n]*`",
+            options: []
+        ) {
+            let range = NSRange(working.startIndex..., in: working)
+            working = regex.stringByReplacingMatches(in: working, options: [], range: range, withTemplate: " ")
+        }
+
+        // 4. 連続する空白行を 1 行に圧縮
+        if let regex = try? NSRegularExpression(pattern: "\\n{3,}", options: []) {
+            let range = NSRange(working.startIndex..., in: working)
+            working = regex.stringByReplacingMatches(in: working, options: [], range: range, withTemplate: "\n\n")
+        }
+
+        return working.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// spec 006: meta-summary 専用 prompt。本文ではなく chunk 別 essence を入力に取る。

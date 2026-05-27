@@ -1,28 +1,73 @@
-# KnowledgeTree (知積) — Spec Roadmap
+# KnowledgeTree (知積) → iKnow — Spec Roadmap
 
-**Last updated**: 2026-05-08 (PM session)
-**Current branch**: `vision-spec-035-038` (PR #9 予定)
-**Main HEAD**: `06cc2a9` (PR #7 = spec 034 PDF support マージ済)
+**Last updated**: 2026-05-24 (PM session、V3.0 完成)
+**Current branch**: `056-uiux-redesign-v3` (PR #17 = spec 056 + spec 057 統合、実機検証待ち)
+**Main HEAD**: V2.5 完成 (CloudKit sync、PR #16 merge)
 **Vision**: [VISION.md](./VISION.md) — プロダクトビジョン確定版
 
-## 🎯 次の 3 ヶ月の柱 (本セッション 2026-05-08 で確定)
+## 🎉 V3.0 完成サマリ (2026-05-24)
 
-VISION.md コア価値「**読んだ知識を AI が自動で体系化・更新し、必要な時だけ開けば最新の自分が見える、優しい第二の脳**」を具現化する 4 spec:
+V3.0 = **「気になったものが、勝手に整理される」 + 「ChatGPT 風 agentic chat」**
 
-| spec | 機能 | 規模 | 優先度 |
-|---|---|---|---|
-| **035** | 「最近のあなた」差分ダイジェスト (機能 X) | ~340 行 | ⭐⭐⭐⭐⭐ |
-| **036** | 動的トピック自動発見 (機能 Y) | ~810 行 | ⭐⭐⭐⭐⭐ |
-| **037** | 時系列事実上書き提案 (機能 Z) | ~590 行 | ⭐⭐⭐⭐ |
-| **038** | 用語のやさしさ整理 (機能 W) | ~200-300 行 | ⭐⭐⭐⭐ |
-| **033** | AI Chat モダン UI (履歴サイドバー / multi-turn / streaming / inline link) | ~600 行 | ⭐⭐⭐⭐⭐ |
-| **040** | Knowledge Graph 抽出 + Digest + RAG 統合 (Phase A) — graph で体系化、UI なし | ~1000 行 | ⭐⭐⭐⭐⭐ |
-| **041** | Knowledge Graph UI + 編集 (Phase B) — Concept Map / 編集 / spec 037 統合 | ~1000-1200 行 | ⭐⭐⭐⭐ |
+### V3.0 で完成した 2 spec (PR #17 で 1 PR 統合)
 
-詳細: `specs/035-recent-digest/`, `specs/036-dynamic-topics/`, `specs/037-fact-overwrite/`, `specs/038-friendly-terms/`
+| spec | 機能 | 規模 |
+|---|---|---|
+| **056** | UIUX redesign V3.0 (3-tab simplification + Apple News パターン) | ~2300 行 |
+| **057** | Agentic Chat (LLM が考えて聞いて調べて答える) | ~1500 行 |
 
-このドキュメントは spec 001 〜 spec 040+ の全体計画を保存し、`/speckit-specify` 起動時の優先順位判断に使う。
-更新は spec を新たに着手する / 完了させる毎に行う。
+### V3.0 の体験変化
+
+- 5 タブ → **3 タブ** (知識 Clip / ライブラリ / AI チャット)
+- 知識 Clip 8 セクション → **3 セクション** (最近の記事 / 続きが気になる / 追っている人物・モノ)
+- ライブラリ → **日付別 grouping** (今日 / 昨日 / 今週 / 今月 / それ以前) + FAB
+- AI チャット: 「分かりません」廃止、**clarification chips**、**long press menu** (保存/コピー/共有)、**max 3 round agent loop**
+
+詳細: `specs/056-uiux-redesign-v3/`, `specs/057-agentic-chat/`
+
+---
+
+## 📅 次の 3-6 ヶ月の方針
+
+V3.0 release 後の paper plans は **`specs/058-future-paper-plans.md`** にまとめた。
+Tier 1 (小改善 1-3 日) → Tier 2 (中規模 3-7 日) → Tier 3 (大規模 1-2 週間) で段階展開。
+
+最優先候補 (release 後 1 ヶ月以内に着手判断):
+- **spec 058**: 「分かりません」filter 強化 + hedge 学習 (V3.0 patch)
+- **spec 062**: Web 検索 tool (agent action 拡張)
+- **spec 064**: AI Chat 答え評価 + 自動改善
+
+---
+
+## 過去 release (参考)
+
+### V2.5 (2026-05-24)
+- spec 051 — iCloud sync (SwiftData CloudKit) PR #16 merge 済
+
+### V2.0 (2026-05-23 前後)
+- spec 048 (Apple Intelligence non-availability banner)
+- spec 049 (Onboarding)
+- spec 050 (Settings cleanup)
+- spec 052 (Widget「今日の学習カード」)
+- iKnow リブランディング (知積 → iKnow)
+
+### V1.5 (2026-05-08〜2026-05-23)
+- spec 042 (ConceptPage) — iKnow V1 Phase A 第 1 弾
+- spec 043 (SavedAnswer) — iKnow V1 Phase A 第 2 弾
+- spec 044 (Understanding Chat / 家庭教師ループ + 学習タブ) — iKnow V1 Phase A 核心
+- spec 040/041 (Knowledge Graph + UI)
+- spec 045/046/047 (WikiLint Lite Phase 1/2 + Chat ConceptPage chips)
+
+詳細は CLAUDE.md 各 spec ステータス、または `git log --oneline main` 参照。
+
+---
+
+## 🔖 旧 ROADMAP コンテンツ (アーカイブ)
+
+本 ROADMAP 上部は V3.0 完成時 (2026-05-24) に書き換え。
+旧 spec 030-053 計画 / 残 spec 状態別サマリは以下に残置 (参考用)、新規 spec 着手判断は `specs/058-future-paper-plans.md` を使う。
+
+---
 
 ---
 
