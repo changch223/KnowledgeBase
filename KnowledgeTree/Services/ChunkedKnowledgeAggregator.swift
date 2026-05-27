@@ -133,6 +133,7 @@ enum ChunkedKnowledgeAggregator {
     // MARK: - Private helpers
 
     /// keyFacts: trim 済 statement の完全一致で重複排除。最初に出現した順序を保持。
+    /// 全 chunk からの合計を最大 10 件で打ち切り (各 chunk が重要度順なので冒頭優先で残る)。
     private static func mergeKeyFacts(from outputs: [ExtractedKnowledgeOutput]) -> [KeyFactOutput] {
         var seen: Set<String> = []
         var deduped: [KeyFactOutput] = []
@@ -142,6 +143,7 @@ enum ChunkedKnowledgeAggregator {
                 guard !key.isEmpty, !seen.contains(key) else { continue }
                 seen.insert(key)
                 deduped.append(fact)
+                if deduped.count >= 10 { return deduped }
             }
         }
         return deduped

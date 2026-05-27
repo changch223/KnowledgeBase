@@ -58,11 +58,10 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         processingMonitor: ProcessingMonitor? = nil,
         minimumTextLength: Int = 200,
         extractionVersion: Int = 1,
-        // spec 051 spike で 1000 → 600 に縮小。
-        // Foundation Models 4096 token 制限のうち @Generable schema serialization + FM internal overhead で
-        // 3000+ tokens 消費するため、user 入力に使える余地は ~1000 tokens のみ。
-        // 600 chars Japanese ≈ 900 tokens、margin 確保。
-        chunkSizeChars: Int = 600,
+        // spec 051 spike: 1000 → 600 / V3.0 polish: 600 → 400 に縮小。
+        // 実機ログで 600 字 chunked extraction でも英語翻訳後 + Generable schema で 4089-4095 tokens 連発、
+        // 4096 限界に貼り付いて多数 chunk が失敗。400 字 ≈ 600 tokens まで下げて margin 1.5x 確保。
+        chunkSizeChars: Int = 400,
         maxChunks: Int = 30,
         chunkProgressStore: ChunkProgressStoreProtocol? = nil,
         tagStore: TagStore? = nil,

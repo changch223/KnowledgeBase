@@ -768,6 +768,17 @@
         }
       }
     },
+    "chat.sidebar.badge.deepDive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学習チャット"
+          }
+        }
+      }
+    },
     "chat.sidebar.deleteAction" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -797,6 +808,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新しいチャット"
+          }
+        }
+      }
+    },
+    "chat.sidebar.section.deepDive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学習チャット"
+          }
+        }
+      }
+    },
+    "chat.sidebar.section.general" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI チャット"
           }
         }
       }
@@ -888,15 +921,6 @@
           }
         }
       }
-    },
-    "clip.(detail.articles ?? []).title" : {
-
-    },
-    "clip.(detail.entities ?? []).title" : {
-
-    },
-    "clip.(detail.keyFacts ?? []).title" : {
-
     },
     "clip.card.staleLabel" : {
       "extractionState" : "manual",
@@ -1326,9 +1350,6 @@
           }
         }
       }
-    },
-    "ConceptPage.(detail.relatedArticles ?? []).title" : {
-
     },
     "ConceptPage.card.relatedCount" : {
       "extractionState" : "manual",
@@ -2328,6 +2349,72 @@
         }
       }
     },
+    "knowledgeClip.recent.articles.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元記事"
+          }
+        }
+      }
+    },
+    "knowledgeClip.recent.detail.articles.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象の記事が見つかりません"
+          }
+        }
+      }
+    },
+    "knowledgeClip.recent.detail.articles.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連記事"
+          }
+        }
+      }
+    },
+    "knowledgeClip.recent.headline.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の記事から要点をまとめます"
+          }
+        }
+      }
+    },
+    "knowledgeClip.recent.headline.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要約を準備しています…"
+          }
+        }
+      }
+    },
+    "knowledgeClip.recent.themes.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主なテーマ"
+          }
+        }
+      }
+    },
     "knowledgeClip.recentArticles.moreCount %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2378,7 +2465,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最近の記事"
+            "value" : "最近の Know"
           }
         }
       }
@@ -2704,9 +2791,6 @@
       }
     },
     "Safari で記事を開いて「共有」→ アプリ名 で保存できます" : {
-
-    },
-    "SavedAnswer.(detail.citedArticles ?? []).title" : {
 
     },
     "SavedAnswer.detail.answer.title" : {
@@ -4362,6 +4446,12 @@
     "他のノードと統合" : {
 
     },
+    "会話を始められませんでした" : {
+
+    },
+    "会話を準備しています…" : {
+
+    },
     "保存" : {
 
     },
@@ -4433,12 +4523,6 @@
 
     },
     "学習統計" : {
-
-    },
-    "家庭教師を起動できませんでした" : {
-
-    },
-    "家庭教師を起動中…" : {
 
     },
     "復習" : {

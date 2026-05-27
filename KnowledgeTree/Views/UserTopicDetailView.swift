@@ -54,7 +54,7 @@ struct UserTopicDetailView: View {
         return Group {
             if !facts.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    Text("clip.(detail.keyFacts ?? []).title")
+                    Text("clip.detail.keyFacts.title")
                         .font(DS.Typography.sectionTitle)
                     ForEach(Array(facts.enumerated()), id: \.offset) { _, fact in
                         Text("・\(fact)")
@@ -71,7 +71,7 @@ struct UserTopicDetailView: View {
         return Group {
             if !entities.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                    Text("clip.(detail.entities ?? []).title")
+                    Text("clip.detail.entities.title")
                         .font(DS.Typography.sectionTitle)
                     FlowLayout(spacing: DS.Spacing.sm) {
                         ForEach(entities, id: \.self) { name in
@@ -92,7 +92,7 @@ struct UserTopicDetailView: View {
 
     private func articlesSection(topic: UserTopic) -> some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("clip.(detail.articles ?? []).title")
+            Text("clip.detail.articles.title")
                 .font(DS.Typography.sectionTitle)
             // 最新順
             let sorted = (topic.articles ?? []).sorted { $0.savedAt > $1.savedAt }

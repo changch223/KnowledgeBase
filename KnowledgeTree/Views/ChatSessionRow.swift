@@ -17,6 +17,12 @@ struct ChatSessionRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: DS.Spacing.sm) {
+                if session.mode == .deepDive {
+                    Image(systemName: "book.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .accessibilityLabel(Text("chat.sidebar.badge.deepDive"))
+                }
                 Text(displayTitle)
                     .font(.body)
                     .foregroundStyle(isActive ? DS.Color.actionBlue : .primary)

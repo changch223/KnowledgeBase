@@ -18,30 +18,56 @@ struct InterestingNextSection: View {
     @Query(sort: [SortDescriptor(\Article.savedAt, order: .reverse)])
     private var allArticles: [Article]
 
-    /// (Category 名, 記事数, 最新 savedAt) を記事数多い順で算出。
+    /// (Category 名, 記事数, 最新 savedAt) を全 10 分野で算出。
+    /// V3.0 polish (2026-05-28):
+    ///   - 1 Article が複数 Tag (異なる Category) を持つ場合、両 Category にカウント (Tag union 一覧と一致)
+    ///   - CategorySeed.allSeeds 10 分野を全部保証 (件数 0 でもリスト表示)
+    ///   - 件数多い順 + 同件数なら最新 savedAt 順
     private var categoryStats: [(category: String, count: Int, latest: Date)] {
-        // 各 Article の主 Category を解決 (Tag.categoryRaw 優先、なければ「未分類」)
-        var grouped: [String: (count: Int, latest: Date)] = [:]
+        // [Category 名: (記事 ID Set + 最新 savedAt)]
+        var grouped: [String: (ids: Set<UUID>, latest: Date)] = [:]
         for article in allArticles {
-            let cat = primaryCategory(for: article)
-            if let existing = grouped[cat] {
-                grouped[cat] = (existing.count + 1, max(existing.latest, article.savedAt))
-            } else {
-                grouped[cat] = (1, article.savedAt)
+            let categoriesOfArticle = categoriesFor(article)
+            for cat in categoriesOfArticle {
+                if let existing = grouped[cat] {
+                    var newIDs = existing.ids
+                    newIDs.insert(article.id)
+                    grouped[cat] = (newIDs, max(existing.latest, article.savedAt))
+                } else {
+                    grouped[cat] = ([article.id], article.savedAt)
+                }
             }
         }
-        return grouped
-            .map { (category: $0.key, count: $0.value.count, latest: $0.value.latest) }
-            .sorted { $0.count > $1.count }
+
+        // CategorySeed.allSeeds 全 10 件を base に、件数 0 でも保証
+        var stats: [(category: String, count: Int, latest: Date)] = []
+        for seed in CategorySeed.allSeeds {
+            if let data = grouped[seed.name] {
+                stats.append((seed.name, data.ids.count, data.latest))
+            } else {
+                stats.append((seed.name, 0, .distantPast))
+            }
+        }
+        // CategorySeed に無い分類 (例: 「未分類」) があれば末尾に追加
+        for (name, data) in grouped where CategorySeed.allSeeds.first(where: { $0.name == name }) == nil {
+            stats.append((name, data.ids.count, data.latest))
+        }
+
+        return stats.sorted { lhs, rhs in
+            if lhs.count != rhs.count { return lhs.count > rhs.count }
+            return lhs.latest > rhs.latest
+        }
     }
 
+    /// 全分野リスト (件数多い順 + 0 件含む)。
     private var topCategories: [(category: String, count: Int, latest: Date)] {
-        Array(categoryStats.prefix(5))
+        categoryStats
     }
 
     private var totalCategoryCount: Int { categoryStats.count }
 
     var body: some View {
+        // V3.0 polish (2026-05-28): CategorySeed.allSeeds 10 件で常に non-empty、ガードは defensive。
         if categoryStats.isEmpty {
             EmptyView()
         } else {
@@ -50,11 +76,6 @@ struct InterestingNextSection: View {
                     Text("knowledgeClip.section.categories")
                         .font(.headline)
                     Spacer()
-                    if totalCategoryCount > 5 {
-                        Text("knowledgeClip.categories.allCount \(totalCategoryCount)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
                 }
                 .padding(.horizontal, DS.Spacing.xxl)
 
@@ -80,6 +101,7 @@ struct InterestingNextSection: View {
     }
 
     /// Article の主 Category を解決 (関連 Tag の categoryRaw 中で最初の non-empty)。
+    /// V3.0 polish 後は categoriesFor で複数 Category 集計するため、参照箇所が無くなった場合は保持目的。
     private func primaryCategory(for article: Article) -> String {
         let tags = article.tags ?? []
         for tag in tags {
@@ -88,6 +110,19 @@ struct InterestingNextSection: View {
             }
         }
         return "未分類"
+    }
+
+    /// V3.0 polish (2026-05-28): Article が属する全 Category 名を Set で返す。
+    /// CategoryFilter.filteredArticles と件数を一致させるため、Tag.categoryRaw 全部を Category 名に解決。
+    /// categoryRaw が無い / 全部空なら ["未分類"]。
+    private func categoriesFor(_ article: Article) -> Set<String> {
+        let categoryNames: Set<String> = Set(
+            (article.tags ?? []).compactMap { tag in
+                guard let raw = tag.categoryRaw, !raw.isEmpty else { return nil }
+                return CategorySeed.category(for: raw).name
+            }
+        )
+        return categoryNames.isEmpty ? ["未分類"] : categoryNames
     }
 }
 

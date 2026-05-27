@@ -83,6 +83,10 @@ struct KnowledgeClipView: View {
             .navigationDestination(for: CategoryFilteredDestination.self) { dest in
                 CategoryFilteredListView(category: dest.category)
             }
+            // V3.0 polish (2026-05-27): 「最近の Know」ヘッドライン tap → 詳細画面
+            .navigationDestination(for: RecentLearningDetailDestination.self) { dest in
+                RecentLearningDetailView(since: dest.since)
+            }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()
             }

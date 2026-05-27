@@ -212,7 +212,7 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var relatedArticlesSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text(String(format: String(localized: "ConceptPage.(detail.relatedArticles ?? []).title") + " (%lld)", (conceptPage.relatedArticles ?? []).count))
+            Text(String(format: String(localized: "ConceptPage.detail.relatedArticles.title") + " (%lld)", (conceptPage.relatedArticles ?? []).count))
                 .font(.title3.bold())
             if (conceptPage.relatedArticles ?? []).isEmpty {
                 Text("ConceptPage.detail.emptyRelatedArticles")
