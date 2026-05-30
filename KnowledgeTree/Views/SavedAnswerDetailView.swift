@@ -17,6 +17,8 @@ struct SavedAnswerDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(ServiceContainer.self) private var services
     @State private var showDeleteConfirm: Bool = false
+    /// spec 061 (P1-3): 削除失敗を伝える軽い alert。
+    @State private var showDeleteError: Bool = false
 
     /// 削除時に空になる reactive guard (spec 042 ConceptPageDetailView と同パターン)。
     /// body 冒頭で `isAlive` short-circuit、@Bindable answer のプロパティ参照を一切させず crash 回避。
@@ -31,13 +33,18 @@ struct SavedAnswerDetailView: View {
     /// answer がまだ DB に存在しているか (delete で消えた直後は false)。
     private var isAlive: Bool { !liveMatches.isEmpty }
 
-    /// pin Toggle binding — Service 経由で永続化、失敗時は silent。
+    /// pin Toggle binding — Service 経由で永続化。
+    /// spec 061 (P1-3): 失敗を記録 (非破壊操作なので alert は出さず log のみ、calm UX)。
     private var pinBinding: Binding<Bool> {
         Binding(
             get: { answer.isPinned },
             set: { newValue in
                 if let service = services.savedAnswerService {
-                    try? service.setPinned(answer, isPinned: newValue)
+                    do {
+                        try service.setPinned(answer, isPinned: newValue)
+                    } catch {
+                        AppErrorReporter.shared.report(error, operation: "setPinnedSavedAnswer")
+                    }
                 } else {
                     answer.isPinned = newValue
                 }
@@ -103,7 +110,12 @@ struct SavedAnswerDetailView: View {
                 Menu {
                     if answer.isStale {
                         Button {
-                            try? services.savedAnswerService?.markFresh(answer)
+                            // spec 061 (P1-3): 非破壊操作、失敗は log のみ (calm UX)。
+                            do {
+                                try services.savedAnswerService?.markFresh(answer)
+                            } catch {
+                                AppErrorReporter.shared.report(error, operation: "markFreshSavedAnswer")
+                            }
                         } label: {
                             Label("更新済としてマーク", systemImage: "checkmark.circle")
                         }
@@ -123,12 +135,24 @@ struct SavedAnswerDetailView: View {
         }
         .alert("SavedAnswer.detail.delete.confirmTitle", isPresented: $showDeleteConfirm) {
             Button("SavedAnswer.detail.delete.action", role: .destructive) {
-                try? services.savedAnswerService?.delete(answer)
-                // dismiss は live check (Color.clear.onAppear) が自動で実行
+                // spec 061 (P1-3): 削除失敗を記録 + 表示。
+                do {
+                    try services.savedAnswerService?.delete(answer)
+                    // dismiss は live check (Color.clear.onAppear) が自動で実行
+                } catch {
+                    AppErrorReporter.shared.report(error, operation: "deleteSavedAnswer")
+                    showDeleteError = true
+                }
             }
             Button("SavedAnswer.detail.cancel", role: .cancel) {}
         } message: {
             Text("SavedAnswer.detail.delete.confirmMessage")
+        }
+        // spec 061 (P1-3): 削除失敗の表示
+        .alert("error.action.deleteFailed.title", isPresented: $showDeleteError) {
+            Button("common.ok", role: .cancel) { }
+        } message: {
+            Text("error.action.deleteFailed")
         }
         .accessibilityIdentifier("savedAnswerDetail_root")
     }
