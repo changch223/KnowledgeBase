@@ -287,4 +287,61 @@ struct RecentDigestServiceTests {
         #expect(result.hasSuffix("…"))
         #expect(result.count == 101)  // 100 + "…"
     }
+
+    // MARK: - spec 060 (P1-10): buildPrompt token 超過防止
+
+    /// 50 件 (各 title/essence 長め) でも buildPrompt の文字数が安全上限 (3500 字) 以内。
+    /// 旧実装は 30 件全列挙で ~4089 token → 4096 超過していた。
+    @Test func testBuildPromptStaysUnderCharBudget() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let now = Date.now
+        var articles: [Article] = []
+        for i in 0..<50 {
+            // title / essence を長めにして worst case を作る
+            let article = makeArticle(
+                title: "記事タイトル番号 \(i) " + String(repeating: "長", count: 40),
+                savedAt: now.addingTimeInterval(-Double(i) * 60),
+                essence: String(repeating: "要点テキスト", count: 20),  // ~120 字
+                in: context
+            )
+            articles.append(article)
+        }
+        try context.save()
+
+        let prompt = RecentDigestService.buildPrompt(articles: articles)
+        // 安全上限 3500 字以内 (promptCharBudget 3000 + 固定フッタ余裕)
+        #expect(prompt.count <= 3500, "buildPrompt が \(prompt.count) 字、3500 字を超過 (token 超過リスク)")
+        // 件数表示は実件数 (50) を維持
+        #expect(prompt.contains("件数 50"))
+    }
+
+    /// buildPrompt は promptArticleLimit (8) 件しか列挙しない (9 件目以降は非含有)。
+    @Test func testBuildPromptLimitsArticleCount() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let now = Date.now
+        var articles: [Article] = []
+        for i in 0..<20 {
+            // 固有な識別子を title に埋め込む
+            let article = makeArticle(
+                title: "UNIQUEMARK\(i)",
+                savedAt: now.addingTimeInterval(-Double(i) * 60),
+                essence: "essence \(i)",
+                in: context
+            )
+            articles.append(article)
+        }
+        try context.save()
+
+        let prompt = RecentDigestService.buildPrompt(articles: articles)
+        // 先頭 8 件 (0-7) は含まれる
+        #expect(prompt.contains("UNIQUEMARK0"))
+        #expect(prompt.contains("UNIQUEMARK7"))
+        // 9 件目以降 (8, 9, ...) は含まれない (promptArticleLimit=8)
+        #expect(!prompt.contains("UNIQUEMARK8"))
+        #expect(!prompt.contains("UNIQUEMARK15"))
+    }
 }

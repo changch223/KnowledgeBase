@@ -192,6 +192,14 @@ final class RecentDigestService: RecentDigestServiceProtocol {
     ///   - [1] テーマ 1 (10-20 字)
     ///   - [2] テーマ 2 (10-20 字)
     ///   - [3] テーマ 3 (10-20 字)
+    /// spec 060 (P1-10): buildPrompt に列挙する記事の上限。
+    /// maxArticles=30 (差分判定 / articleCount 表示用) とは別に、prompt 構築だけ絞る。
+    /// ヘッドライン + テーマ 3 個の生成には最新 8 件で代表性十分。
+    static let promptArticleLimit = 8
+    /// spec 060 (P1-10): prompt 累積文字数の安全上限。日本語 char≈token 近似で
+    /// Foundation Models の 4096 token 上限を確実に下回るマージン。
+    static let promptCharBudget = 3000
+
     static func buildPrompt(articles: [Article]) -> String {
         var prompt = """
         あなたは iKnow の AI アシスタントです。ユーザーが最近保存した記事から、何を学んだかを「1 文の見出し + 主要テーマ 3 個」で伝えてください。
@@ -206,15 +214,21 @@ final class RecentDigestService: RecentDigestServiceProtocol {
         ## 最近保存した記事 (件数 \(articles.count))
         """
 
-        for (i, article) in articles.enumerated() {
-            let essence = (article.extractedKnowledge?.essence ?? "").prefix(60)
-            let firstFact = article.extractedKnowledge?.keyFacts?.first?.statement.prefix(30) ?? ""
-            prompt += """
+        // spec 060 (P1-10): 全 30 件列挙だと ~4089 token で 4096 超過するため、
+        // 上限 promptArticleLimit 件 + 累積文字数ガードで token 超過を防ぐ。
+        let promptArticles = Array(articles.prefix(promptArticleLimit))
+        for (i, article) in promptArticles.enumerated() {
+            let essence = (article.extractedKnowledge?.essence ?? "").prefix(50)
+            let firstFact = article.extractedKnowledge?.keyFacts?.first?.statement.prefix(20) ?? ""
+            let entry = """
 
             [\(i + 1)] \(article.title.prefix(50))
             要点: \(essence)
             事実: \(firstFact)
             """
+            // 累積が安全上限を超えるならそれ以上記事を足さない (1 記事が異常に長いケースも吸収)
+            if prompt.count + entry.count > promptCharBudget { break }
+            prompt += entry
         }
 
         prompt += """
