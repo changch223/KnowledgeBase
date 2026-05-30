@@ -2734,6 +2734,61 @@
         }
       }
     },
+    "error.action.deleteFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除に失敗しました。もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.action.deleteFailed.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除できませんでした"
+          }
+        }
+      }
+    },
+    "error.store.loadFailed.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "データの読み込みに問題が発生しました"
+          }
+        }
+      }
+    },
+    "error.store.loadFailed.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一時的にこの端末内のデータが読み込めませんでした。アプリを再起動しても改善しない場合は、設定をご確認ください。"
+          }
+        }
+      }
+    },
+    "common.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
     "list.title" : {
       "extractionState" : "manual",
       "localizations" : {

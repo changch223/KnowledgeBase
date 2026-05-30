@@ -45,12 +45,17 @@ struct ConceptPageDetailView: View {
     }
 
     /// pin Toggle binding — store 経由で永続化。
+    /// spec 061 (P1-3): 失敗を記録 (非破壊操作なので log のみ、calm UX)。
     private var pinBinding: Binding<Bool> {
         Binding(
             get: { conceptPage.isFollowing },
             set: { newValue in
                 if let store = services.conceptPageStore {
-                    try? store.setFollowing(conceptPage, isFollowing: newValue)
+                    do {
+                        try store.setFollowing(conceptPage, isFollowing: newValue)
+                    } catch {
+                        AppErrorReporter.shared.report(error, operation: "setFollowingConceptPage")
+                    }
                 } else {
                     conceptPage.isFollowing = newValue
                 }
