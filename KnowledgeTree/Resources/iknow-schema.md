@@ -159,3 +159,17 @@ AI チャット空状態 (ChatSession 履歴ゼロ) で表示する 3 候補:
 4. 良かったら `SchemaLoader` の code 内 fallback constants も同期更新 (production 反映)
 
 注意: production build では schema.md がなくても fallback で動作する (CloudKit migration の影響受けない)。
+
+---
+
+## Wiki 本文生成ルール
+
+spec 063 (LLM Wiki)。ConceptPage.bodyMarkdown を生成するときの指示。
+plain string (Markdown) で出力、固定スキーマは使わない。
+
+- **構成**: `## 概要` (2-3 文の全体像) → `## 詳細` (箇条書き中心) → 必要なら `## 関連` (他テーマとの繋がり)。
+- **箇条書き** (`- `) を活用し、一目で読める構造にする。
+- **文字数**: 全体 300〜800 字目安。長すぎない。
+- **推測禁止**: 与えられた要約・記事の要点に明示されていることだけを書く (source 追跡)。
+- **日本語**で書く。固有名詞は原語可。
+- ページ名そのものの繰り返しを避け、内容で語る。

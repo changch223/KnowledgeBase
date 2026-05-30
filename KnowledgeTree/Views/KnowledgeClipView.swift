@@ -209,7 +209,9 @@ struct ConceptPageDetailLoader: View {
 
 /// 「+N すべて見る」遷移先の全 ConceptPage 一覧画面 (LazyVStack)。
 struct ConceptPageListView: View {
+    // spec 063 (LLM Wiki): 非表示ページ (isHidden) は除外。
     @Query(
+        filter: #Predicate<ConceptPage> { !$0.isHidden },
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
     )
     private var allPagesRaw: [ConceptPage]

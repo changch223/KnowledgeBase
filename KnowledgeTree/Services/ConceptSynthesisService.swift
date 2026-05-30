@@ -235,6 +235,9 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 conceptPage.embedding = vector.asEmbeddingData
             }
 
+            // spec 063 (LLM Wiki): kind 自動判定 + bodyMarkdown 生成
+            await generateBodyMarkdown(for: conceptPage, articles: articles)
+
             conceptPage.isStale = false
             conceptPage.updatedAt = .now
             try? context.save()
@@ -247,6 +250,85 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             logger.notice("concept synthesis falling back to essence-list for \(conceptPage.name, privacy: .public)")
             await fallback.resynthesize(conceptPage)
         }
+    }
+
+    // MARK: - spec 063 (LLM Wiki) bodyMarkdown 生成 + kind 判定
+
+    /// Wiki 本文を plain string で生成 (token 超過回避)。kind も自動判定。
+    /// ユーザー訂正済 (bodyEditedByUser) は本文生成をスキップして保護する。
+    private func generateBodyMarkdown(for conceptPage: ConceptPage, articles: [Article]) async {
+        // kind 自動判定 (記事の entity から推定、誤りはユーザーが Picker で訂正可)
+        if let inferred = Self.inferKind(from: articles) {
+            conceptPage.kind = inferred
+        }
+
+        // ユーザーが本文を訂正済なら自動再生成しない (FR-007)
+        guard !conceptPage.bodyEditedByUser else { return }
+
+        // Apple Intelligence 不可 → summary を本文に流用 (fallback)
+        guard availability.isAvailable else {
+            if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
+                conceptPage.bodyMarkdown = conceptPage.summary
+            }
+            return
+        }
+
+        let prompt = Self.buildWikiBodyPrompt(conceptPage: conceptPage, articles: articles)
+        do {
+            let body = try await session.generateWikiBody(prompt: prompt)
+            let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                conceptPage.bodyMarkdown = trimmed
+            }
+            // 空出力 → 既存 bodyMarkdown を保持 (防御)
+        } catch {
+            logger.error("wiki body generation failed for \(conceptPage.name, privacy: .public): \(String(describing: error), privacy: .public)")
+            if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
+                conceptPage.bodyMarkdown = conceptPage.summary
+            }
+        }
+    }
+
+    /// relatedArticles の KnowledgeEntity.typeRaw を集計して種別を推定。
+    /// person/organization 優勢 → .person、それ以外 → .concept。entity ゼロ → nil (kind 据え置き)。
+    static func inferKind(from articles: [Article]) -> WikiPageKind? {
+        var personish = 0
+        var other = 0
+        for article in articles {
+            for entity in (article.extractedKnowledge?.entities ?? []) {
+                switch entity.typeRaw {
+                case "person", "organization": personish += 1
+                default: other += 1
+                }
+            }
+        }
+        if personish == 0 && other == 0 { return nil }
+        return personish > other ? .person : .concept
+    }
+
+    /// Wiki 本文生成 prompt。summary + 圧縮した記事 essence + schema.md ルールを連結。
+    /// plain string 出力 (schema コストゼロ) で token 内に収める。
+    static func buildWikiBodyPrompt(conceptPage: ConceptPage, articles: [Article]) -> String {
+        let rule = SchemaLoader.shared.section(named: "Wiki 本文生成ルール") ?? """
+        ## 概要 → ## 詳細 (箇条書き中心) の構成。300-800 字。推測禁止。日本語。
+        """
+        let essences = articles.prefix(5).compactMap { article -> String? in
+            guard let e = article.extractedKnowledge?.essence, !e.isEmpty else { return nil }
+            return "- " + Self.truncate(e, max: Self.perArticleEssenceMaxChars)
+        }.joined(separator: "\n")
+
+        return """
+        「\(conceptPage.name)」についての Wiki ページ本文を Markdown で書いてください。
+
+        # ルール
+        \(rule)
+
+        # 現在の要約
+        \(conceptPage.summary)
+
+        # 関連記事の要点
+        \(essences)
+        """
     }
 
     func resynthesizeAllStale() async {

@@ -80,6 +80,7 @@ struct ConceptPageDetailView: View {
             VStack(alignment: .leading, spacing: DS.Spacing.section) {
                 headerSection
                 summarySection
+                wikiBodySection
                 crossSourceInsightsSection
                 relatedArticlesSection
                 // spec 043: この概念についての質問と答え (SavedAnswer セクション)
@@ -111,8 +112,20 @@ struct ConceptPageDetailView: View {
                 .accessibilityLabel(Text("この概念を学習する"))
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showEditSheet = true
+                Menu {
+                    Button {
+                        showEditSheet = true
+                    } label: {
+                        Label("編集", systemImage: "square.and.pencil")
+                    }
+                    // spec 063 (LLM Wiki): 非表示 (削除でなく隠す、データは残る)
+                    Button(role: .destructive) {
+                        conceptPage.isHidden = true
+                        try? context.save()
+                        dismiss()
+                    } label: {
+                        Label("wiki.hide.action", systemImage: "eye.slash")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -147,6 +160,11 @@ struct ConceptPageDetailView: View {
         // spec 058 polish: navigationTitle 経由で表示するため、body 内の title 重複を削除。
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             HStack(spacing: DS.Spacing.md) {
+                // spec 063 (LLM Wiki): 種別バッジ (人物 / 概念 / プロジェクト)
+                Label(LocalizedStringKey(conceptPage.kind.displayNameKey), systemImage: conceptPage.kind.symbolName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("conceptPageDetail_kind")
                 Text(categoryDisplay)
                     .font(.caption)
                     .padding(.horizontal, DS.Spacing.md)
@@ -164,6 +182,32 @@ struct ConceptPageDetailView: View {
             }
         }
         .accessibilityIdentifier("conceptPageDetail_header")
+    }
+
+    /// spec 063 (LLM Wiki): AI が書いた Markdown 本文を整形表示。空なら非表示。
+    @ViewBuilder
+    private var wikiBodySection: some View {
+        if !conceptPage.bodyMarkdown.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                Text("wiki.body.sectionTitle").font(.title3.bold())
+                Text(Self.renderMarkdown(conceptPage.bodyMarkdown))
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityIdentifier("conceptPageDetail_wikiBody")
+        }
+    }
+
+    /// Markdown を AttributedString に整形 (失敗時は plain text fallback)。
+    static func renderMarkdown(_ markdown: String) -> AttributedString {
+        if let attributed = try? AttributedString(
+            markdown: markdown,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        ) {
+            return attributed
+        }
+        return AttributedString(markdown)
     }
 
     @ViewBuilder

@@ -17,6 +17,7 @@ struct ConceptPageEditSheet: View {
     var onSourceGone: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Query private var allPages: [ConceptPage]
 
     @State private var editedName: String = ""
@@ -24,6 +25,9 @@ struct ConceptPageEditSheet: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var showMergeConfirm: Bool = false
     @State private var errorMessage: String?
+    // spec 063 (LLM Wiki): 本文 + 種別 編集
+    @State private var editedBody: String = ""
+    @State private var editedKind: WikiPageKind = .concept
 
     /// merge 候補は同 categoryRaw、自分自身を除く ConceptPage。
     private var mergeCandidates: [ConceptPage] {
@@ -38,6 +42,8 @@ struct ConceptPageEditSheet: View {
         NavigationStack {
             Form {
                 renameSection
+                wikiKindSection
+                wikiBodySection
                 if !mergeCandidates.isEmpty {
                     mergeSection
                 }
@@ -89,8 +95,48 @@ struct ConceptPageEditSheet: View {
             }
             .onAppear {
                 editedName = conceptPage.name
+                editedBody = conceptPage.bodyMarkdown
+                editedKind = conceptPage.kind
             }
         }
+    }
+
+    // MARK: - spec 063 (LLM Wiki) sections
+
+    private var wikiKindSection: some View {
+        Section("wiki.kind.label") {
+            Picker("wiki.kind.label", selection: $editedKind) {
+                ForEach(WikiPageKind.allCases, id: \.self) { kind in
+                    Text(LocalizedStringKey(kind.displayNameKey)).tag(kind)
+                }
+            }
+            Button("ConceptPage.editSheet.save") { saveWiki() }
+                .accessibilityIdentifier("conceptPageEditSheet_kindSaveButton")
+        }
+    }
+
+    private var wikiBodySection: some View {
+        Section("wiki.body.sectionTitle") {
+            TextEditor(text: $editedBody)
+                .frame(minHeight: 160)
+                .accessibilityIdentifier("conceptPageEditSheet_bodyEditor")
+            Text("wiki.body.editPlaceholder")
+                .font(.caption).foregroundStyle(.secondary)
+            Button("ConceptPage.editSheet.save") { saveWiki() }
+                .accessibilityIdentifier("conceptPageEditSheet_bodySaveButton")
+        }
+    }
+
+    /// spec 063: 本文 + 種別を保存。本文が変わったら bodyEditedByUser を立て、自動再生成の上書きを防ぐ (FR-007)。
+    private func saveWiki() {
+        conceptPage.kind = editedKind
+        if editedBody != conceptPage.bodyMarkdown {
+            conceptPage.bodyMarkdown = editedBody
+            conceptPage.bodyEditedByUser = true
+        }
+        conceptPage.updatedAt = .now
+        try? modelContext.save()
+        dismiss()
     }
 
     // MARK: - Sections

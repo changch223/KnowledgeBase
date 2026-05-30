@@ -11,7 +11,9 @@ import SwiftUI
 import SwiftData
 
 struct FollowingPeopleSection: View {
+    // spec 063 (LLM Wiki): 非表示ページ (isHidden) は除外。
     @Query(
+        filter: #Predicate<ConceptPage> { !$0.isHidden },
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
     )
     private var allPages: [ConceptPage]
