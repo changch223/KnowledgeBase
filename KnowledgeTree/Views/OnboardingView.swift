@@ -20,29 +20,31 @@ struct OnboardingView: View {
     @Binding var isPresented: Bool
     @State private var currentPage: Int = 0
 
+    // spec 059 (P0-2): 全 4 ページを xcstrings key 化。Page 4 は V3.0 で廃止された
+    // 「学習タブ」案内を現行 3 タブ導線 (知識 Clip →「続きが気になる」→ 家庭教師) に書き換え。
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             symbol: "brain.head.profile",
-            title: "ようこそ iKnow へ",
-            body: "iKnow はあなたが読んだ記事を AI が自動で整理し、必要なときに思い出せる「あなた専用の第二の脳」です。",
+            title: "onboarding.page1.title",
+            body: "onboarding.page1.body",
             highlightColor: .blue
         ),
         OnboardingPage(
             symbol: "square.and.arrow.down.on.square",
-            title: "Share Sheet で保存",
-            body: "Safari / Chrome / X / 他のアプリの共有メニューから「iKnow」を選ぶだけ。記事の本文 + 知識を端末内で自動抽出します。",
+            title: "onboarding.page2.title",
+            body: "onboarding.page2.body",
             highlightColor: .green
         ),
         OnboardingPage(
             symbol: "lightbulb.fill",
-            title: "AI が自動で整理",
-            body: "保存した記事を AI が読み、人物・モノ・概念ごとに「概念ページ」を作成。複数記事の知見を統合した最新の理解が常に手元に。",
+            title: "onboarding.page3.title",
+            body: "onboarding.page3.body",
             highlightColor: .orange
         ),
         OnboardingPage(
             symbol: "book.fill",
-            title: "家庭教師と一緒に学ぶ",
-            body: "「学習タブ」では AI が次に深めるべきカードを 5 つ提案。タップで家庭教師と対話、「✓ わかった」で理解度が育ちます。",
+            title: "onboarding.page4.title",
+            body: "onboarding.page4.body",
             highlightColor: .purple
         )
     ]
@@ -53,6 +55,7 @@ struct OnboardingView: View {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
                     OnboardingPageView(page: page)
                         .tag(index)
+                        .accessibilityIdentifier("onboarding.page.\(index)")
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
@@ -60,7 +63,7 @@ struct OnboardingView: View {
 
             HStack {
                 if currentPage < pages.count - 1 {
-                    Button("スキップ") {
+                    Button("onboarding.skip") {
                         finish()
                     }
                     .accessibilityIdentifier("onboarding.skip")
@@ -74,7 +77,7 @@ struct OnboardingView: View {
                         finish()
                     }
                 } label: {
-                    Text(currentPage < pages.count - 1 ? "次へ" : "はじめる")
+                    Text(currentPage < pages.count - 1 ? "onboarding.next" : "onboarding.start")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, DS.Spacing.xxl)
@@ -102,8 +105,8 @@ struct OnboardingView: View {
 
 private struct OnboardingPage {
     let symbol: String
-    let title: String
-    let body: String
+    let title: LocalizedStringKey
+    let body: LocalizedStringKey
     let highlightColor: Color
 }
 

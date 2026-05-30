@@ -2712,6 +2712,17 @@
         }
       }
     },
+    "list.empty.instruction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari で記事を開いて「共有」→ iKnow で保存できます"
+          }
+        }
+      }
+    },
     "list.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2742,6 +2753,127 @@
     },
     "OK" : {
 
+    },
+    "onboarding.next" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次へ"
+          }
+        }
+      }
+    },
+    "onboarding.page1.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iKnow はあなたが読んだ記事を AI が自動で整理し、必要なときに思い出せる「あなた専用の第二の脳」です。"
+          }
+        }
+      }
+    },
+    "onboarding.page1.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ようこそ iKnow へ"
+          }
+        }
+      }
+    },
+    "onboarding.page2.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari / Chrome / X / 他のアプリの共有メニューから「iKnow」を選ぶだけ。記事の本文 + 知識を端末内で自動抽出します。"
+          }
+        }
+      }
+    },
+    "onboarding.page2.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Sheet で保存"
+          }
+        }
+      }
+    },
+    "onboarding.page3.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存した記事を AI が読み、人物・モノ・概念ごとに「概念ページ」を作成。複数記事の知見を統合した最新の理解が常に手元に。"
+          }
+        }
+      }
+    },
+    "onboarding.page3.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI が自動で整理"
+          }
+        }
+      }
+    },
+    "onboarding.page4.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「知識 Clip」タブの「続きが気になる」から、AI 家庭教師と対話して理解を深められます。「✓ わかった」で理解度が育ちます。"
+          }
+        }
+      }
+    },
+    "onboarding.page4.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家庭教師と一緒に学ぶ"
+          }
+        }
+      }
+    },
+    "onboarding.skip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキップ"
+          }
+        }
+      }
+    },
+    "onboarding.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はじめる"
+          }
+        }
+      }
     },
     "OS 設定 → ユーザー名 → iCloud が ON になっている必要があります。同期データはあなたの iCloud private database 内のみ、他人に公開されません。" : {
 
@@ -2789,9 +2921,6 @@
           }
         }
       }
-    },
-    "Safari で記事を開いて「共有」→ アプリ名 で保存できます" : {
-
     },
     "SavedAnswer.detail.answer.title" : {
       "extractionState" : "manual",
@@ -4314,9 +4443,6 @@
     "コンテンツ" : {
 
     },
-    "スキップ" : {
-
-    },
     "タイトル" : {
 
     },
@@ -4356,9 +4482,6 @@
 
     },
     "はじめての方への説明をもう一度見る" : {
-
-    },
-    "はじめる" : {
 
     },
     "プライバシーポリシー" : {
@@ -4557,16 +4680,10 @@
     "概念" : {
 
     },
-    "次へ" : {
-
-    },
     "深掘り余地あり" : {
 
     },
     "現在の知識ベースを iCloud に同期します。設定変更を反映するためアプリの再起動が必要です。初回 sync は数分かかります。" : {
-
-    },
-    "現在は全てこの端末内に保存されます。iCloud 同期は次のバージョンで予定しています。" : {
 
     },
     "理解が浅い" : {
@@ -4610,9 +4727,6 @@
 
     },
     "質問" : {
-
-    },
-    "近日対応 — 複数の端末で同じ知識ベースを共有" : {
 
     },
     "送信" : {

@@ -25,7 +25,7 @@ struct EmptyStateView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                Text("Safari で記事を開いて「共有」→ アプリ名 で保存できます")
+                Text("list.empty.instruction")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)

@@ -44,6 +44,10 @@ struct ChatTabView: View {
     /// iPhone / iPad 両方で確実に動く UX を優先。
     @State private var showSidebar: Bool = false
 
+    /// spec 059 (P0-4): 引用リンク tap → Article を push するための navigation path。
+    /// 既存の .navigationDestination(for: Article.self) がそのまま発火する。
+    @State private var navigationPath = NavigationPath()
+
     /// 動的算出: pinned があればそれ、なければ最新。allSessions が空 (全削除後) なら nil。
     private var currentSession: ChatSession? {
         if let id = pinnedSessionID,
@@ -65,7 +69,7 @@ struct ChatTabView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 // spec 048: AI 不可端末で「分かりません」連発を防ぐ説明 banner
                 if let reason = serviceContainer.availabilityChecker?.unavailabilityReason {
@@ -217,7 +221,8 @@ struct ChatTabView: View {
                     ForEach(currentSessionMessages) { msg in
                         ChatMessageRow(
                             message: msg,
-                            streamingTextOverride: streamingMessageID == msg.id ? streamingDisplayedText : nil
+                            streamingTextOverride: streamingMessageID == msg.id ? streamingDisplayedText : nil,
+                            onArticleLinkTap: { navigationPath.append($0) }
                         )
                         .id(msg.id)
                     }

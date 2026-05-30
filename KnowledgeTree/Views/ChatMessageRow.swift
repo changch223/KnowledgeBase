@@ -19,6 +19,8 @@ struct ChatMessageRow: View {
     let message: ChatMessage
     /// spec 033: 擬似 streaming 表示用 override (nil の時は message.text を表示)
     var streamingTextOverride: String? = nil
+    /// spec 059 (P0-4): 引用リンク tap 時に親へ Article を通知。nil の時は遷移しない。
+    var onArticleLinkTap: ((Article) -> Void)? = nil
 
     @Query private var allArticles: [Article]
     @Environment(\.openURL) private var openURL
@@ -62,9 +64,10 @@ struct ChatMessageRow: View {
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                     .environment(\.openURL, OpenURLAction { url in
+                        // spec 059 (P0-4): 引用リンク tap → 親 (ChatTabView) へ Article を通知し遷移。
                         if let id = Self.extractArticleID(from: url),
                            let article = allArticles.first(where: { $0.id == id }) {
-                            _ = article
+                            onArticleLinkTap?(article)
                             return .handled
                         }
                         return .systemAction
