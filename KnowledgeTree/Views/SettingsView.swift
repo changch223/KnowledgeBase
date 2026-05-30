@@ -195,25 +195,8 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.onboarding.replay")
             }
 
-            // spec 050: iCloud sync (近日対応 placeholder、v2.0 で実装予定)
-            Section {
-                HStack(spacing: DS.Spacing.lg) {
-                    Image(systemName: "icloud")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("iCloud で同期")
-                        Text("近日対応 — 複数の端末で同じ知識ベースを共有")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                .accessibilityIdentifier("settings.icloud.placeholder")
-            } footer: {
-                Text("現在は全てこの端末内に保存されます。iCloud 同期は次のバージョンで予定しています。")
-                    .font(.caption)
-            }
+            // spec 059 (P0-3): 旧「近日対応」iCloud placeholder Section を削除。
+            // spec 051 で iCloud sync は実装済 (上部の動作する toggle Section が正)。
 
             // spec 050: プライバシー + サポート
             Section {
