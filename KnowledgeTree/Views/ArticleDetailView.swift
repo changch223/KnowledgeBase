@@ -240,12 +240,21 @@ struct ArticleDetailView: View {
 
     private func addTag(rawName: String) {
         guard let store = services.tagStore else { return }
-        try? store.addTag(rawName: rawName, to: article)
+        // spec 061 (P1-3): 失敗を黙殺せず記録 (非破壊操作なので log のみ、calm UX)。
+        do {
+            try store.addTag(rawName: rawName, to: article)
+        } catch {
+            AppErrorReporter.shared.report(error, operation: "addTag")
+        }
     }
 
     private func removeTag(name: String) {
         guard let store = services.tagStore else { return }
-        try? store.removeTag(normalizedName: name, from: article)
+        do {
+            try store.removeTag(normalizedName: name, from: article)
+        } catch {
+            AppErrorReporter.shared.report(error, operation: "removeTag")
+        }
     }
 
     @ViewBuilder

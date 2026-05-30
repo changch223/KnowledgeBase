@@ -37,6 +37,9 @@ struct KnowledgeTreeApp: App {
     @State private var selectedTab: AppTab = .knowledgeClip
     /// spec 049: 初回起動時の onboarding 表示。
     @State private var showOnboarding: Bool = !OnboardingFlagStore.shared.hasCompleted
+    /// spec 061 (P1-6): 永続 store 構築失敗 → in-memory fallback で起動した印。
+    /// true なら「データ読み込みに問題」banner を表示する。
+    @State private var storeLoadFailed: Bool = UserDefaults.standard.bool(forKey: "spec061_storeLoadFailed")
 
     @MainActor
     init() {
@@ -73,12 +76,32 @@ struct KnowledgeTreeApp: App {
                         configurations: [SharedSchema.sharedConfiguration(cloudKitEnabled: false)]
                     )
                 } catch {
-                    fatalError("Could not create local ModelContainer fallback: \(error)")
+                    return Self.inMemoryFallbackContainer(reason: error)
                 }
             }
-            fatalError("Could not create ModelContainer: \(error)")
+            return Self.inMemoryFallbackContainer(reason: error)
         }
     }()
+
+    /// spec 061 (P1-6): 永続 store 構築が完全に失敗したときの最終 fallback。
+    /// fatalError で hard-crash させると再インストール (= 全データ消失) 以外の復旧手段が
+    /// なくなるため、in-memory store で「起動だけは成功させる」。
+    /// 永続化は失われるが crash は防ぎ、起動後に banner で状態を伝える (storeLoadFailed flag)。
+    @MainActor
+    private static func inMemoryFallbackContainer(reason: Error) -> ModelContainer {
+        NSLog("⚠️ ModelContainer init failed entirely, using in-memory store: \(reason)")
+        #if DEBUG
+        assertionFailure("ModelContainer init failed, using in-memory fallback: \(reason)")
+        #endif
+        UserDefaults.standard.set(true, forKey: "spec061_storeLoadFailed")
+        do {
+            let inMemory = ModelConfiguration(isStoredInMemoryOnly: true)
+            return try ModelContainer(for: SharedSchema.all, configurations: [inMemory])
+        } catch {
+            // in-memory すら作れない場合は本当に異常 (理論上ほぼ起きない)。
+            fatalError("Even in-memory ModelContainer failed: \(error)")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -108,6 +131,12 @@ struct KnowledgeTreeApp: App {
             .environment(processingMonitor)
             .environment(refreshTrigger)
             .environment(serviceContainer)
+            // spec 061 (P1-6): in-memory fallback 起動時に上部へ軽い警告 banner。
+            .safeAreaInset(edge: .top) {
+                if storeLoadFailed {
+                    storeLoadFailedBanner
+                }
+            }
             // V3.0 polish (2026-05-28): AI 出力含む全 Text を長押しで選択 + Copy 可能に。
             // TabView root に適用すると全 descendant の Text に伝播 (Apple HIG 準拠)。
             .textSelection(.enabled)
@@ -130,6 +159,34 @@ struct KnowledgeTreeApp: App {
             }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    /// spec 061 (P1-6): in-memory fallback 起動時の警告 banner。
+    @ViewBuilder
+    private var storeLoadFailedBanner: some View {
+        HStack(spacing: DS.Spacing.md) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("error.store.loadFailed.title")
+                    .font(.callout.weight(.semibold))
+                Text("error.store.loadFailed.body")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            Button {
+                storeLoadFailed = false
+                UserDefaults.standard.set(false, forKey: "spec061_storeLoadFailed")
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel(Text("common.ok"))
+        }
+        .padding(DS.Spacing.lg)
+        .background(.regularMaterial)
+        .accessibilityIdentifier("banner.storeLoadFailed")
     }
 
     /// spec 052 + spec 056: Widget deep link を解析 → 知識 Clip タブに切替 + ServiceContainer に card ID をセット。
@@ -385,45 +442,55 @@ struct KnowledgeTreeApp: App {
         serviceContainer.lintEngine = lintEngine
         serviceContainer.healthScoreService = DefaultHealthScoreService(context: context)
 
-        // 既存記事の backfill (順次): enrichment → body → knowledge
+        // 既存記事の backfill: enrichment → body → knowledge は依存 chain のため直列維持。
         await enrichmentService.backfillAll()
         await bodyService.backfillAll()
         await knowledgeService.backfillAll()
-        // spec 008: 孤児タグの cleanup (起動時 1 回)
+
+        // spec 061 (P1-7): knowledge 完了後の独立 backfill 群を並列化して cold start を短縮。
+        // 全て @MainActor のため真の並列計算ではないが、各 service の await suspend
+        // (I/O / Foundation Models 呼び出し) が重なり待ち時間が短縮される。
+        // 依存 chain (enrichment→body→knowledge) は上で直列維持済 (FR-010)。
+
+        // spec 008: 孤児タグの cleanup は同期 @MainActor 処理のため async let に乗せず先に実行 (軽量)。
         try? tagStore.cleanupOrphans()
 
-        // spec 013: 既存記事への auto-tag backfill (1 度限り、永続フラグで重複防止)
+        // runner は async let に渡す前に生成
         let backfillRunner = AutoTagBackfillRunner(
             context: context,
             tagStore: tagStore,
             processingMonitor: processingMonitor
         )
-        await backfillRunner.run()
-
-        // spec 015: 既存 Tag の Category 自動分類 backfill (1 度限り、永続フラグで重複防止)
         let categoryBackfillRunner = AutoCategoryBackfillRunner(
             context: context,
             classifier: categoryClassifier,
             processingMonitor: processingMonitor
         )
-        await categoryBackfillRunner.run()
 
-        // spec 018: 起動時の stale Digest 全再集約 (新記事追加分が反映される)
-        try? await digestService.regenerateAllStale()
+        async let autoTag: Void = backfillRunner.run()                              // spec 013
+        async let categoryBackfill: Void = categoryBackfillRunner.run()             // spec 015
+        async let digest: Void = Self.runDigestBackfill(digestService)             // spec 018
+        async let embeddings: Void = chatService.backfillEmbeddings()               // spec 021
+        async let topics: Void = topicClusteringService.runIfDue(force: false)      // spec 036
+        async let concepts: Void = Self.runConceptBackfill(conceptSynthesisService) // spec 042
 
-        // spec 021: 既存記事への essence embedding backfill (Apple Intelligence 端末のみ動作)
-        await chatService.backfillEmbeddings()
+        // 全 backfill の完了を待つ
+        _ = await (autoTag, categoryBackfill, digest, embeddings, topics, concepts)
 
-        // spec 036: 動的トピック batch (前回から 7 日経過していれば実行)
-        await topicClusteringService.runIfDue(force: false)
+        // BGTask 予約は全 backfill 完了後 (最後)
+        await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis() // spec 042
+        await BackgroundExtractionScheduler.shared.scheduleNextWeeklyLint()         // spec 058
+    }
 
-        // spec 042: 既存記事からの ConceptPage 初期 backfill (UserDefaults flag で 1 回限り)
-        // 完了後、stale な ConceptPage を 1 回だけ即時再合成 (BGTask 待たずに最初の summary を表示)
-        await conceptSynthesisService.backfillFromExistingArticles()
-        await conceptSynthesisService.resynthesizeAllStale()
-        // spec 042: 次回 BGTask を 1 時間後に予約
-        await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis()
-        // spec 058: 週 1 Lint loop BGTask の最初の予約 (次の日曜 3 AM)
-        await BackgroundExtractionScheduler.shared.scheduleNextWeeklyLint()
+    // spec 061 (P1-7): async let に乗せる throwing / 多段 await を包む @MainActor helper。
+    @MainActor
+    private static func runDigestBackfill(_ service: KnowledgeDigestService) async {
+        try? await service.regenerateAllStale()  // spec 018
+    }
+
+    @MainActor
+    private static func runConceptBackfill(_ service: ConceptSynthesisServiceProtocol) async {
+        await service.backfillFromExistingArticles()  // spec 042
+        await service.resynthesizeAllStale()
     }
 }

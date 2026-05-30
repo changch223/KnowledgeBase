@@ -79,7 +79,8 @@ struct RecentLearningDetailView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             FlowingTagsLayout(spacing: DS.Spacing.sm) {
-                ForEach(themes, id: \.self) { theme in
+                // spec 061: 同テーマ重複で id: \.self 衝突 → index 込み一意 ID。
+                ForEach(Array(themes.enumerated()), id: \.offset) { _, theme in
                     Text(theme)
                         .font(.caption)
                         .padding(.horizontal, DS.Spacing.md)

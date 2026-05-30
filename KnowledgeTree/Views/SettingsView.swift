@@ -30,6 +30,11 @@ struct SettingsView: View {
     @State private var showICloudDisableConfirm: Bool = false
     /// spec 051: toggle 切替後の「再起動が必要」banner
     @State private var showRestartBanner: Bool = false
+    /// spec 061 (P1-2): iCloud toggle のバウンス解消用 pending state。
+    /// tap 直後は pending を楽観表示し、確認 alert の結果で確定 (OK) / 破棄 (Cancel) する。
+    @State private var pendingICloudToggle: Bool?
+    /// spec 061 (P1-3): チャット履歴全削除の失敗を伝える軽い alert。
+    @State private var showDeleteChatError: Bool = false
 
     /// spec 050: App Store 表示用 version (CFBundleShortVersionString + CFBundleVersion)
     private var appVersionString: String {
@@ -69,8 +74,10 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.icloud.restartBanner")
                 }
                 Toggle(isOn: Binding(
-                    get: { iCloudSyncEnabled },
+                    // spec 061 (P1-2): pending を楽観表示してバウンスを防ぐ。
+                    get: { pendingICloudToggle ?? iCloudSyncEnabled },
                     set: { newValue in
+                        pendingICloudToggle = newValue
                         if newValue {
                             showICloudEnableConfirm = true
                         } else {
@@ -285,19 +292,29 @@ struct SettingsView: View {
             isPresented: $showDeleteChatConfirm
         ) {
             Button("chat.settings.deleteAllHistory.confirmAction", role: .destructive) {
-                try? serviceContainer.chatService?.deleteAllSessions()
+                // spec 061 (P1-3): 失敗を黙殺せず記録 + ユーザーに表示。
+                do {
+                    try serviceContainer.chatService?.deleteAllSessions()
+                } catch {
+                    AppErrorReporter.shared.report(error, operation: "deleteAllChatSessions")
+                    showDeleteChatError = true
+                }
             }
             Button("settings.safariSetup.confirmAutoSave.cancel", role: .cancel) { }
         } message: {
             Text("chat.settings.deleteAllHistory.confirmMessage")
         }
         // spec 051: iCloud sync ON 確認
+        // spec 061 (P1-2): OK で pending を確定、Cancel で pending を破棄 (toggle が元位置に戻る)。
         .alert("iCloud で同期を開始しますか?", isPresented: $showICloudEnableConfirm) {
             Button("開始") {
                 iCloudSyncEnabled = true
+                pendingICloudToggle = nil
                 showRestartBanner = true
             }
-            Button("キャンセル", role: .cancel) { }
+            Button("キャンセル", role: .cancel) {
+                pendingICloudToggle = nil
+            }
         } message: {
             Text("現在の知識ベースを iCloud に同期します。設定変更を反映するためアプリの再起動が必要です。初回 sync は数分かかります。")
         }
@@ -305,11 +322,20 @@ struct SettingsView: View {
         .alert("iCloud 同期を停止しますか?", isPresented: $showICloudDisableConfirm) {
             Button("停止", role: .destructive) {
                 iCloudSyncEnabled = false
+                pendingICloudToggle = nil
                 showRestartBanner = true
             }
-            Button("キャンセル", role: .cancel) { }
+            Button("キャンセル", role: .cancel) {
+                pendingICloudToggle = nil
+            }
         } message: {
             Text("新規保存はこの端末のみに保存されます。iCloud 上のデータは残ります (再 ON で復元可能)。設定変更を反映するためアプリの再起動が必要です。")
+        }
+        // spec 061 (P1-3): チャット履歴全削除の失敗表示
+        .alert("error.action.deleteFailed.title", isPresented: $showDeleteChatError) {
+            Button("common.ok", role: .cancel) { }
+        } message: {
+            Text("error.action.deleteFailed")
         }
         .accessibilityIdentifier("settings.root")
     }

@@ -119,7 +119,9 @@ struct RecentArticlesSection: View {
     @ViewBuilder
     private var themeChips: some View {
         FlowingTagsLayout(spacing: DS.Spacing.sm) {
-            ForEach(themes, id: \.self) { theme in
+            // spec 061: AI が同じテーマ文字列を複数返すと id: \.self が衝突し
+            // ForEach undefined results 警告になるため、index 込みの一意 ID にする。
+            ForEach(Array(themes.enumerated()), id: \.offset) { _, theme in
                 Text(theme)
                     .font(.caption)
                     .padding(.horizontal, DS.Spacing.md)
