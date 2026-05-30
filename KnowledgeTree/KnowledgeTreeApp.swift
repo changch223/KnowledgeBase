@@ -313,7 +313,10 @@ struct KnowledgeTreeApp: App {
             digestService: digestService,
             embeddingService: embeddingService,
             conflictDetectionService: conflictDetectionService,
-            graphExtractionService: graphExtractionService,
+            // spec 065 (軽さ優先): graph 抽出 hook を停止 (-1 回/記事)。関係発見は spec 064 で
+            // WikiPage (relatedConceptIDs + 本文リンク) が引き継いだため、GraphNode 生成は不要。
+            // 既存 GraphNode は残る (ChatService RAG / Digest は既存ノードで継続)。@Model 削除は spec 066。
+            graphExtractionService: nil,
             conceptSynthesisService: conceptSynthesisService,
             savedAnswerService: savedAnswerService
         )
@@ -469,13 +472,15 @@ struct KnowledgeTreeApp: App {
 
         async let autoTag: Void = backfillRunner.run()                              // spec 013
         async let categoryBackfill: Void = categoryBackfillRunner.run()             // spec 015
-        async let digest: Void = Self.runDigestBackfill(digestService)             // spec 018
+        // spec 065 (軽さ優先): 起動時の digest 一括生成 (spec 018) と UserTopic clustering (spec 036) を停止。
+        //   - digest: pull-to-refresh / Category 詳細でオンデマンド生成に寄せる (News+ = spec 066 が役割継承)
+        //   - topic clustering: 表示 UI が無い (orphan) ため起動 K-means は無駄
+        //   @Model・service は残す (生成を止めるだけ、退役は spec 066)。
         async let embeddings: Void = chatService.backfillEmbeddings()               // spec 021
-        async let topics: Void = topicClusteringService.runIfDue(force: false)      // spec 036
         async let concepts: Void = Self.runConceptBackfill(conceptSynthesisService) // spec 042
 
         // 全 backfill の完了を待つ
-        _ = await (autoTag, categoryBackfill, digest, embeddings, topics, concepts)
+        _ = await (autoTag, categoryBackfill, embeddings, concepts)
 
         // BGTask 予約は全 backfill 完了後 (最後)
         await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis() // spec 042

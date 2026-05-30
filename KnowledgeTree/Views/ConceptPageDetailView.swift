@@ -10,6 +10,11 @@
 import SwiftUI
 import SwiftData
 
+/// spec 064: 本文中 concept-id:// リンクの navigationDestination(item:) 用ラッパー。
+struct WikiLinkTarget: Identifiable, Hashable {
+    let id: UUID
+}
+
 struct ConceptPageDetailView: View {
     @Bindable var conceptPage: ConceptPage
     @Environment(\.modelContext) private var context
@@ -63,6 +68,9 @@ struct ConceptPageDetailView: View {
         )
     }
 
+    /// spec 064: 本文中の concept-id:// リンク tap 先 (self-contained 遷移)。
+    @State private var wikiLinkTarget: WikiLinkTarget?
+
     var body: some View {
         // page が削除/merge で消えた瞬間に短絡 → conceptPage プロパティ参照を一切させない (crash 防止)
         // Loader 側の @Query auto-pop で navigation も pop されるので、ここは描画スキップだけで OK
@@ -94,6 +102,10 @@ struct ConceptPageDetailView: View {
         .scrollIndicators(.hidden)
         .navigationTitle(conceptPage.name)
         .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(item: $wikiLinkTarget) { target in
+            // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
+            ConceptPageDetailLoader(destinationID: target.id)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Toggle(isOn: pinBinding) {
@@ -194,12 +206,27 @@ struct ConceptPageDetailView: View {
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .environment(\.openURL, OpenURLAction { url in
+                        // spec 064: concept-id:// は自前遷移、それ以外は OS 標準動作
+                        if let id = Self.extractConceptID(from: url) {
+                            wikiLinkTarget = WikiLinkTarget(id: id)
+                            return .handled
+                        }
+                        return .systemAction
+                    })
             }
             .accessibilityIdentifier("conceptPageDetail_wikiBody")
         }
     }
 
     /// Markdown を AttributedString に整形 (失敗時は plain text fallback)。
+    /// spec 064: `concept-id://<UUID>` URL から UUID を復元 (spec 033 article-id:// と同型)。
+    static func extractConceptID(from url: URL) -> UUID? {
+        guard url.scheme == "concept-id" else { return nil }
+        let raw = url.host ?? url.absoluteString.replacingOccurrences(of: "concept-id://", with: "")
+        return UUID(uuidString: raw)
+    }
+
     static func renderMarkdown(_ markdown: String) -> AttributedString {
         if let attributed = try? AttributedString(
             markdown: markdown,

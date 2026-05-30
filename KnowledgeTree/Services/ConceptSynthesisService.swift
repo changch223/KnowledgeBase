@@ -158,6 +158,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     static let perKeyFactMaxChars = 30
     /// 各 article の title 上限 (長文 title 対策)。V3.0 polish: 80 → 50。
     static let perArticleTitleMaxChars = 50
+    /// spec 064 (LLM Wiki): embedding 近傍で relatedConceptIDs に補完する上限。
+    static let relatedConceptLimit = 8
+    /// spec 064: cosine 類似度の下限 (これ未満は無関係として除外)。
+    static let relatedConceptThreshold: Float = 0.5
+    /// spec 064: 本文 AI リンク候補の上限。
+    static let linkCandidateLimit = 8
 
     init(
         session: LanguageModelSessionProtocol,
@@ -235,6 +241,13 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 conceptPage.embedding = vector.asEmbeddingData
             }
 
+            // spec 064 (LLM Wiki): embedding 近傍で relatedConceptIDs を補完 (AI 呼び出しゼロ)。
+            // 既存 (LintEngine/merge 由来) と union で保全。bodyMarkdown 生成の前に置き候補を共有。
+            let neighborIDs = nearestConceptIDs(for: conceptPage, in: context)
+            if !neighborIDs.isEmpty {
+                conceptPage.relatedConceptIDs = Array(Set(conceptPage.relatedConceptIDs + neighborIDs))
+            }
+
             // spec 063 (LLM Wiki): kind 自動判定 + bodyMarkdown 生成
             await generateBodyMarkdown(for: conceptPage, articles: articles)
 
@@ -250,6 +263,42 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             logger.notice("concept synthesis falling back to essence-list for \(conceptPage.name, privacy: .public)")
             await fallback.resynthesize(conceptPage)
         }
+    }
+
+    // MARK: - spec 064 (LLM Wiki) 関係発見 (embedding 近傍)
+
+    /// embedding cosine 類似で近い ConceptPage の id を返す (AI 呼び出しゼロ)。
+    /// self / isHidden / embedding なしは除外。threshold 未満は無関係として除外、上限 relatedConceptLimit。
+    func nearestConceptIDs(for page: ConceptPage, in context: ModelContext) -> [UUID] {
+        guard let data = page.embedding else { return [] }
+        let target = data.asFloatArray
+        guard !target.isEmpty else { return [] }
+
+        let all: [ConceptPage] = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        var scored: [(id: UUID, sim: Float)] = []
+        for other in all {
+            guard other.id != page.id, !other.isHidden, let od = other.embedding else { continue }
+            let vec = od.asFloatArray
+            guard vec.count == target.count else { continue }
+            let sim = EmbeddingService.cosineSimilarity(target, vec)
+            if sim >= Self.relatedConceptThreshold {
+                scored.append((other.id, sim))
+            }
+        }
+        return scored.sorted { $0.sim > $1.sim }
+            .prefix(Self.relatedConceptLimit)
+            .map(\.id)
+    }
+
+    /// relatedConceptIDs を (name, id) 候補に解決 (本文 AI リンク用)。非表示は除外。
+    func resolveLinkCandidates(for page: ConceptPage) -> [(name: String, id: UUID)] {
+        guard !page.relatedConceptIDs.isEmpty else { return [] }
+        let ids = Set(page.relatedConceptIDs)
+        let all: [ConceptPage] = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        return all
+            .filter { ids.contains($0.id) && !$0.isHidden && $0.id != page.id }
+            .prefix(Self.linkCandidateLimit)
+            .map { (name: $0.name, id: $0.id) }
     }
 
     // MARK: - spec 063 (LLM Wiki) bodyMarkdown 生成 + kind 判定
@@ -273,10 +322,20 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             return
         }
 
-        let prompt = Self.buildWikiBodyPrompt(conceptPage: conceptPage, articles: articles)
+        // spec 064: relatedConceptIDs (Phase 1 で補完済) を相互リンク候補に解決
+        let linkCandidates = resolveLinkCandidates(for: conceptPage)
+        let validIDs = Set(linkCandidates.map(\.id))
+
+        let prompt = Self.buildWikiBodyPrompt(
+            conceptPage: conceptPage,
+            articles: articles,
+            linkCandidates: linkCandidates
+        )
         do {
             let body = try await session.generateWikiBody(prompt: prompt)
-            let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            var trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            // spec 064: 捏造/候補外の concept-id:// リンクをプレーン化 (dead link 防止)
+            trimmed = Self.sanitizeConceptLinks(in: trimmed, validIDs: validIDs)
             if !trimmed.isEmpty {
                 conceptPage.bodyMarkdown = trimmed
             }
@@ -308,7 +367,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
     /// Wiki 本文生成 prompt。summary + 圧縮した記事 essence + schema.md ルールを連結。
     /// plain string 出力 (schema コストゼロ) で token 内に収める。
-    static func buildWikiBodyPrompt(conceptPage: ConceptPage, articles: [Article]) -> String {
+    /// spec 064: linkCandidates があれば相互リンク候補を埋める (本文生成 AI 呼び出し回数は不変)。
+    static func buildWikiBodyPrompt(
+        conceptPage: ConceptPage,
+        articles: [Article],
+        linkCandidates: [(name: String, id: UUID)] = []
+    ) -> String {
         let rule = SchemaLoader.shared.section(named: "Wiki 本文生成ルール") ?? """
         ## 概要 → ## 詳細 (箇条書き中心) の構成。300-800 字。推測禁止。日本語。
         """
@@ -316,6 +380,22 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             guard let e = article.extractedKnowledge?.essence, !e.isEmpty else { return nil }
             return "- " + Self.truncate(e, max: Self.perArticleEssenceMaxChars)
         }.joined(separator: "\n")
+
+        // spec 064: 相互リンク候補 (name + ID)。name は 30 字 truncate、最大 linkCandidateLimit 件。
+        let candidatesBlock: String
+        if linkCandidates.isEmpty {
+            candidatesBlock = ""
+        } else {
+            let lines = linkCandidates.prefix(Self.linkCandidateLimit).map {
+                "- \(Self.truncate($0.name, max: 30)) → concept-id://\($0.id.uuidString)"
+            }.joined(separator: "\n")
+            candidatesBlock = """
+
+
+            # 関連ページ候補 (本文に名前が出たら [名前](concept-id://UUID) リンクにする。候補外にリンクしない。UUID は創作しない)
+            \(lines)
+            """
+        }
 
         return """
         「\(conceptPage.name)」についての Wiki ページ本文を Markdown で書いてください。
@@ -327,8 +407,31 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(conceptPage.summary)
 
         # 関連記事の要点
-        \(essences)
+        \(essences)\(candidatesBlock)
         """
+    }
+
+    /// spec 064: AI が書いた本文中の concept-id:// リンクのうち、実在しない UUID をプレーン化する。
+    /// validIDs に含まれない UUID のリンクは `[名前](concept-id://...)` → `名前` に剥がし、dead link を防ぐ。
+    static func sanitizeConceptLinks(in markdown: String, validIDs: Set<UUID>) -> String {
+        let pattern = #"\[([^\]]+)\]\(concept-id://([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return markdown }
+        let ns = markdown as NSString
+        var result = markdown
+        let matches = regex.matches(in: markdown, range: NSRange(location: 0, length: ns.length))
+        // 後ろから置換 (range ずれ防止)
+        for match in matches.reversed() {
+            let name = ns.substring(with: match.range(at: 1))
+            let uuidString = ns.substring(with: match.range(at: 2))
+            let isValid = UUID(uuidString: uuidString).map { validIDs.contains($0) } ?? false
+            if !isValid {
+                let full = ns.substring(with: match.range)
+                if let r = result.range(of: full) {
+                    result.replaceSubrange(r, with: name)
+                }
+            }
+        }
+        return result
     }
 
     func resynthesizeAllStale() async {
