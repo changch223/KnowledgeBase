@@ -1946,6 +1946,50 @@
     "entity.filtered.title %@" : {
 
     },
+    "error.action.deleteFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除に失敗しました。もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.action.deleteFailed.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除できませんでした"
+          }
+        }
+      }
+    },
+    "error.store.loadFailed.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一時的にこの端末内のデータが読み込めませんでした。アプリを再起動しても改善しない場合は、設定をご確認ください。"
+          }
+        }
+      }
+    },
+    "error.store.loadFailed.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "データの読み込みに問題が発生しました"
+          }
+        }
+      }
+    },
     "fab.accessibility.label" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2730,61 +2774,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "共有メニューから記事を追加してみよう"
-          }
-        }
-      }
-    },
-    "error.action.deleteFailed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "削除に失敗しました。もう一度お試しください。"
-          }
-        }
-      }
-    },
-    "error.action.deleteFailed.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "削除できませんでした"
-          }
-        }
-      }
-    },
-    "error.store.loadFailed.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "データの読み込みに問題が発生しました"
-          }
-        }
-      }
-    },
-    "error.store.loadFailed.body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一時的にこの端末内のデータが読み込めませんでした。アプリを再起動しても改善しない場合は、設定をご確認ください。"
-          }
-        }
-      }
-    },
-    "common.ok" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OK"
           }
         }
       }
@@ -4463,6 +4452,83 @@
     "URL を iKnow に保存します" : {
 
     },
+    "wiki.body.editPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このページの本文 (AI が自動生成、手で編集できます)"
+          }
+        }
+      }
+    },
+    "wiki.body.sectionTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まとめ"
+          }
+        }
+      }
+    },
+    "wiki.hide.action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このページを非表示"
+          }
+        }
+      }
+    },
+    "wiki.kind.concept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "概念"
+          }
+        }
+      }
+    },
+    "wiki.kind.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "種別"
+          }
+        }
+      }
+    },
+    "wiki.kind.person" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人物"
+          }
+        }
+      }
+    },
+    "wiki.kind.project" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロジェクト"
+          }
+        }
+      }
+    },
     "Your AI is growing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4757,6 +4823,9 @@
 
     },
     "統計" : {
+
+    },
+    "編集" : {
 
     },
     "考えています…" : {

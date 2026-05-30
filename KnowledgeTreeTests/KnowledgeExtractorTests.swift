@@ -384,6 +384,20 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         }
     }
 
+    // spec 063 (LLM Wiki): Wiki 本文 plain string 生成
+    var nextWikiBodyResult: Result<String, Error>?
+    private(set) var wikiBodyCallCount = 0
+    func generateWikiBody(prompt: String) async throws -> String {
+        wikiBodyCallCount += 1
+        if let result = nextWikiBodyResult {
+            switch result {
+            case .success(let s): return s
+            case .failure(let e): throw e
+            }
+        }
+        return "## 概要\nダミー Wiki 本文。\n\n- 要点 1\n- 要点 2"
+    }
+
     func generateAgentAction(prompt: String) async throws -> AgentAction {
         agentActionCallCount += 1
         lastAgentActionPrompt = prompt

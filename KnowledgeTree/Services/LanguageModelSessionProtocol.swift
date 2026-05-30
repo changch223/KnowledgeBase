@@ -232,6 +232,10 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// retrieval なし (ChatService の RAG 経路を経由しない、low-similarity 早期 return を避けるため)。
     func generateTutorReply(prompt: String) async throws -> String
 
+    /// spec 063 (LLM Wiki): Wiki ページ本文を Markdown で生成 (plain string、@Generable 不使用)。
+    /// 出力 schema コストがゼロなので token を入力に回せ、長い本文でも 4096 上限内に収まる。
+    func generateWikiBody(prompt: String) async throws -> String
+
     /// spec 057: Agentic Chat 用、AgentAction Generable enum を生成。
     /// LLM が agent loop の毎 turn で「immediate / askClarification / searchArticles / finalAnswer」のいずれかを返す。
     /// Swift 側で switch 分岐して状態遷移する (Tool Use 不在の代替パターン)。
@@ -356,6 +360,15 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     /// spec 044: 学習タブ用「家庭教師」自由形 chat 応答 (plain string、Generable 制約なし)。
     /// LanguageModelSession の `respond { prompt }` を直接呼び、`.content` (String) を返却。
     func generateTutorReply(prompt: String) async throws -> String {
+        let session = LanguageModelSession()
+        let response = try await session.respond {
+            prompt
+        }
+        return response.content
+    }
+
+    /// spec 063 (LLM Wiki): Wiki 本文 plain string 生成 (Generable schema を渡さず token 節約)。
+    func generateWikiBody(prompt: String) async throws -> String {
         let session = LanguageModelSession()
         let response = try await session.respond {
             prompt

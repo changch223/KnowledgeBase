@@ -64,6 +64,22 @@ final class ConceptPage {
     @Attribute(.externalStorage)
     var embedding: Data?
 
+    // MARK: - spec 063 (LLM Wiki 土台) 追加フィールド
+
+    /// AI が書く Wiki 本文 (Markdown)。summary より詳しい「全体像」(VISION v2 LLM Wiki)。
+    /// plain string 生成 (generateWikiBody) で token 超過を回避。空 = 未生成 (次回 ingest で埋まる)。
+    var bodyMarkdown: String = ""
+
+    /// 種別 rawValue (WikiPageKind: person / concept / project)。
+    /// Generable enum 非対応のため String 保存 + computed `kind` で enum 変換 (spec 044/057 同パターン)。
+    var kindRaw: String = "concept"
+
+    /// ユーザーが非表示にしたページ (AI 誤生成の抑制)。一覧・関連表示から除外、削除はしない。
+    var isHidden: Bool = false
+
+    /// ユーザーが bodyMarkdown を手で訂正したフラグ。true の間は自動再生成で無断上書きしない (FR-007)。
+    var bodyEditedByUser: Bool = false
+
     var createdAt: Date = Date.now
     var updatedAt: Date = Date.now
 
@@ -80,6 +96,10 @@ final class ConceptPage {
         isFollowing: Bool = false,
         isStale: Bool = true,
         embedding: Data? = nil,
+        bodyMarkdown: String = "",
+        kindRaw: String = "concept",
+        isHidden: Bool = false,
+        bodyEditedByUser: Bool = false,
         createdAt: Date = .now,
         updatedAt: Date = Date.now
     ) {
@@ -95,14 +115,43 @@ final class ConceptPage {
         self.isFollowing = isFollowing
         self.isStale = isStale
         self.embedding = embedding
+        self.bodyMarkdown = bodyMarkdown
+        self.kindRaw = kindRaw
+        self.isHidden = isHidden
+        self.bodyEditedByUser = bodyEditedByUser
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+// MARK: - WikiPageKind (spec 063, LLM Wiki)
+
+/// Wiki ページの種別。ConceptPage.kindRaw に rawValue 保存。
+enum WikiPageKind: String, CaseIterable {
+    case person   // 人物
+    case concept  // 概念
+    case project  // プロジェクト
+
+    var displayNameKey: String { "wiki.kind.\(rawValue)" }
+
+    var symbolName: String {
+        switch self {
+        case .person: return "person.fill"
+        case .concept: return "lightbulb.fill"
+        case .project: return "folder.fill"
+        }
     }
 }
 
 // MARK: - Computed properties
 
 extension ConceptPage {
+    /// spec 063: kindRaw <-> WikiPageKind 変換。不正値は .concept に fallback。
+    var kind: WikiPageKind {
+        get { WikiPageKind(rawValue: kindRaw) ?? .concept }
+        set { kindRaw = newValue.rawValue }
+    }
+
     /// 同名判定用 (大文字小文字無視 + aliases 含む) のキー文字列配列。
     /// in-memory fetch で `searchableNames.contains(lowercased(name))` のように使う。
     var searchableNames: [String] {
