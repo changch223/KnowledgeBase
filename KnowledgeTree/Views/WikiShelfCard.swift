@@ -28,16 +28,17 @@ struct WikiShelfCard: View {
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
 
-                // spec 070: おすすめ横棚にも「まとめ」種別バッジ
-                FeedTypeBadge(labelKey: "feed.badge.wiki", systemImage: page.kind.symbolName)
-
-                Label(page.name, systemImage: page.kind.symbolName)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .frame(width: Self.cardWidth, alignment: .leading)
+                // spec 070: 「まとめ」バッジの隣に概念名 (AI / Claude など) を 1 行で並べる
+                HStack(spacing: DS.Spacing.xs) {
+                    FeedTypeBadge(labelKey: "feed.badge.wiki", systemImage: page.kind.symbolName)
+                    Text(page.name)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .frame(width: Self.cardWidth, alignment: .leading)
             }
         }
         .buttonStyle(.plain)
