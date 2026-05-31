@@ -21,10 +21,20 @@ struct FeedBuilderTests {
 
     private let fixedNow = Date(timeIntervalSince1970: 1_800_000_000)  // 固定 now
 
+    /// spec 068: フィードに出すには AI 処理完了 (succeeded) が必要なので、
+    /// デフォルトで succeeded な ExtractedKnowledge を付ける。
     @discardableResult
-    private func insertArticle(_ ctx: ModelContext, title: String, savedAt: Date) -> Article {
+    private func insertArticle(
+        _ ctx: ModelContext,
+        title: String,
+        savedAt: Date,
+        status: ExtractionStatus = .succeeded
+    ) -> Article {
         let a = Article(url: "https://example.com/\(UUID().uuidString)", title: title, savedAt: savedAt)
         ctx.insert(a)
+        let k = ExtractedKnowledge(article: a, status: status)
+        ctx.insert(k)
+        a.extractedKnowledge = k
         return a
     }
 
@@ -35,11 +45,21 @@ struct FeedBuilderTests {
         updatedAt: Date,
         body: String = "本文あり",
         summary: String = "要約",
-        isHidden: Bool = false
+        isHidden: Bool = false,
+        articleCount: Int = 0
     ) -> ConceptPage {
         let p = ConceptPage(name: name, categoryRaw: "tech", summary: summary, updatedAt: updatedAt)
         p.bodyMarkdown = body
         p.isHidden = isHidden
+        if articleCount > 0 {
+            var arts: [Article] = []
+            for i in 0..<articleCount {
+                let a = Article(url: "https://example.com/\(name)-\(i)", title: "\(name) 記事\(i)", savedAt: updatedAt)
+                ctx.insert(a)
+                arts.append(a)
+            }
+            p.relatedArticles = arts
+        }
         ctx.insert(p)
         return p
     }
@@ -116,5 +136,69 @@ struct FeedBuilderTests {
         let hasHidden = items.contains { if case .wikiUpdate(let p) = $0 { return p.name == "非表示" } else { return false } }
         #expect(!hasHidden)
         #expect(items.count == 1)  // 記事のみ
+    }
+
+    // MARK: - spec 068: AI 処理中の記事は assemble に出ない
+
+    @Test func excludesArticlesStillProcessing() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        insertArticle(ctx, title: "完了記事", savedAt: fixedNow.addingTimeInterval(-600), status: .succeeded)
+        insertArticle(ctx, title: "処理中記事", savedAt: fixedNow.addingTimeInterval(-300), status: .pending)
+        insertArticle(ctx, title: "抽出中記事", savedAt: fixedNow.addingTimeInterval(-200), status: .extracting)
+        insertArticle(ctx, title: "失敗記事", savedAt: fixedNow.addingTimeInterval(-100), status: .failed)
+        insertArticle(ctx, title: "部分成功記事", savedAt: fixedNow.addingTimeInterval(-50), status: .partiallySucceeded)
+
+        let titles = makeBuilder(c).build().compactMap { item -> String? in
+            if case .article(let a) = item { return a.title } else { return nil }
+        }
+        #expect(titles.contains("完了記事"))
+        #expect(titles.contains("部分成功記事"))
+        #expect(!titles.contains("処理中記事"))
+        #expect(!titles.contains("抽出中記事"))
+        #expect(!titles.contains("失敗記事"))
+    }
+
+    // MARK: - spec 068: recommend
+
+    @Test func recommendRanksWikiWithMoreArticlesAndRecencyHigher() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        // 記事多 + 最近更新 → 高スコア
+        insertWiki(ctx, name: "人気Wiki", updatedAt: fixedNow.addingTimeInterval(-3_600), articleCount: 8)
+        // 記事少 + 古め → 低スコア
+        insertWiki(ctx, name: "地味Wiki", updatedAt: fixedNow.addingTimeInterval(-10 * 86_400), articleCount: 1)
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let items = FeedBuilder.recommend(articles: [], wikiPages: pages, now: fixedNow)
+        // 先頭が人気Wiki
+        if case .wikiUpdate(let p) = items.first { #expect(p.name == "人気Wiki") } else { Issue.record("先頭は人気Wikiのはず") }
+    }
+
+    @Test func recommendCapsAtLimit() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        for i in 0..<10 {
+            insertWiki(ctx, name: "W\(i)", updatedAt: fixedNow.addingTimeInterval(-Double(i) * 3_600), articleCount: i + 1)
+        }
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let items = FeedBuilder.recommend(articles: [], wikiPages: pages, now: fixedNow, limit: 5)
+        #expect(items.count == 5)
+    }
+
+    @Test func recommendExcludesProcessingArticlesAndHiddenWiki() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        let done = insertArticle(ctx, title: "完了", savedAt: fixedNow, status: .succeeded)
+        let processing = insertArticle(ctx, title: "処理中", savedAt: fixedNow, status: .pending)
+        insertWiki(ctx, name: "非表示W", updatedAt: fixedNow, isHidden: true, articleCount: 10)
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let items = FeedBuilder.recommend(articles: [done, processing], wikiPages: pages, now: fixedNow)
+        let articleTitles = items.compactMap { if case .article(let a) = $0 { return a.title } else { return nil } }
+        let wikiNames = items.compactMap { if case .wikiUpdate(let p) = $0 { return p.name } else { return nil } }
+        #expect(articleTitles.contains("完了"))
+        #expect(!articleTitles.contains("処理中"))
+        #expect(!wikiNames.contains("非表示W"))
     }
 }

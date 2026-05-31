@@ -41,6 +41,11 @@ struct KnowledgeClipView: View {
         FeedBuilder.assemble(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
     }
 
+    /// spec 068: おすすめ carousel の中身 (記事+Wiki 混在、AI ゼロ)。重複除外なし (FR-009)。
+    private var recommendItems: [FeedItem] {
+        FeedBuilder.recommend(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
@@ -48,7 +53,9 @@ struct KnowledgeClipView: View {
                     if feedItems.isEmpty {
                         feedEmptyState
                     } else {
-                        ForEach(feedItems) { item in
+                        // spec 068: 縦 mix の途中 (carouselInsertIndex の後) に
+                        // おすすめ横 carousel を 1 本挿入 (App Store Today 風)。候補不足なら非表示。
+                        ForEach(Array(feedItems.enumerated()), id: \.element.id) { idx, item in
                             switch item {
                             case .article(let article):
                                 ArticleFeedCard(article: article)
@@ -56,6 +63,11 @@ struct KnowledgeClipView: View {
                                 WikiFeedCard(page: page)
                             case .periodicDigest(let pages):
                                 PeriodicDigestCard(pages: pages)
+                            }
+
+                            if idx == FeedBuilder.carouselInsertIndex - 1,
+                               recommendItems.count >= FeedBuilder.carouselMinItems {
+                                RecommendCarousel(items: recommendItems)
                             }
                         }
                     }
@@ -195,16 +207,8 @@ struct KnowledgeClipView: View {
     /// 既存 ConceptPage を fetch → fromConceptPage で wrap。
     @MainActor
     private func loadCardFromDeepLink(cardID: UUID) async -> UnderstandingCard? {
-        guard let context = services.understandingCardSurfaceService else { return nil }
-        _ = context  // suppress unused warning - actual fetch is via @Environment
-        // ID で ConceptPage fetch
-        let cpDescriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.id == cardID }
-        )
-        if let modelContext = try? ModelContext(.init(for: ConceptPage.self)) {
-            _ = modelContext  // can't easily access global context here
-        }
-        // 実際には surface service 経由で全 card を取り出して該当 ID を探す
+        guard services.understandingCardSurfaceService != nil else { return nil }
+        // surface service 経由で全 card を取り出して該当 ID を探す
         let allCards = await services.understandingCardSurfaceService?.surfaceAllCards() ?? []
         return allCards.first { $0.id == cardID }
     }
