@@ -13,7 +13,7 @@ struct TagFilteredListView: View {
 
     var body: some View {
         TagFilteredListContent(tagName: tagName)
-            .navigationTitle(Text("tag.filtered.title \(tagName)"))
+            .navigationTitle(Text(verbatim: "#\(tagName)"))
     }
 }
 
