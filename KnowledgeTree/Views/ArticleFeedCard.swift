@@ -19,6 +19,9 @@ struct ArticleFeedCard: View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             NavigationLink(value: article) {
                 VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                    // spec 070: 種別バッジ (アイコン + 文字)
+                    FeedTypeBadge(labelKey: "feed.badge.article", systemImage: "doc.text.fill")
+
                     if let ogURL = article.enrichment?.ogImageURL,
                        let url = URL(string: ogURL), url.scheme == "https" {
                         AsyncImage(url: url) { phase in

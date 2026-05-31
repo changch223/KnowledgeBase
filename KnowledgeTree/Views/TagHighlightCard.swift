@@ -24,6 +24,8 @@ struct TagHighlightCard: View {
                     .background(DS.Color.tagFill, in: RoundedRectangle(cornerRadius: DS.Radius.chip))
 
                 VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                    // spec 070: 種別バッジ「タグ」
+                    FeedTypeBadge(labelKey: "feed.badge.tag", systemImage: "number")
                     Text("#\(tag.name)")
                         .font(.headline)
                         .foregroundStyle(.primary)
