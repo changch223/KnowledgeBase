@@ -32,8 +32,8 @@ final class ServiceContainer {
     var lastOpenedStore: LastOpenedStore?
     /// spec 037: 時系列事実上書き検出 service
     var conflictDetectionService: ConflictDetectionServiceProtocol?
-    /// spec 036: 動的トピック clustering service
-    var topicClusteringService: TopicClusteringServiceProtocol?
+    // spec 067: TopicClusteringService 退役 (UserTopic は生成停止 + UI 孤児だったため削除)。
+    // @Model UserTopic は CloudKit 安全のため残置。
     /// spec 040: Knowledge Graph 抽出 service (記事保存 hook で fire-and-forget)
     var graphExtractionService: GraphExtractionServiceProtocol?
     /// spec 040: Knowledge Graph traversal service (Digest / Chat prompt 拡張で使用)

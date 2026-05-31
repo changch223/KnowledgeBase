@@ -109,7 +109,7 @@ struct KnowledgeTreeApp: App {
                 // spec 056: 3 タブ構成 V3.0 (起動 default = 知識 Clip)
                 KnowledgeClipView()
                     .tabItem {
-                        Label("clip.tab.title", systemImage: "lightbulb.fill")
+                        Label("clip.tab.title", systemImage: "newspaper.fill")
                     }
                     .tag(AppTab.knowledgeClip)
                     .accessibilityIdentifier("tab.knowledgeClip")
@@ -264,12 +264,8 @@ struct KnowledgeTreeApp: App {
             availability: availability
         )
 
-        // spec 036: TopicClusteringService (起動時 + 7 日 batch)
-        let topicClusteringService: TopicClusteringServiceProtocol = TopicClusteringService(
-            context: context,
-            session: session,
-            availability: availability
-        )
+        // spec 067: TopicClusteringService 退役 (UserTopic 生成停止 + UI 孤児ゆえ削除)。
+        // @Model UserTopic は CloudKit record type 保護のため残置。
 
         // spec 042: ConceptPage 自動生成 service (Fallback 先構築 → Foundation に inject)
         let fallbackConceptService = FallbackConceptSynthesisService(
@@ -423,7 +419,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.recentDigestService = recentDigestService  // spec 035
         serviceContainer.lastOpenedStore = lastOpenedStore          // spec 035
         serviceContainer.conflictDetectionService = conflictDetectionService // spec 037
-        serviceContainer.topicClusteringService = topicClusteringService     // spec 036
+        // spec 067: topicClusteringService 退役
         serviceContainer.graphExtractionService = graphExtractionService     // spec 040
         serviceContainer.graphTraversalService = graphTraversalService       // spec 040
         serviceContainer.graphNodeStore = graphNodeStore                     // spec 041

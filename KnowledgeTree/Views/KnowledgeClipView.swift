@@ -28,15 +28,37 @@ struct KnowledgeClipView: View {
     /// spec 056 polish: V2.5 → V3.0 初回起動 1 回限りの tooltip 表示
     @State private var showV3Tooltip: Bool = false
 
+    // spec 066 (News+ フィード): 記事 + Wiki 更新を @Query で取り、FeedBuilder.assemble で
+    // 時系列 mix。@Query ゆえ保存/更新で自動反映 (reactive)。AI 呼び出しゼロ。
+    @Query(sort: \Article.savedAt, order: .reverse) private var feedArticles: [Article]
+    @Query(
+        filter: #Predicate<ConceptPage> { !$0.isHidden },
+        sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
+    )
+    private var feedWikiPages: [ConceptPage]
+
+    private var feedItems: [FeedItem] {
+        FeedBuilder.assemble(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: DS.Spacing.xxl) {
-                    if let since = sinceForRecent {
-                        RecentArticlesSection(since: since)
+                    if feedItems.isEmpty {
+                        feedEmptyState
+                    } else {
+                        ForEach(feedItems) { item in
+                            switch item {
+                            case .article(let article):
+                                ArticleFeedCard(article: article)
+                            case .wikiUpdate(let page):
+                                WikiFeedCard(page: page)
+                            case .periodicDigest(let pages):
+                                PeriodicDigestCard(pages: pages)
+                            }
+                        }
                     }
-                    InterestingNextSection()
-                    FollowingPeopleSection()
                 }
                 .padding(.vertical, DS.Spacing.xxl)
             }
@@ -130,6 +152,22 @@ struct KnowledgeClipView: View {
                 services.pendingDeepLinkCardID = nil
             }
         }
+    }
+
+    /// spec 066: フィードが空のときの穏やかな空状態。
+    private var feedEmptyState: some View {
+        VStack(spacing: DS.Spacing.md) {
+            Image(systemName: "tray")
+                .font(.system(size: 44))
+                .foregroundStyle(.secondary)
+            Text("clip.recent.empty")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Spacing.section)
+        .padding(.horizontal, DS.Spacing.xxl)
     }
 
     /// spec 056 polish: V3 migration tooltip の表示判定 (初回起動 1 回限り)。
