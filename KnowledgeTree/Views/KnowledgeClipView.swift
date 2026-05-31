@@ -36,6 +36,8 @@ struct KnowledgeClipView: View {
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
     )
     private var feedWikiPages: [ConceptPage]
+    /// spec 068: カテゴリー/タグ ハイライト用の全 Tag。
+    @Query private var allTags: [Tag]
 
     /// spec 068: 時系列 mix (記事 + Wiki) に カテゴリー/タグ ハイライトを差し込んだ最終フィード。
     private var feedItems: [FeedItem] {

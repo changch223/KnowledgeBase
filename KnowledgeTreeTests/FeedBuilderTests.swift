@@ -215,7 +215,7 @@ struct FeedBuilderTests {
         status: ExtractionStatus = .succeeded
     ) -> Article {
         let a = insertArticle(ctx, title: title, savedAt: savedAt, status: status)
-        let tag = Tag(name: tagName, categoryRaw: categoryRaw)
+        let tag = KnowledgeTree.Tag(name: tagName, categoryRaw: categoryRaw)
         ctx.insert(tag)
         a.tags = [tag]
         return a
@@ -233,7 +233,7 @@ struct FeedBuilderTests {
             insertTaggedArticle(ctx, title: "旧T\(i)", savedAt: fixedNow.addingTimeInterval(-30 * 86_400),
                                 tagName: "AI", categoryRaw: "テクノロジー")
         }
-        let tags = try ctx.fetch(FetchDescriptor<Tag>())
+        let tags = try ctx.fetch(FetchDescriptor<KnowledgeTree.Tag>())
         let arts = try ctx.fetch(FetchDescriptor<Article>())
         let items = FeedBuilder.highlights(articles: arts, tags: tags,
                                            wikiCountByCategory: ["テクノロジー": 4], now: fixedNow)
@@ -252,7 +252,7 @@ struct FeedBuilderTests {
         // 2 件のみ (categoryHighlightMinArticles=3 未満) → カード出ない
         insertTaggedArticle(ctx, title: "x", savedAt: fixedNow, tagName: "T", categoryRaw: "経済")
         insertTaggedArticle(ctx, title: "y", savedAt: fixedNow, tagName: "T", categoryRaw: "経済")
-        let tags = try ctx.fetch(FetchDescriptor<Tag>())
+        let tags = try ctx.fetch(FetchDescriptor<KnowledgeTree.Tag>())
         let arts = try ctx.fetch(FetchDescriptor<Article>())
         let items = FeedBuilder.highlights(articles: arts, tags: tags, wikiCountByCategory: [:], now: fixedNow)
         let hasEconomy = items.contains { if case .categoryHighlight(let c, _, _, _) = $0 { return c.name == "経済" } else { return false } }
@@ -268,7 +268,7 @@ struct FeedBuilderTests {
         }
         let arts = try ctx.fetch(FetchDescriptor<Article>())
         let feed: [FeedItem] = arts.map { .article($0) }
-        let dummyTag = Tag(name: "X", categoryRaw: "テクノロジー")
+        let dummyTag = KnowledgeTree.Tag(name: "X", categoryRaw: "テクノロジー")
         ctx.insert(dummyTag)
         let highlights: [FeedItem] = [
             .tagHighlight(tag: dummyTag, totalCount: 5, recentCount: 3),
