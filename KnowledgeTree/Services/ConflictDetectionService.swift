@@ -30,10 +30,12 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
     private let availability: AvailabilityChecker
 
     /// 検出に使う entity 上位件数 (salience 高い順)
-    private let topEntityCount: Int = 2
+    /// spec 065 (軽さ優先): 記事保存 1 件あたりの矛盾検出 AI 呼び出しを削減 (2 → 1)。
+    /// topEntityCount × comparisonLimit = 旧 2×5=10 回 → 1×1=1 回。VISION「重い」解消。
+    private let topEntityCount: Int = 1
 
-    /// 比較対象の過去記事上限 (entity ごと)
-    private let comparisonLimit: Int = 5
+    /// 比較対象の過去記事上限 (entity ごと)。spec 065: 5 → 1 (上記同理由)。
+    private let comparisonLimit: Int = 1
 
     /// dismissed 状態を「再検出を許可しない」期間
     private let dismissCooldownDays: Int = 30
