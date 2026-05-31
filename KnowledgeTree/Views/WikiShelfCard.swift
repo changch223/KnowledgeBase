@@ -28,6 +28,9 @@ struct WikiShelfCard: View {
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
 
+                // spec 070: おすすめ横棚にも「まとめ」種別バッジ
+                FeedTypeBadge(labelKey: "feed.badge.wiki", systemImage: page.kind.symbolName)
+
                 Label(page.name, systemImage: page.kind.symbolName)
                     .font(.caption)
                     .fontWeight(.semibold)
