@@ -88,40 +88,92 @@ struct WikiFeedCard: View {
     }
 }
 
-// MARK: - 周期ダイジェストカード (P2)
+// MARK: - 周期ダイジェストカード (spec 068 v2: 1 枚サマリーカード)
 
-/// 最近更新された複数 Wiki を束ねた「振り返り」カード。各行 tap で詳細へ。
+/// 最近更新された複数 Wiki を束ねた「振り返り」を 1 枚のサマリーカードで表示する。
+/// 代表サムネを重ねて横並び + 件数 + 「すべて見る」。tap で全 Wiki 一覧へ。
 struct PeriodicDigestCard: View {
     let pages: [ConceptPage]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-            Label("feed.digest.title", systemImage: "calendar")
-                .font(.caption)
-                .foregroundStyle(DS.Color.actionBlue)
-
-            ForEach(pages, id: \.id) { page in
-                NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
-                    HStack(spacing: DS.Spacing.sm) {
-                        Image(systemName: page.kind.symbolName)
-                            .foregroundStyle(DS.Color.actionBlue)
-                        Text(page.name)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, DS.Spacing.xxs)
-                }
-                .buttonStyle(.plain)
+    /// 代表サムネ用に、関連記事から借用できる画像 URL を最大 4 件集める。
+    private var thumbnailURLs: [URL] {
+        var urls: [URL] = []
+        for page in pages {
+            guard urls.count < 4 else { break }
+            if let raw = (page.relatedArticles ?? []).compactMap({ $0.enrichment?.ogImageURL }).first,
+               let url = URL(string: raw), url.scheme == "https" {
+                urls.append(url)
             }
         }
-        .padding(DS.Spacing.md)
-        .background(DS.Color.surfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card))
-        .padding(.horizontal, DS.Spacing.xxl)
+        return urls
+    }
+
+    var body: some View {
+        NavigationLink(value: ConceptPageListDestination()) {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                HStack {
+                    Label("feed.digest.title", systemImage: "calendar")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(DS.Color.actionBlue)
+                    Spacer()
+                    Text(String(format: String(localized: "feed.digest.count"), pages.count))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                // 代表サムネを少し重ねて横並び (写真が無ければ kind アイコン)
+                HStack(spacing: -DS.Spacing.md) {
+                    ForEach(Array(pages.prefix(4).enumerated()), id: \.element.id) { idx, page in
+                        thumbnail(for: page)
+                            .frame(width: 52, height: 52)
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.Radius.chip)
+                                    .stroke(DS.Color.surfaceSecondary, lineWidth: 2)
+                            )
+                            .zIndex(Double(4 - idx))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                // 代表ページ名 (先頭 2 件を「、」連結)
+                Text(pages.prefix(2).map(\.name).joined(separator: "、"))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+            .padding(DS.Spacing.md)
+            .background(DS.Color.surfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card))
+            .padding(.horizontal, DS.Spacing.xxl)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func thumbnail(for page: ConceptPage) -> some View {
+        if let raw = (page.relatedArticles ?? []).compactMap({ $0.enrichment?.ogImageURL }).first,
+           let url = URL(string: raw), url.scheme == "https" {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image): image.resizable().aspectRatio(contentMode: .fill)
+                default: kindFallback(page)
+                }
+            }
+        } else {
+            kindFallback(page)
+        }
+    }
+
+    private func kindFallback(_ page: ConceptPage) -> some View {
+        ZStack {
+            DS.Color.tagFill
+            Image(systemName: page.kind.symbolName)
+                .foregroundStyle(DS.Color.actionBlue)
+        }
     }
 }

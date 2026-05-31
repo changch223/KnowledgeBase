@@ -2,6 +2,7 @@
   "sourceLanguage": "ja",
   "strings": {
     "": {},
+    "#%@": {},
     "%@ ↔ %@": {
       "localizations": {
         "ja": {
@@ -2187,6 +2188,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "記事 %1$lld / Wiki %2$lld"
+          }
+        }
+      }
+    },
+    "feed.digest.count": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の更新"
           }
         }
       }
