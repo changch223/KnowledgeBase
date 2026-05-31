@@ -1688,7 +1688,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フィード"
+            "value": "iKnow"
           }
         }
       }
@@ -1732,7 +1732,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フィード"
+            "value": "iKnow"
           }
         }
       }
@@ -2186,6 +2186,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近の振り返り"
+          }
+        }
+      }
+    },
+    "feed.recommend.title": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "おすすめ"
           }
         }
       }

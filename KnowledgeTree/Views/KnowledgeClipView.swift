@@ -41,6 +41,11 @@ struct KnowledgeClipView: View {
         FeedBuilder.assemble(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
     }
 
+    /// spec 068: おすすめ carousel の中身 (記事+Wiki 混在、AI ゼロ)。重複除外なし (FR-009)。
+    private var recommendItems: [FeedItem] {
+        FeedBuilder.recommend(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
@@ -48,7 +53,9 @@ struct KnowledgeClipView: View {
                     if feedItems.isEmpty {
                         feedEmptyState
                     } else {
-                        ForEach(feedItems) { item in
+                        // spec 068: 縦 mix の途中 (carouselInsertIndex の後) に
+                        // おすすめ横 carousel を 1 本挿入 (App Store Today 風)。候補不足なら非表示。
+                        ForEach(Array(feedItems.enumerated()), id: \.element.id) { idx, item in
                             switch item {
                             case .article(let article):
                                 ArticleFeedCard(article: article)
@@ -56,6 +63,11 @@ struct KnowledgeClipView: View {
                                 WikiFeedCard(page: page)
                             case .periodicDigest(let pages):
                                 PeriodicDigestCard(pages: pages)
+                            }
+
+                            if idx == FeedBuilder.carouselInsertIndex - 1,
+                               recommendItems.count >= FeedBuilder.carouselMinItems {
+                                RecommendCarousel(items: recommendItems)
                             }
                         }
                     }
