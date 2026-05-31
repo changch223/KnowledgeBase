@@ -42,7 +42,7 @@ enum FeedItem: Identifiable, Hashable {
             let key = pages.first?.id.uuidString ?? "empty"
             return "d-\(key)-\(pages.count)"
         case .categoryHighlight(let category, _, _, _): return "cat-\(category.name)"
-        case .tagHighlight(let tag, _, _): return "tag-\(tag.id.uuidString)"
+        case .tagHighlight(let tag, _, _): return "tag-\(tag.name)"
         }
     }
 }
