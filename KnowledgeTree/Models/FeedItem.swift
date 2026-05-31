@@ -3,13 +3,14 @@
 //  KnowledgeTree
 //
 //  spec 066 (LLM Wiki) — News+ 風フィードの 1 行を表す transient enum。
-//  記事カード / Wiki 更新カード / 周期ダイジェストを時系列 merge するための型。
+//  spec 068 — iKnow タブ: 記事 / Wiki / カテゴリー / タグ の 4 種カードに拡張。
 //  @Model ではない (永続化しない、毎回 FeedBuilder が組み立てる)。
 //
 
 import Foundation
+import SwiftData
 
-/// フィードに並ぶカードの種類。sortDate で時系列 merge する。
+/// フィードに並ぶカードの種類。sortDate で時系列 merge する (highlight は挿入式で時系列に乗らない)。
 enum FeedItem: Identifiable, Hashable {
     /// 保存した記事カード。
     case article(Article)
@@ -17,13 +18,19 @@ enum FeedItem: Identifiable, Hashable {
     case wikiUpdate(ConceptPage)
     /// 周期ダイジェスト (最近更新された Wiki を束ねた「振り返り」カード、P2)。
     case periodicDigest([ConceptPage])
+    /// spec 068: カテゴリーハイライトカード (例「テクノロジー — 記事24 / Wiki5、今週 +3」)。
+    /// recentCount = 直近 7 日に追加された記事数 (0 なら数字非表示)。
+    case categoryHighlight(category: Category, articleCount: Int, wikiCount: Int, recentCount: Int)
+    /// spec 068: タグハイライトカード (例「#AI 今週 +3」)。recentCount = 直近 7 日の記事増加数。
+    case tagHighlight(tag: Tag, totalCount: Int, recentCount: Int)
 
-    /// 時系列 merge 用の日時 (新しい順に並べる)。
+    /// 時系列 merge 用の日時 (新しい順に並べる)。highlight は時系列に乗らないので distantPast。
     var sortDate: Date {
         switch self {
         case .article(let a): return a.savedAt
         case .wikiUpdate(let p): return p.updatedAt
         case .periodicDigest(let pages): return pages.map(\.updatedAt).max() ?? .distantPast
+        case .categoryHighlight, .tagHighlight: return .distantPast
         }
     }
 
@@ -34,6 +41,8 @@ enum FeedItem: Identifiable, Hashable {
         case .periodicDigest(let pages):
             let key = pages.first?.id.uuidString ?? "empty"
             return "d-\(key)-\(pages.count)"
+        case .categoryHighlight(let category, _, _, _): return "cat-\(category.name)"
+        case .tagHighlight(let tag, _, _): return "tag-\(tag.name)"
         }
     }
 }

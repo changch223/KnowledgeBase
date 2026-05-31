@@ -42,6 +42,18 @@ final class FeedBuilder: FeedBuilding {
     /// 縦フィードの何件目の後に carousel を挿入するか。
     static let carouselInsertIndex = 3
 
+    // spec 068: カテゴリー / タグ ハイライトカード (縦フィードのバリエーション)
+    /// 「最近」= 直近何日に追加された記事を「今週 +N」としてカウントするか。
+    static let highlightRecentWindowDays = 7.0
+    /// カテゴリーカードを出す最小記事数 (これ未満の小さいカテゴリは出さない)。
+    static let categoryHighlightMinArticles = 3
+    /// タグカードを出す最小「最近の増加数」(直近 N 日でこれ以上増えたタグのみ)。
+    static let tagHighlightMinRecent = 2
+    /// 縦フィードに挿入するハイライトカードの間隔 (この件数ごとに 1 枚)。
+    static let highlightEvery = 6
+    /// 縦フィードに挿入するハイライトカードの総数上限。
+    static let maxHighlights = 3
+
     private let context: ModelContext
     private let now: () -> Date
 
@@ -126,6 +138,94 @@ final class FeedBuilder: FeedBuilding {
         let days = now.timeIntervalSince(date) / 86_400
         guard days >= 0 else { return 1 }
         return max(0, 1 - days / recommendRecencyWindowDays)
+    }
+
+    // MARK: - spec 068: カテゴリー / タグ ハイライト
+
+    /// 縦フィードのバリエーション用に、カテゴリーカード・タグカードを生成する (AI 呼び出しゼロ)。
+    /// 「最近伸びている」= 直近 highlightRecentWindowDays 日に追加された記事数でランク付け。
+    /// - articles: 表示対象 (AI 処理完了済を渡す前提だが内部でも filter)
+    /// - tags: 全 Tag
+    /// - wikiCountByCategory: カテゴリ名 → Wiki(ConceptPage) 件数
+    static func highlights(
+        articles: [Article],
+        tags: [Tag],
+        wikiCountByCategory: [String: Int],
+        now: Date
+    ) -> [FeedItem] {
+        let recentCutoff = now.addingTimeInterval(-highlightRecentWindowDays * 86_400)
+        let shown = articles.filter { isProcessingComplete($0) }
+
+        // --- カテゴリーカード: 記事の Tag.categoryRaw を集計 ---
+        var catTotal: [String: Int] = [:]
+        var catRecent: [String: Int] = [:]
+        for article in shown {
+            // 記事のカテゴリ = tags の categoryRaw 最頻 (なければ「その他」)
+            let cat = resolveArticleCategory(article)
+            catTotal[cat, default: 0] += 1
+            if article.savedAt >= recentCutoff { catRecent[cat, default: 0] += 1 }
+        }
+        let categoryNames: [String] = catTotal.keys
+            .filter { (catTotal[$0] ?? 0) >= categoryHighlightMinArticles }
+            .sorted { lhs, rhs in
+                let lr = catRecent[lhs] ?? 0, rr = catRecent[rhs] ?? 0
+                if lr != rr { return lr > rr }
+                return (catTotal[lhs] ?? 0) > (catTotal[rhs] ?? 0)
+            }
+        let categoryCards: [FeedItem] = categoryNames.map { name in
+            .categoryHighlight(
+                category: CategorySeed.category(for: name),
+                articleCount: catTotal[name] ?? 0,
+                wikiCount: wikiCountByCategory[name] ?? 0,
+                recentCount: catRecent[name] ?? 0
+            )
+        }
+
+        // --- タグカード: 直近 N 日に増えたタグ ---
+        let tagCards: [FeedItem] = tags
+            .compactMap { tag -> (Tag, Int, Int)? in
+                let arts = tag.articles ?? []
+                let recent = arts.filter { $0.savedAt >= recentCutoff && isProcessingComplete($0) }.count
+                guard recent >= tagHighlightMinRecent else { return nil }
+                return (tag, arts.count, recent)
+            }
+            .sorted { $0.2 > $1.2 }
+            .map { .tagHighlight(tag: $0.0, totalCount: $0.1, recentCount: $0.2) }
+
+        // カテゴリ → タグ の順で交互に、maxHighlights まで
+        var result: [FeedItem] = []
+        var ci = categoryCards.makeIterator()
+        var ti = tagCards.makeIterator()
+        while result.count < maxHighlights {
+            var added = false
+            if let c = ci.next() { result.append(c); added = true }
+            if result.count >= maxHighlights { break }
+            if let t = ti.next() { result.append(t); added = true }
+            if !added { break }
+        }
+        return result
+    }
+
+    /// 記事のカテゴリを解決 (tags の categoryRaw のうち最頻、無ければ「その他」)。
+    private static func resolveArticleCategory(_ article: Article) -> String {
+        let cats = (article.tags ?? []).compactMap { $0.categoryRaw }.filter { !$0.isEmpty }
+        guard !cats.isEmpty else { return CategorySeed.otherCategory.name }
+        let counts = Dictionary(cats.map { ($0, 1) }, uniquingKeysWith: +)
+        return counts.max { $0.value < $1.value }?.key ?? CategorySeed.otherCategory.name
+    }
+
+    /// 時系列 feed にハイライトカードを highlightEvery 件ごとに差し込む (純関数)。
+    static func interleaveHighlights(into feed: [FeedItem], highlights: [FeedItem]) -> [FeedItem] {
+        guard !highlights.isEmpty, !feed.isEmpty else { return feed }
+        var result: [FeedItem] = []
+        var hi = highlights.makeIterator()
+        for (idx, item) in feed.enumerated() {
+            result.append(item)
+            if (idx + 1) % highlightEvery == 0, let h = hi.next() {
+                result.append(h)
+            }
+        }
+        return result
     }
 
     // MARK: - Fetch

@@ -28,8 +28,8 @@ struct RecommendCarousel: View {
                             ArticleShelfCard(article: article)
                         case .wikiUpdate(let page):
                             WikiShelfCard(page: page)
-                        case .periodicDigest:
-                            EmptyView()  // carousel には digest は出さない
+                        case .periodicDigest, .categoryHighlight, .tagHighlight:
+                            EmptyView()  // carousel には digest / highlight は出さない
                         }
                     }
                 }

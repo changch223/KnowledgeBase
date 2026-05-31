@@ -1684,6 +1684,7 @@
       }
     },
     "clip.nav.title": {
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -2180,6 +2181,16 @@
         }
       }
     },
+    "feed.category.counts": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記事 %1$lld / Wiki %2$lld"
+          }
+        }
+      }
+    },
     "feed.digest.title": {
       "localizations": {
         "ja": {
@@ -2190,12 +2201,32 @@
         }
       }
     },
+    "feed.highlight.recent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今週 +%lld"
+          }
+        }
+      }
+    },
     "feed.recommend.title": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "おすすめ"
+          }
+        }
+      }
+    },
+    "feed.tag.total": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記事 %lld 件"
           }
         }
       }
@@ -4486,7 +4517,6 @@
     "×%lld": {},
     "—": {},
     "•": {},
-    "• %@": {},
     "⚠️ 更新が必要 (%lld)": {},
     "✓ わかった": {},
     "✓ 理解した / 🤔 もっと聞く / ✗ 今は表示不要": {},
