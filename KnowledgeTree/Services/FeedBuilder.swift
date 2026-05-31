@@ -93,12 +93,15 @@ final class FeedBuilder: FeedBuilding {
     /// 記事と Wiki を同一スコア軸でソートし、上位 limit 件を carousel 用に返す (AI 呼び出しゼロ)。
     /// - Wiki スコア = 関連記事数 × wikiArticleWeight + 更新 recency ボーナス
     /// - 記事スコア = 保存 recency ボーナス (AI 処理完了済のみ)
+    /// limit は省略時 recommendLimit(5)。デフォルト引数は nonisolated context で評価されるため
+    /// @MainActor static プロパティを直接書けない (Swift 6) → -1 sentinel で本体解決。
     static func recommend(
         articles: [Article],
         wikiPages: [ConceptPage],
         now: Date,
-        limit: Int = recommendLimit
+        limit: Int = -1
     ) -> [FeedItem] {
+        let limit = limit < 0 ? recommendLimit : limit
         var scored: [(item: FeedItem, score: Double)] = []
 
         for page in wikiPages where !page.isHidden {

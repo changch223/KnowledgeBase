@@ -207,16 +207,8 @@ struct KnowledgeClipView: View {
     /// 既存 ConceptPage を fetch → fromConceptPage で wrap。
     @MainActor
     private func loadCardFromDeepLink(cardID: UUID) async -> UnderstandingCard? {
-        guard let context = services.understandingCardSurfaceService else { return nil }
-        _ = context  // suppress unused warning - actual fetch is via @Environment
-        // ID で ConceptPage fetch
-        let cpDescriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.id == cardID }
-        )
-        if let modelContext = try? ModelContext(.init(for: ConceptPage.self)) {
-            _ = modelContext  // can't easily access global context here
-        }
-        // 実際には surface service 経由で全 card を取り出して該当 ID を探す
+        guard services.understandingCardSurfaceService != nil else { return nil }
+        // surface service 経由で全 card を取り出して該当 ID を探す
         let allCards = await services.understandingCardSurfaceService?.surfaceAllCards() ?? []
         return allCards.first { $0.id == cardID }
     }
