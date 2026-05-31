@@ -201,4 +201,82 @@ struct FeedBuilderTests {
         #expect(!articleTitles.contains("処理中"))
         #expect(!wikiNames.contains("非表示W"))
     }
+
+    // MARK: - spec 068: highlights (カテゴリー / タグ)
+
+    /// categoryRaw 付き Tag を持つ記事を作る。
+    @discardableResult
+    private func insertTaggedArticle(
+        _ ctx: ModelContext,
+        title: String,
+        savedAt: Date,
+        tagName: String,
+        categoryRaw: String,
+        status: ExtractionStatus = .succeeded
+    ) -> Article {
+        let a = insertArticle(ctx, title: title, savedAt: savedAt, status: status)
+        let tag = Tag(name: tagName, categoryRaw: categoryRaw)
+        ctx.insert(tag)
+        a.tags = [tag]
+        return a
+    }
+
+    @Test func highlightsBuildsCategoryCardWithRecentCount() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        // テクノロジー: 5 件、うち 3 件が直近 7 日
+        for i in 0..<3 {
+            insertTaggedArticle(ctx, title: "新T\(i)", savedAt: fixedNow.addingTimeInterval(-Double(i) * 86_400),
+                                tagName: "AI", categoryRaw: "テクノロジー")
+        }
+        for i in 0..<2 {
+            insertTaggedArticle(ctx, title: "旧T\(i)", savedAt: fixedNow.addingTimeInterval(-30 * 86_400),
+                                tagName: "AI", categoryRaw: "テクノロジー")
+        }
+        let tags = try ctx.fetch(FetchDescriptor<Tag>())
+        let arts = try ctx.fetch(FetchDescriptor<Article>())
+        let items = FeedBuilder.highlights(articles: arts, tags: tags,
+                                           wikiCountByCategory: ["テクノロジー": 4], now: fixedNow)
+        let cat = items.compactMap { item -> (String, Int, Int, Int)? in
+            if case .categoryHighlight(let c, let a, let w, let r) = item { return (c.name, a, w, r) } else { return nil }
+        }.first
+        #expect(cat?.0 == "テクノロジー")
+        #expect(cat?.1 == 5)   // 総記事数
+        #expect(cat?.2 == 4)   // Wiki 数
+        #expect(cat?.3 == 3)   // 直近 7 日
+    }
+
+    @Test func highlightsSkipsSmallCategory() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        // 2 件のみ (categoryHighlightMinArticles=3 未満) → カード出ない
+        insertTaggedArticle(ctx, title: "x", savedAt: fixedNow, tagName: "T", categoryRaw: "経済")
+        insertTaggedArticle(ctx, title: "y", savedAt: fixedNow, tagName: "T", categoryRaw: "経済")
+        let tags = try ctx.fetch(FetchDescriptor<Tag>())
+        let arts = try ctx.fetch(FetchDescriptor<Article>())
+        let items = FeedBuilder.highlights(articles: arts, tags: tags, wikiCountByCategory: [:], now: fixedNow)
+        let hasEconomy = items.contains { if case .categoryHighlight(let c, _, _, _) = $0 { return c.name == "経済" } else { return false } }
+        #expect(!hasEconomy)
+    }
+
+    @Test func interleaveInsertsHighlightsEveryN() throws {
+        // feed 12 件 + highlight 2 件 → highlightEvery(6) ごとに挿入
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        for i in 0..<12 {
+            insertArticle(ctx, title: "A\(i)", savedAt: fixedNow.addingTimeInterval(-Double(i) * 3_600))
+        }
+        let arts = try ctx.fetch(FetchDescriptor<Article>())
+        let feed: [FeedItem] = arts.map { .article($0) }
+        let dummyTag = Tag(name: "X", categoryRaw: "テクノロジー")
+        ctx.insert(dummyTag)
+        let highlights: [FeedItem] = [
+            .tagHighlight(tag: dummyTag, totalCount: 5, recentCount: 3),
+            .categoryHighlight(category: CategorySeed.category(for: "テクノロジー"), articleCount: 5, wikiCount: 1, recentCount: 2)
+        ]
+        let merged = FeedBuilder.interleaveHighlights(into: feed, highlights: highlights)
+        #expect(merged.count == feed.count + highlights.count)
+        // 7 番目 (index 6) が最初の highlight
+        if case .tagHighlight = merged[6] {} else { Issue.record("index 6 は最初の highlight のはず") }
+    }
 }

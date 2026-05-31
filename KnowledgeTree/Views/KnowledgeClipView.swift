@@ -37,25 +37,46 @@ struct KnowledgeClipView: View {
     )
     private var feedWikiPages: [ConceptPage]
 
+    /// spec 068: 時系列 mix (記事 + Wiki) に カテゴリー/タグ ハイライトを差し込んだ最終フィード。
     private var feedItems: [FeedItem] {
-        FeedBuilder.assemble(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
+        let base = FeedBuilder.assemble(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
+        return FeedBuilder.interleaveHighlights(into: base, highlights: highlightItems)
     }
 
-    /// spec 068: おすすめ carousel の中身 (記事+Wiki 混在、AI ゼロ)。重複除外なし (FR-009)。
-    private var recommendItems: [FeedItem] {
-        FeedBuilder.recommend(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
+    /// spec 068: 「For You Wiki」横棚 (一番上固定)。Wiki のみ recommend (記事多い+最近更新)。
+    /// recommend に空 articles を渡すと Wiki だけが返る。
+    private var forYouWikiItems: [FeedItem] {
+        FeedBuilder.recommend(articles: [], wikiPages: feedWikiPages, now: Date())
+    }
+
+    /// spec 068: カテゴリー/タグ ハイライトカード (縦 mix のバリエーション、AI ゼロ)。
+    private var highlightItems: [FeedItem] {
+        var wikiCountByCategory: [String: Int] = [:]
+        for page in feedWikiPages where !page.isHidden {
+            wikiCountByCategory[page.categoryRaw, default: 0] += 1
+        }
+        return FeedBuilder.highlights(
+            articles: feedArticles,
+            tags: allTags,
+            wikiCountByCategory: wikiCountByCategory,
+            now: Date()
+        )
     }
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: DS.Spacing.xxl) {
+                    // spec 068: 一番上に「For You Wiki」横スクロール棚 (Wiki のみ)。候補不足なら非表示。
+                    if forYouWikiItems.count >= FeedBuilder.carouselMinItems {
+                        RecommendCarousel(items: forYouWikiItems)
+                    }
+
                     if feedItems.isEmpty {
                         feedEmptyState
                     } else {
-                        // spec 068: 縦 mix の途中 (carouselInsertIndex の後) に
-                        // おすすめ横 carousel を 1 本挿入 (App Store Today 風)。候補不足なら非表示。
-                        ForEach(Array(feedItems.enumerated()), id: \.element.id) { idx, item in
+                        // spec 068: 縦 mix (記事 / Wiki / カテゴリー / タグ の 4 種カード)。
+                        ForEach(feedItems) { item in
                             switch item {
                             case .article(let article):
                                 ArticleFeedCard(article: article)
@@ -63,11 +84,15 @@ struct KnowledgeClipView: View {
                                 WikiFeedCard(page: page)
                             case .periodicDigest(let pages):
                                 PeriodicDigestCard(pages: pages)
-                            }
-
-                            if idx == FeedBuilder.carouselInsertIndex - 1,
-                               recommendItems.count >= FeedBuilder.carouselMinItems {
-                                RecommendCarousel(items: recommendItems)
+                            case .categoryHighlight(let category, let articleCount, let wikiCount, let recentCount):
+                                CategoryHighlightCard(
+                                    category: category,
+                                    articleCount: articleCount,
+                                    wikiCount: wikiCount,
+                                    recentCount: recentCount
+                                )
+                            case .tagHighlight(let tag, let totalCount, let recentCount):
+                                TagHighlightCard(tag: tag, totalCount: totalCount, recentCount: recentCount)
                             }
                         }
                     }
@@ -116,6 +141,10 @@ struct KnowledgeClipView: View {
             // spec 058 polish: 「分野ごとの活動」section から Category 詳細遷移
             .navigationDestination(for: CategoryFilteredDestination.self) { dest in
                 CategoryFilteredListView(category: dest.category)
+            }
+            // spec 068: タグハイライトカード → タグ別記事一覧
+            .navigationDestination(for: TagFilteredDestination.self) { dest in
+                TagFilteredListView(tagName: dest.tagName)
             }
             // V3.0 polish (2026-05-27): 「最近の Know」ヘッドライン tap → 詳細画面
             .navigationDestination(for: RecentLearningDetailDestination.self) { dest in

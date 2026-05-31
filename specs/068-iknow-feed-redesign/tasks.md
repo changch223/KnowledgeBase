@@ -32,3 +32,17 @@ T001→T002→T003 / T002→T007 / T004+T005→T006→T007 / T007→T008 / Phase
 
 ## 実装戦略
 Phase 1 (純ロジック、テスト可) を先に固める → Phase 2 (カード) → Phase 3 (統合)。一度に大量 Edit せず build 確認。最終 commit はユーザー指示後。アイコンは newspaper 維持 (好みで後変更)。
+
+## Phase 5: v2 改訂 (ユーザー対話、2026-06-06)
+- [x] **T014** For You Wiki 横棚を一番上に固定 (Wiki のみ、recommend に空 articles)
+- [x] **T015** 縦 mix に カテゴリー/タグ ハイライトカード追加 (FeedItem 2 case + highlights/interleaveHighlights 純関数)
+- [x] **T016** CategoryHighlightCard / TagHighlightCard 新規 (アイコンで区別、色なし、tap→既存 destination)
+- [x] **T017** KnowledgeClipView 統合 (@Query allTags + highlight 配線 + TagFilteredDestination navigationDestination)
+- [x] **T018** xcstrings (feed.category.counts / feed.tag.total / feed.highlight.recent)
+- [x] **T019** FeedBuilderTests +3 (highlights category / 小カテゴリ除外 / interleave)
+- [x] **T020** build + 全 test PASS (iPhone 17 Simulator)
+- [ ] **T021** 実機検証 (ユーザー、For You Wiki 上部固定 / 4 種カード / 今週+N / カテゴリ・タグ tap 遷移)
+
+## 判定基準メモ
+「最近伸びてる」= 直近 7 日 (highlightRecentWindowDays) に追加された記事数 = 「今週 +N」。
+記事少 (recentCount=0) なら「今週 +N」chip は非表示、カテゴリ名+総数のみ表示。
