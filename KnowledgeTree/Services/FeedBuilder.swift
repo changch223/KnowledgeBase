@@ -1,0 +1,101 @@
+//
+//  FeedBuilder.swift
+//  KnowledgeTree
+//
+//  spec 066 (LLM Wiki) — News+ 風フィードを組み立てる純粋ロジック service。
+//  記事 (savedAt 降順) と Wiki 更新 (ConceptPage、最近更新 + 本文あり) を sortDate で
+//  時系列 merge する。AI 呼び出しゼロ (SwiftData fetch + merge のみ = VISION 軽さ優先)。
+//
+
+import Foundation
+import SwiftData
+
+@MainActor
+protocol FeedBuilding {
+    /// フィード 1 画面分のカード列を時系列降順で返す。
+    func build() -> [FeedItem]
+}
+
+@MainActor
+final class FeedBuilder: FeedBuilding {
+
+    /// Wiki 更新カードを出す直近日数 (過去すぎる更新は出さない = 情報過多防止)。
+    static let wikiUpdateWindowDays = 14
+    /// 記事 fetch 上限。
+    static let maxArticles = 60
+    /// Wiki 更新カード上限。
+    static let maxWikiUpdates = 20
+    /// 周期ダイジェストを差し込む間隔 (この件数ごとに 1 枚、P2)。0 で無効。
+    static let periodicDigestEvery = 12
+    /// 周期ダイジェストに束ねる Wiki 上限。
+    static let periodicDigestSize = 5
+
+    private let context: ModelContext
+    private let now: () -> Date
+
+    init(context: ModelContext, now: @escaping () -> Date = { Date() }) {
+        self.context = context
+        self.now = now
+    }
+
+    func build() -> [FeedItem] {
+        let articles = fetchArticles()
+        let pages = fetchWikiCandidates()
+        return Self.assemble(articles: articles, wikiPages: pages, now: now())
+    }
+
+    /// 純粋 merge ロジック (テスト容易 + View が @Query 結果で直接呼べる = reactive)。
+    /// articles は savedAt 降順、wikiPages は isHidden==false の全候補を渡す前提。
+    static func assemble(articles: [Article], wikiPages: [ConceptPage], now: Date) -> [FeedItem] {
+        let cutoff = now.addingTimeInterval(-Double(wikiUpdateWindowDays) * 86_400)
+        let wikiUpdates = wikiPages
+            .filter { !$0.isHidden }
+            .filter { $0.updatedAt >= cutoff }
+            .filter { !$0.bodyMarkdown.isEmpty || !$0.summary.isEmpty }
+            .sorted { $0.updatedAt > $1.updatedAt }
+            .prefix(maxWikiUpdates)
+            .map { $0 }
+
+        var items: [FeedItem] = articles.prefix(maxArticles).map { .article($0) }
+        items.append(contentsOf: wikiUpdates.map { .wikiUpdate($0) })
+        items.sort { $0.sortDate > $1.sortDate }
+
+        return insertPeriodicDigests(into: items, wikiCandidates: wikiUpdates)
+    }
+
+    // MARK: - Fetch
+
+    private func fetchArticles() -> [Article] {
+        var descriptor = FetchDescriptor<Article>(
+            sortBy: [SortDescriptor(\.savedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = Self.maxArticles
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    /// 非表示でない ConceptPage 全件 (更新ガードは assemble 側で適用)。
+    private func fetchWikiCandidates() -> [ConceptPage] {
+        let descriptor = FetchDescriptor<ConceptPage>(
+            predicate: #Predicate<ConceptPage> { !$0.isHidden },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    // MARK: - 周期ダイジェスト (P2)
+
+    /// periodicDigestEvery 件ごとに、最近更新 Wiki を束ねた振り返りカードを差し込む。
+    /// 候補が足りない / 無効設定なら何もしない (calm UX、過多防止)。
+    private static func insertPeriodicDigests(into items: [FeedItem], wikiCandidates: [ConceptPage]) -> [FeedItem] {
+        guard Self.periodicDigestEvery > 0,
+              wikiCandidates.count >= 2,
+              items.count > Self.periodicDigestEvery else {
+            return items
+        }
+        let digestPages = Array(wikiCandidates.prefix(Self.periodicDigestSize))
+        var result = items
+        let insertAt = min(Self.periodicDigestEvery, result.count)
+        result.insert(.periodicDigest(digestPages), at: insertAt)
+        return result
+    }
+}

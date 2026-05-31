@@ -109,7 +109,7 @@ struct KnowledgeTreeApp: App {
                 // spec 056: 3 タブ構成 V3.0 (起動 default = 知識 Clip)
                 KnowledgeClipView()
                     .tabItem {
-                        Label("clip.tab.title", systemImage: "lightbulb.fill")
+                        Label("clip.tab.title", systemImage: "newspaper.fill")
                     }
                     .tag(AppTab.knowledgeClip)
                     .accessibilityIdentifier("tab.knowledgeClip")
