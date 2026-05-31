@@ -26,6 +26,8 @@ struct CategoryHighlightCard: View {
                     .background(DS.Color.tagFill, in: RoundedRectangle(cornerRadius: DS.Radius.chip))
 
                 VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                    // spec 070: 種別バッジ「分野」
+                    FeedTypeBadge(labelKey: "feed.badge.category", systemImage: "square.grid.2x2.fill")
                     Text(category.name)
                         .font(.headline)
                         .foregroundStyle(.primary)

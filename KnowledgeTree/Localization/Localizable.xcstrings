@@ -2182,6 +2182,46 @@
         }
       }
     },
+    "feed.badge.article": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記事"
+          }
+        }
+      }
+    },
+    "feed.badge.category": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分野"
+          }
+        }
+      }
+    },
+    "feed.badge.tag": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグ"
+          }
+        }
+      }
+    },
+    "feed.badge.wiki": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まとめ"
+          }
+        }
+      }
+    },
     "feed.category.counts": {
       "localizations": {
         "ja": {

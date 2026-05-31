@@ -32,9 +32,14 @@ struct WikiFeedCard: View {
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card))
 
-                Label("feed.wiki.updated", systemImage: "sparkles")
-                    .font(.caption)
-                    .foregroundStyle(DS.Color.actionBlue)
+                // spec 070: 種別バッジ「まとめ」+ 更新印 (kind 名は「まとめ」と重複ゆえ非表示)
+                HStack(spacing: DS.Spacing.xs) {
+                    FeedTypeBadge(labelKey: "feed.badge.wiki", systemImage: page.kind.symbolName)
+                    Label("feed.wiki.updated", systemImage: "sparkles")
+                        .font(.caption2)
+                        .foregroundStyle(DS.Color.actionBlue)
+                        .labelStyle(.titleAndIcon)
+                }
 
                 Label(page.name, systemImage: page.kind.symbolName)
                     .font(.title3)
