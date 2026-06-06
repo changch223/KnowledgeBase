@@ -80,7 +80,13 @@ final class AutoCategoryBackfillRunner {
         // 4. 1 件ずつ classify + save (中断時の部分結果保存のため per-Tag save)
         var processedIndex = 0
         for tag in candidates {
-            let categoryName = await classifier.classify(tagName: tag.name)
+            // spec 072: Tag が付く記事のタイトル/essence を文脈として渡す。
+            let contextText = (tag.articles ?? []).prefix(2)
+                .flatMap { [$0.title, $0.extractedKnowledge?.essence] }
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: " / ")
+            let categoryName = await classifier.classify(tagName: tag.name, context: contextText)
             tag.categoryRaw = categoryName
             try? context.save()
             processedIndex += 1

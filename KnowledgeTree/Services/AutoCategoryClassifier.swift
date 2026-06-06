@@ -24,7 +24,15 @@ struct CategoryClassificationOutput: Sendable {
 protocol AutoCategoryClassifier {
     /// Tag の name を入力に、CategorySeed の category 名を返す。
     /// 失敗 / 不明 → "その他" (= CategorySeed.otherCategory.name)。
-    func classify(tagName: String) async -> String
+    /// spec 072: context (記事タイトル/essence 等) を渡すと文脈込みで分類精度が上がる。nil でタグ名のみ。
+    func classify(tagName: String, context: String?) async -> String
+}
+
+extension AutoCategoryClassifier {
+    /// 後方互換: context なし呼び出し。
+    func classify(tagName: String) async -> String {
+        await classify(tagName: tagName, context: nil)
+    }
 }
 
 /// production 用。Apple Foundation Models で 1 回推論。
@@ -37,7 +45,7 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         self.availabilityChecker = availabilityChecker
     }
 
-    func classify(tagName: String) async -> String {
+    func classify(tagName: String, context: String? = nil) async -> String {
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             logger.debug("classify skipped: empty tagName")
@@ -49,10 +57,24 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
             return CategorySeed.otherCategory.name
         }
 
+        // spec 072: context (記事タイトル/essence) があれば文脈ブロックを足す。
+        let contextBlock: String
+        if let context, !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            contextBlock = "\n\nこのタグが登場した文脈:\n\(String(context.prefix(200)))"
+        } else {
+            contextBlock = ""
+        }
+
         let prompt = """
-            次のタグはどのカテゴリーに属しますか? 候補から 1 つだけ完全一致で返してください。
-            候補: \(CategorySeed.promptCandidatesString)
-            タグ: \(trimmed)
+            次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
+            必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
+            判断に迷う人名・組織名・一般語は「その他」にしてください。
+
+            # カテゴリー候補 (定義と例)
+            \(CategorySeed.promptCandidatesWithDefinitions)
+
+            # 分類するタグ
+            \(trimmed)\(contextBlock)
             """
 
         do {
@@ -89,7 +111,7 @@ final class InMemoryAutoCategoryClassifier: AutoCategoryClassifier {
         self.defaultCategory = defaultCategory
     }
 
-    func classify(tagName: String) async -> String {
+    func classify(tagName: String, context: String? = nil) async -> String {
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !trimmed.isEmpty else { return defaultCategory }
         return mapping[trimmed] ?? defaultCategory

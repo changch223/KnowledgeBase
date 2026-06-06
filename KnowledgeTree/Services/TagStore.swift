@@ -69,8 +69,13 @@ final class TagStore {
         // Tag 作成自体は同期完了済、categorize は非同期で後追い。
         // 失敗しても Tag は残る (graceful)。
         if isNewTag, let classifier = categoryClassifier {
+            // spec 072: 記事のタイトル + essence を文脈として渡し、1 語分類の誤りを減らす。
+            let contextText = [article.title, article.extractedKnowledge?.essence]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: " / ")
             Task { [weak self] in
-                let categoryName = await classifier.classify(tagName: normalized)
+                let categoryName = await classifier.classify(tagName: normalized, context: contextText)
                 await MainActor.run {
                     guard let self else { return }
                     tag.categoryRaw = categoryName

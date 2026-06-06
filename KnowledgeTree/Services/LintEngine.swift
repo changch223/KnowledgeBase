@@ -298,7 +298,13 @@ final class DefaultLintEngine: LintEngineProtocol {
         var reclassifyCount = 0
 
         for tag in tags {
-            let predicted = await classifier.classify(tagName: tag.name)
+            // spec 072: Tag が付く記事の文脈を渡して再分類精度を上げる。
+            let contextText = (tag.articles ?? []).prefix(2)
+                .flatMap { [$0.title, $0.extractedKnowledge?.essence] }
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: " / ")
+            let predicted = await classifier.classify(tagName: tag.name, context: contextText)
             let predictedNonEmpty = !predicted.isEmpty && predicted != "その他"
             let currentRaw = tag.categoryRaw ?? ""
 
