@@ -212,6 +212,11 @@ struct KnowledgeTreeApp: App {
         // 二重 bootstrap 抑止: scene 復帰時の .task 再実行で backfill が重複しないように。
         guard serviceContainer.knowledgeService == nil else { return }
 
+        // spec 071: token 実測診断 (デバッグ専用、生成は呼ばない)。入力 truncate 緩和の数値根拠用。
+        #if DEBUG
+        await TokenBudgetProbe.runDiagnostics()
+        #endif
+
         let context = sharedModelContainer.mainContext
 
         // spec 009: ChunkProgressStore (incremental 永続化)
