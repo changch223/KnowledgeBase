@@ -18,6 +18,40 @@ import Foundation
 import SwiftData
 import os
 
+// MARK: - 概念合成の直列化ゲート (再入安全)
+
+/// 概念合成 (ConceptPage の upsert / 再合成) を **プロセス全体で 1 本ずつ直列化**する gate。
+///
+/// 背景: KnowledgeExtractionService の extract hook は記事ごとに `Task { ingestArticle }` を
+/// fire-and-forget する。通常運用では問題ないが、全記事一括再処理 (DebugReprocessButton) で
+/// 数十件の hook が同時発火すると、各 Task が共有 ModelContext 上で ConceptPage の
+/// fetch / mutate / delete を競合し、"backing data was detached from a context" クラッシュを起こす。
+///
+/// 対策: 別タスク同士は semaphore(1) で直列化。ただし `ingestArticle → processConceptHierarchy
+/// → resynthesizeAllStale → resynthesize → fallback.resynthesize` と同一タスク内で多段再入する
+/// ため、`@TaskLocal isHeld` で「既にこのタスクチェーンが gate を保持中」を検知し、再取得を
+/// スキップする (= deadlock 回避)。`Task {}` 越しには isHeld は伝播するが、hook は gate の外で
+/// 生成されるので各 hook は isHeld=false で開始し、確実に直列化される。
+enum ConceptSynthesisGate {
+    static let semaphore = AsyncSemaphore(1)
+
+    @TaskLocal static var isHeld = false
+
+    /// gate 配下で `operation` を実行。同一タスクチェーンで既に保持中なら再取得しない。
+    @MainActor
+    static func run<T>(_ operation: () async -> T) async -> T {
+        if isHeld {
+            return await operation()
+        }
+        await semaphore.acquire()
+        let result = await $isHeld.withValue(true) {
+            await operation()
+        }
+        await semaphore.release()
+        return result
+    }
+}
+
 // MARK: - Protocol
 
 @MainActor
@@ -68,26 +102,30 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
     }
 
     func processNewArticle(article: Article) async {
-        ConceptSynthesisCommon.processNewArticle(
-            article: article,
-            context: context,
-            refreshTrigger: refreshTrigger,
-            logger: logger
-        )
-        // spec 042 fix: 同セッション内で summary を生成 (BGTask 待たない)
-        // fetchLimit=5 で bounded、Fallback 経路は AI 不使用なので軽量
-        await resynthesizeAllStale()
+        await ConceptSynthesisGate.run {
+            ConceptSynthesisCommon.processNewArticle(
+                article: article,
+                context: context,
+                refreshTrigger: refreshTrigger,
+                logger: logger
+            )
+            // spec 042 fix: 同セッション内で summary を生成 (BGTask 待たない)
+            // fetchLimit=5 で bounded、Fallback 経路は AI 不使用なので軽量
+            await resynthesizeAllStale()
+        }
     }
 
     func processConceptHierarchy(article: Article, hierarchy: ConceptHierarchyOutput) async {
-        ConceptSynthesisCommon.processConceptHierarchy(
-            article: article,
-            hierarchy: hierarchy,
-            context: context,
-            refreshTrigger: refreshTrigger,
-            logger: logger
-        )
-        await resynthesizeAllStale()
+        await ConceptSynthesisGate.run {
+            ConceptSynthesisCommon.processConceptHierarchy(
+                article: article,
+                hierarchy: hierarchy,
+                context: context,
+                refreshTrigger: refreshTrigger,
+                logger: logger
+            )
+            await resynthesizeAllStale()
+        }
     }
 
     func ingestArticle(_ article: Article) async {
@@ -96,6 +134,10 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
     }
 
     func resynthesize(_ conceptPage: ConceptPage) async {
+        await ConceptSynthesisGate.run { await self._resynthesize(conceptPage) }
+    }
+
+    private func _resynthesize(_ conceptPage: ConceptPage) async {
         let articles = (conceptPage.relatedArticles ?? []).sorted { $0.savedAt > $1.savedAt }
         // ① 自己修復: categoryRaw を relatedArticles から再計算。
         ConceptSynthesisCommon.healCategory(conceptPage, articles: articles)
@@ -120,20 +162,22 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
     }
 
     func resynthesizeAllStale() async {
-        // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
-        // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
-        let allDescriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.isStale == true }
-        )
-        guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
+        await ConceptSynthesisGate.run {
+            // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
+            // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
+            let allDescriptor = FetchDescriptor<ConceptPage>(
+                predicate: #Predicate { $0.isStale == true }
+            )
+            guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
 
-        let sorted = allStale.sorted { lhs, rhs in
-            let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
-            let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
-            return lhsLatest > rhsLatest
-        }
-        for page in sorted.prefix(5) {
-            await resynthesize(page)
+            let sorted = allStale.sorted { lhs, rhs in
+                let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+                let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+                return lhsLatest > rhsLatest
+            }
+            for page in sorted.prefix(5) {
+                await _resynthesize(page)
+            }
         }
     }
 
@@ -210,50 +254,56 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     }
 
     func processNewArticle(article: Article) async {
-        // entity スキャン + ConceptPage 生成 / isStale toggle は availability に依存しない (DB 操作のみ)。
-        ConceptSynthesisCommon.processNewArticle(
-            article: article,
-            context: context,
-            refreshTrigger: refreshTrigger,
-            logger: logger
-        )
-        // spec 042 fix: 同セッション内で summary を生成 (BGTask 待たない、UI に「整理中…」が残らない)
-        // fetchLimit=5 で bounded、availability=false → fallback 経路で軽量 essence 並べ summary
-        await resynthesizeAllStale()
+        await ConceptSynthesisGate.run {
+            // entity スキャン + ConceptPage 生成 / isStale toggle は availability に依存しない (DB 操作のみ)。
+            ConceptSynthesisCommon.processNewArticle(
+                article: article,
+                context: context,
+                refreshTrigger: refreshTrigger,
+                logger: logger
+            )
+            // spec 042 fix: 同セッション内で summary を生成 (BGTask 待たない、UI に「整理中…」が残らない)
+            // fetchLimit=5 で bounded、availability=false → fallback 経路で軽量 essence 並べ summary
+            await resynthesizeAllStale()
+        }
     }
 
     func processConceptHierarchy(article: Article, hierarchy: ConceptHierarchyOutput) async {
-        // upsert は DB 操作のみで availability 非依存。
-        ConceptSynthesisCommon.processConceptHierarchy(
-            article: article,
-            hierarchy: hierarchy,
-            context: context,
-            refreshTrigger: refreshTrigger,
-            logger: logger
-        )
-        await resynthesizeAllStale()
+        await ConceptSynthesisGate.run {
+            // upsert は DB 操作のみで availability 非依存。
+            ConceptSynthesisCommon.processConceptHierarchy(
+                article: article,
+                hierarchy: hierarchy,
+                context: context,
+                refreshTrigger: refreshTrigger,
+                logger: logger
+            )
+            await resynthesizeAllStale()
+        }
     }
 
     func ingestArticle(_ article: Article) async {
-        // AI 不可 → entity 共起の従来パスに degrade。
-        guard availability.isAvailable else {
-            await processNewArticle(article: article)
-            return
-        }
-        do {
-            let prompt = buildConceptHierarchyPrompt(article: article)
-            let hierarchy = try await session.generateConceptHierarchy(prompt: prompt)
-            let broad = hierarchy.broadConcept.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard broad.count >= ConceptSynthesisCommon.minEntityNameLength else {
-                // AI が広い概念を出せなかった → 従来パスに degrade
-                logger.notice("concept hierarchy empty broad for article, fallback to entity path")
+        await ConceptSynthesisGate.run {
+            // AI 不可 → entity 共起の従来パスに degrade。
+            guard availability.isAvailable else {
                 await processNewArticle(article: article)
                 return
             }
-            await processConceptHierarchy(article: article, hierarchy: hierarchy)
-        } catch {
-            logger.error("concept hierarchy extraction failed: \(String(describing: error), privacy: .public)")
-            await processNewArticle(article: article)
+            do {
+                let prompt = buildConceptHierarchyPrompt(article: article)
+                let hierarchy = try await session.generateConceptHierarchy(prompt: prompt)
+                let broad = hierarchy.broadConcept.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard broad.count >= ConceptSynthesisCommon.minEntityNameLength else {
+                    // AI が広い概念を出せなかった → 従来パスに degrade
+                    logger.notice("concept hierarchy empty broad for article, fallback to entity path")
+                    await processNewArticle(article: article)
+                    return
+                }
+                await processConceptHierarchy(article: article, hierarchy: hierarchy)
+            } catch {
+                logger.error("concept hierarchy extraction failed: \(String(describing: error), privacy: .public)")
+                await processNewArticle(article: article)
+            }
         }
     }
 
@@ -303,6 +353,10 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     """
 
     func resynthesize(_ conceptPage: ConceptPage) async {
+        await ConceptSynthesisGate.run { await self._resynthesize(conceptPage) }
+    }
+
+    private func _resynthesize(_ conceptPage: ConceptPage) async {
         guard availability.isAvailable else {
             await fallback.resynthesize(conceptPage)
             return
@@ -548,20 +602,22 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     }
 
     func resynthesizeAllStale() async {
-        // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
-        // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
-        let allDescriptor = FetchDescriptor<ConceptPage>(
-            predicate: #Predicate { $0.isStale == true }
-        )
-        guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
+        await ConceptSynthesisGate.run {
+            // spec 058 polish: 最新優先 (関連 Article の最新 savedAt で sort)
+            // 新しい記事に紐付く概念から先に summary 生成、ユーザーは保存後すぐ概要を見られる。
+            let allDescriptor = FetchDescriptor<ConceptPage>(
+                predicate: #Predicate { $0.isStale == true }
+            )
+            guard let allStale = try? context.fetch(allDescriptor), !allStale.isEmpty else { return }
 
-        let sorted = allStale.sorted { lhs, rhs in
-            let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
-            let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
-            return lhsLatest > rhsLatest
-        }
-        for page in sorted.prefix(5) {
-            await resynthesize(page)
+            let sorted = allStale.sorted { lhs, rhs in
+                let lhsLatest = (lhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+                let rhsLatest = (rhs.relatedArticles ?? []).map(\.savedAt).max() ?? .distantPast
+                return lhsLatest > rhsLatest
+            }
+            for page in sorted.prefix(5) {
+                await _resynthesize(page)
+            }
         }
     }
 

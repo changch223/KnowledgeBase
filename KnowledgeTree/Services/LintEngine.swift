@@ -20,8 +20,13 @@ import os
 
 @MainActor
 protocol LintEngineProtocol: AnyObject {
-    /// 6 step 全実行。LintLoopResult で各 step の件数 + 所要時間を返す。
+    /// 1 周 (全タグ) を完走するまで batch を回す。週 1 BGTask / ボタン「今すぐ整理」用。
+    /// resumable: 途中で中断されても、次回呼び出しは前回の続き (未処理タグ) から再開する。
     func runFullLintLoop() async -> LintLoopResult
+
+    /// spec 076: 1 バッチだけ進める (起動時の軽い整理 / ボタンの逐次反映用)。
+    /// 新周回なら速い step1-4 を 1 回実行 + 周回マーカー設定。step5 は lastLintedAt 古い順 maxTags 件。
+    func runBatch(maxTags: Int) async -> LintLoopResult
 }
 
 /// LintEngine 1 回実行の結果サマリ。
@@ -33,10 +38,45 @@ struct LintLoopResult {
     var reclassifiedCount: Int = 0
     var refreshedSavedAnswerCount: Int = 0
     var elapsedSeconds: Double = 0
+    /// spec 076: この batch で 1 周 (全タグ) を完走したか。
+    var loopComplete: Bool = false
+    /// spec 076: 今周回でまだ整理していないタグ数 (進捗表示用、batch 後の残り)。
+    var remainingTags: Int = 0
 
     var totalOperations: Int {
         mergedCount + deletedConceptPageCount + deletedTagCount + linkedCount + reclassifiedCount + refreshedSavedAnswerCount
     }
+}
+
+// MARK: - spec 076: 周回マーカー (resumable 整理ループ用)
+
+/// 「今の整理周回の開始日時」を保持。Tag.lastLintedAt がこれより古い/nil なら今周回の未処理。
+/// 周回完了で nil に戻し、次 batch が新周回を開始する。
+@MainActor
+protocol LintLoopMarkerStoring: AnyObject {
+    var loopStartedAt: Date? { get set }
+}
+
+/// UserDefaults 永続化 (アプリ再起動を跨いで周回を継続)。
+@MainActor
+final class UserDefaultsLintLoopMarker: LintLoopMarkerStoring {
+    private let key = "lint.loopStartedAt.v1"
+    private let defaults: UserDefaults
+    nonisolated init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    var loopStartedAt: Date? {
+        get { defaults.object(forKey: key) as? Date }
+        set {
+            if let newValue { defaults.set(newValue, forKey: key) }
+            else { defaults.removeObject(forKey: key) }
+        }
+    }
+}
+
+/// テスト用 in-memory マーカー。
+@MainActor
+final class InMemoryLintLoopMarker: LintLoopMarkerStoring {
+    var loopStartedAt: Date?
+    init(loopStartedAt: Date? = nil) { self.loopStartedAt = loopStartedAt }
 }
 
 @MainActor
@@ -61,51 +101,92 @@ final class DefaultLintEngine: LintEngineProtocol {
     private let chatService: ChatServiceProtocol?
     /// 1 回の loop で最大 N 件 SavedAnswer を refresh (token cost / 時間制限内)
     private let maxRefreshPerRun: Int = 3
+    /// spec 076: 周回マーカー (resumable)
+    private let loopMarker: LintLoopMarkerStoring
+    /// spec 076: 1 batch で再分類するタグ数の既定
+    private let defaultBatchSize: Int
 
     init(
         context: ModelContext,
         refreshTrigger: RefreshTrigger? = nil,
         categoryClassifier: AutoCategoryClassifier? = nil,
         chatService: ChatServiceProtocol? = nil,
-        inactiveCleanupDays: Int = 60
+        inactiveCleanupDays: Int = 60,
+        loopMarker: LintLoopMarkerStoring = UserDefaultsLintLoopMarker(),
+        defaultBatchSize: Int = 15
     ) {
         self.context = context
         self.refreshTrigger = refreshTrigger
         self.categoryClassifier = categoryClassifier
         self.chatService = chatService
         self.inactiveCleanupDays = inactiveCleanupDays
+        self.loopMarker = loopMarker
+        self.defaultBatchSize = defaultBatchSize
     }
 
+    /// 1 周完走するまで batch を回す。resumable (中断後は続きから)。週1 BGTask / ボタン用。
     func runFullLintLoop() async -> LintLoopResult {
+        let start = Date.now
+        var total = LintLoopResult()
+        logger.notice("LintEngine: starting full loop (resumable batches)")
+
+        var guardCount = 0
+        while true {
+            if Task.isCancelled { break }
+            let batch = await runBatch(maxTags: defaultBatchSize)
+            total.mergedCount += batch.mergedCount
+            total.deletedConceptPageCount += batch.deletedConceptPageCount
+            total.deletedTagCount += batch.deletedTagCount
+            total.linkedCount += batch.linkedCount
+            total.reclassifiedCount += batch.reclassifiedCount
+            total.refreshedSavedAnswerCount += batch.refreshedSavedAnswerCount
+            total.remainingTags = batch.remainingTags
+            guardCount += 1
+            if batch.loopComplete { total.loopComplete = true; break }
+            if guardCount > 1000 { break }  // 暴走 backstop
+        }
+
+        total.elapsedSeconds = Date.now.timeIntervalSince(start)
+        logger.notice("LintEngine: full loop done in \(total.elapsedSeconds)s, ops=\(total.totalOperations), complete=\(total.loopComplete)")
+        return total
+    }
+
+    /// spec 076: 1 batch だけ進める。新周回なら速い step1-4 + マーカー設定、step5 を古い順 maxTags 件。
+    /// remainingTags=0 で 1 周完走 → マーカー clear (次 batch が新周回)。
+    func runBatch(maxTags: Int) async -> LintLoopResult {
         let start = Date.now
         var result = LintLoopResult()
 
-        logger.notice("LintEngine: starting full loop")
+        // 新周回の開始: マーカー未設定なら今を開始時刻に + 速い純DB step を 1 回だけ回す。
+        let isNewLoop = (loopMarker.loopStartedAt == nil)
+        if isNewLoop {
+            loopMarker.loopStartedAt = .now
+            logger.notice("LintEngine: new lint loop started")
+            result.mergedCount = await stepMergeDuplicateConceptPages()
+            result.deletedConceptPageCount = await stepDeleteOrphanedConceptPages()
+            result.deletedTagCount = await stepDeleteOrphanedTags()
+            result.linkedCount = await stepLinkOrphanedConceptPages()
+        }
+        let loopStart = loopMarker.loopStartedAt ?? .now
 
-        // Step 1: ConceptPage merge (重複統合)
-        result.mergedCount = await stepMergeDuplicateConceptPages()
+        // Step 5 (batched): lastLintedAt が nil or < loopStart のタグを古い順 maxTags 件
+        let (reclassified, remaining) = await reclassifyTagBatch(maxTags: maxTags, loopStart: loopStart)
+        result.reclassifiedCount = reclassified
+        result.remainingTags = remaining
 
-        // Step 2: ConceptPage delete (孤立 cleanup)
-        result.deletedConceptPageCount = await stepDeleteOrphanedConceptPages()
-
-        // Step 3: Tag delete (orphan cleanup)
-        result.deletedTagCount = await stepDeleteOrphanedTags()
-
-        // Step 4: ConceptPage link 強化
-        result.linkedCount = await stepLinkOrphanedConceptPages()
-
-        // Step 5: Tag/Category 再分類
-        result.reclassifiedCount = await stepReclassifyTagCategories()
-
-        // Step 6: SavedAnswer auto-refresh (spec 058 Phase C)
+        // Step 6: SavedAnswer auto-refresh (周回中に少しずつ、既存 cap)
         result.refreshedSavedAnswerCount = await stepRefreshStaleSavedAnswers()
 
-        // LintLog cap 維持 (FIFO で最古から削除)
-        trimLintLogToCap()
+        // 1 周完走: マーカーを clear → 次 batch が新周回を始める (NEVER STOP)
+        if remaining == 0 {
+            loopMarker.loopStartedAt = nil
+            result.loopComplete = true
+            trimLintLogToCap()
+            logger.notice("LintEngine: lint loop complete (全タグ整理済)")
+        }
 
         result.elapsedSeconds = Date.now.timeIntervalSince(start)
-        logger.notice("LintEngine: loop done in \(result.elapsedSeconds)s, ops=\(result.totalOperations)")
-        refreshTrigger?.bump()
+        refreshTrigger?.bump()  // 各 batch で UI 反映
         return result
     }
 
@@ -292,12 +373,20 @@ final class DefaultLintEngine: LintEngineProtocol {
 
     // MARK: - Step 5: Tag/Category 再分類
 
-    private func stepReclassifyTagCategories() async -> Int {
-        guard let classifier = categoryClassifier else { return 0 }
-        let tags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+    /// spec 076: 今周回の未処理タグ (lastLintedAt が nil or < loopStart) を古い順 maxTags 件だけ再分類。
+    /// 戻り値: (今回再分類で変化した件数, この batch 後に残っている未処理タグ数)。
+    private func reclassifyTagBatch(maxTags: Int, loopStart: Date) async -> (reclassified: Int, remaining: Int) {
+        guard let classifier = categoryClassifier else { return (0, 0) }
+        let allTags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+
+        // 今周回の未処理 = lastLintedAt が nil または loopStart より前
+        let pending = allTags
+            .filter { ($0.lastLintedAt ?? .distantPast) < loopStart }
+            .sorted { ($0.lastLintedAt ?? .distantPast) < ($1.lastLintedAt ?? .distantPast) }
+        let batch = Array(pending.prefix(maxTags))
         var reclassifyCount = 0
 
-        for tag in tags {
+        for tag in batch {
             // spec 072: Tag が付く記事の文脈を渡して再分類精度を上げる。
             let contextText = (tag.articles ?? []).prefix(2)
                 .flatMap { [$0.title, $0.extractedKnowledge?.essence] }
@@ -308,8 +397,6 @@ final class DefaultLintEngine: LintEngineProtocol {
             let predictedNonEmpty = !predicted.isEmpty && predicted != "その他"
             let currentRaw = tag.categoryRaw ?? ""
 
-            // 既存値が空 → 予測を採用
-            // 既存値が「その他」以外 → 予測も「その他」以外で違うなら更新 (idempotent: 同じなら skip)
             if currentRaw.isEmpty, predictedNonEmpty {
                 tag.categoryRaw = predicted
                 logLintAction(.reclassifyTag, targetName: tag.name, before: "(none)", after: predicted)
@@ -319,9 +406,13 @@ final class DefaultLintEngine: LintEngineProtocol {
                 tag.categoryRaw = predicted
                 reclassifyCount += 1
             }
+            // 分類が変わらなくても「処理済」マーク (周回が前進する)。
+            tag.lastLintedAt = .now
         }
         try? context.save()
-        return reclassifyCount
+
+        let remaining = max(0, pending.count - batch.count)
+        return (reclassifyCount, remaining)
     }
 
     // MARK: - Step 6: SavedAnswer auto-refresh (spec 058 Phase C)

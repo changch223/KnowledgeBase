@@ -45,7 +45,7 @@ struct LintEngineTests {
         context.insert(page2)
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         // 1 件 merge
@@ -76,7 +76,7 @@ struct LintEngineTests {
         context.insert(page2)
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         _ = await engine.runFullLintLoop()
         let result2 = await engine.runFullLintLoop()
 
@@ -96,7 +96,7 @@ struct LintEngineTests {
         context.insert(page2)
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         #expect(result.mergedCount == 0)  // category 違いで merge しない
@@ -130,7 +130,7 @@ struct LintEngineTests {
 
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         // 2 件削除 (orphan + almostOrphan)、protected は残る
@@ -155,7 +155,7 @@ struct LintEngineTests {
         context.insert(article)
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         #expect(result.deletedTagCount == 1)
@@ -180,7 +180,7 @@ struct LintEngineTests {
         context.insert(page3)
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         // 3 件全てに link 追加された
@@ -200,7 +200,7 @@ struct LintEngineTests {
         context.insert(page2)
         try context.save()
 
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         _ = await engine.runFullLintLoop()
 
         let logs = (try? context.fetch(FetchDescriptor<LintLog>())) ?? []
@@ -216,7 +216,7 @@ struct LintEngineTests {
         let context = container.mainContext
 
         // 何もデータなし
-        let engine = DefaultLintEngine(context: context)
+        let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         #expect(result.totalOperations == 0)
@@ -235,9 +235,87 @@ struct LintEngineTests {
         try context.save()
 
         // 閾値 3 日 → 削除候補
-        let engine = DefaultLintEngine(context: context, inactiveCleanupDays: 3)
+        let engine = DefaultLintEngine(context: context, inactiveCleanupDays: 3, loopMarker: InMemoryLintLoopMarker())
         let result = await engine.runFullLintLoop()
 
         #expect(result.deletedConceptPageCount == 1)
+    }
+
+    // MARK: - spec 076: resumable バッチ整理
+
+    @Test func testReclassifyBatchIsResumable() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // 5 タグ (categoryRaw nil)、各タグに記事 1 件付けて orphan 削除を回避。
+        for i in 0..<5 {
+            let tag = KnowledgeTree.Tag(name: "tag\(i)")
+            context.insert(tag)
+            let article = Article(url: "https://example.com/\(i)", title: "記事\(i)", savedAt: .now)
+            context.insert(article)
+            tag.articles = [article]
+        }
+        try context.save()
+
+        let classifier = InMemoryAutoCategoryClassifier(mapping: [:], defaultCategory: "テクノロジー")
+        let marker = InMemoryLintLoopMarker()
+        let engine = DefaultLintEngine(
+            context: context,
+            categoryClassifier: classifier,
+            loopMarker: marker
+        )
+
+        // batch1: 2 件処理、残り 3、未完走、周回マーカー設定
+        let b1 = await engine.runBatch(maxTags: 2)
+        #expect(b1.reclassifiedCount == 2)
+        #expect(b1.remainingTags == 3)
+        #expect(b1.loopComplete == false)
+        #expect(marker.loopStartedAt != nil)
+
+        // batch2: さらに 2 件、残り 1
+        let b2 = await engine.runBatch(maxTags: 2)
+        #expect(b2.remainingTags == 1)
+        #expect(b2.loopComplete == false)
+
+        // batch3: 残り 1 件処理 → 1 周完走、マーカー clear
+        let b3 = await engine.runBatch(maxTags: 2)
+        #expect(b3.remainingTags == 0)
+        #expect(b3.loopComplete == true)
+        #expect(marker.loopStartedAt == nil)
+
+        // 全タグが処理済 (lastLintedAt set) + テクノロジー に分類済
+        let tags = try context.fetch(FetchDescriptor<KnowledgeTree.Tag>())
+        #expect(tags.count == 5)
+        #expect(tags.allSatisfy { $0.lastLintedAt != nil })
+        #expect(tags.allSatisfy { $0.categoryRaw == "テクノロジー" })
+    }
+
+    @Test func testRunBatchResumesFromInterruptedLoop() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        for i in 0..<4 {
+            let tag = KnowledgeTree.Tag(name: "t\(i)")
+            context.insert(tag)
+            let article = Article(url: "https://example.com/r\(i)", title: "r\(i)", savedAt: .now)
+            context.insert(article)
+            tag.articles = [article]
+        }
+        try context.save()
+
+        let classifier = InMemoryAutoCategoryClassifier(mapping: [:], defaultCategory: "テクノロジー")
+        let marker = InMemoryLintLoopMarker()
+        let engine = DefaultLintEngine(context: context, categoryClassifier: classifier, loopMarker: marker)
+
+        // 2 件だけ処理して「中断」(loopComplete=false、マーカーは残る)
+        let b1 = await engine.runBatch(maxTags: 2)
+        #expect(b1.loopComplete == false)
+        let started = marker.loopStartedAt
+        #expect(started != nil)
+
+        // 次の batch は新周回でなく「続き」: マーカーは据え置きで残り 2 件を処理して完走
+        let b2 = await engine.runBatch(maxTags: 10)
+        #expect(marker.loopStartedAt == started || marker.loopStartedAt == nil)  // 完走で nil
+        #expect(b2.loopComplete == true)
+        #expect(b2.reclassifiedCount == 2)  // 続きの 2 件だけ (最初の 2 件は再処理しない)
     }
 }

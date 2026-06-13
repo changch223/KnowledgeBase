@@ -21,10 +21,17 @@ final class Tag {
     /// SwiftData lightweight migration で既存 Tag は nil 初期化、AutoCategoryBackfillRunner が後追い分類。
     var categoryRaw: String?
 
-    init(name: String, categoryRaw: String? = nil) {
+    /// spec 076: resumable 整理ループ用「最後に Lint で再分類した日時」。
+    /// nil = 一度も整理していない。古い順に N 件ずつ処理し、周回マーカー (loopStartedAt) より
+    /// 古い/nil を「今周回の未処理」とみなす。アプリ再起動を跨いで続きから再開できる
+    /// (CloudKit lightweight migration 安全 = default nil)。
+    var lastLintedAt: Date? = nil
+
+    init(name: String, categoryRaw: String? = nil, lastLintedAt: Date? = nil) {
         // name は呼び出し側で必ず TagNormalizer.normalize 済を渡すこと。
         // 防御的に再正規化までは行わない (パフォーマンス + 呼び出し責務明示)。
         self.name = name
         self.categoryRaw = categoryRaw
+        self.lastLintedAt = lastLintedAt
     }
 }
