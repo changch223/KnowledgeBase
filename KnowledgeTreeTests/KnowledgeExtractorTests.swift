@@ -294,6 +294,27 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         }
     }
 
+    /// 案A: chunk 抽出用小型スキーマ。デフォルトは nextResult から essence/keyFacts/entities を流用。
+    var nextChunkResult: Result<ChunkKnowledgeOutput, Error>?
+    private(set) var chunkCallCount = 0
+    func generateChunkKnowledge(prompt: String) async throws -> ChunkKnowledgeOutput {
+        chunkCallCount += 1
+        lastPrompt = prompt
+        if let nextChunkResult {
+            switch nextChunkResult {
+            case .success(let output): return output
+            case .failure(let error): throw error
+            }
+        }
+        // デフォルト: nextResult (ExtractedKnowledgeOutput) があれば中身を流用、無ければ fixture
+        switch nextResult {
+        case .success(let o):
+            return ChunkKnowledgeOutput(essence: o.essence, keyFacts: o.keyFacts, entities: o.entities)
+        case .failure(let error):
+            throw error
+        }
+    }
+
     func generateDigest(prompt: String) async throws -> DigestOutput {
         digestCallCount += 1
         lastDigestPrompt = prompt
@@ -409,6 +430,21 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
             return nextAgentActions.removeFirst()
         }
         return defaultAgentAction
+    }
+
+    // spec 074 (概念階層): 広い概念 + 具体概念の抽出
+    var nextConceptHierarchyResult: Result<ConceptHierarchyOutput, Error> = .success(
+        ConceptHierarchyOutput(broadConcept: "", specificConcepts: [])
+    )
+    private(set) var conceptHierarchyCallCount = 0
+    var lastConceptHierarchyPrompt: String?
+    func generateConceptHierarchy(prompt: String) async throws -> ConceptHierarchyOutput {
+        conceptHierarchyCallCount += 1
+        lastConceptHierarchyPrompt = prompt
+        switch nextConceptHierarchyResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
     }
 }
 

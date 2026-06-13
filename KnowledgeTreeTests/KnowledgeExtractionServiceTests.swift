@@ -155,7 +155,7 @@ struct KnowledgeExtractionServiceTests {
 
     // MARK: - spec 042: ConceptPage hook 検証
 
-    /// extract 末尾で conceptSynthesisService.processNewArticle が呼ばれる (single パス)
+    /// extract 末尾で conceptSynthesisService.ingestArticle が呼ばれる (single パス、spec 074 で hook 変更)
     @Test func extractInvokesConceptSynthesisHookOnSingleShot() async {
         let mockConcept = MockConceptSynthesisService()
         let (service, _, _) = makeService(conceptSynthesisService: mockConcept)
@@ -166,7 +166,7 @@ struct KnowledgeExtractionServiceTests {
         // fire-and-forget Task の完了を待つために短時間 sleep
         try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
 
-        #expect(mockConcept.processNewArticleCallCount == 1)
+        #expect(mockConcept.ingestArticleCallCount == 1)
     }
 
     /// hook が nil でも extract が正常完了する (後方互換)
@@ -185,11 +185,15 @@ struct KnowledgeExtractionServiceTests {
 @MainActor
 final class MockConceptSynthesisService: ConceptSynthesisServiceProtocol {
     var processNewArticleCallCount = 0
+    var ingestArticleCallCount = 0
+    var processConceptHierarchyCallCount = 0
     var resynthesizeCallCount = 0
     var resynthesizeAllStaleCallCount = 0
     var backfillCallCount = 0
 
     func processNewArticle(article: Article) async { processNewArticleCallCount += 1 }
+    func ingestArticle(_ article: Article) async { ingestArticleCallCount += 1 }
+    func processConceptHierarchy(article: Article, hierarchy: ConceptHierarchyOutput) async { processConceptHierarchyCallCount += 1 }
     func resynthesize(_ conceptPage: ConceptPage) async { resynthesizeCallCount += 1 }
     func resynthesizeAllStale() async { resynthesizeAllStaleCallCount += 1 }
     func backfillFromExistingArticles() async { backfillCallCount += 1 }

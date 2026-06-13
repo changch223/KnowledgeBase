@@ -27,7 +27,10 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
     private let processingMonitor: ProcessingMonitor?
     private let minimumTextLength: Int
     private let extractionVersion: Int
-    /// spec 006: chunked パスに切り替える本文長の閾値。これ以下は単発パス。
+    /// 単発パス (full schema 1 回) に乗せる本文長の閾値。これ以下は単発、超えたら chunked。
+    /// 案A: full schema は出力予約が大きく窓を食うので閾値は小さく保つ (単発は短い記事専用)。
+    private let singleShotMaxChars: Int
+    /// chunked パスの 1 chunk あたり最大文字数 (小型スキーマ ChunkKnowledgeOutput なので大きめに取れる)。
     private let chunkSizeChars: Int
     /// spec 006: 1 記事あたりの最大 chunk 数。10000 文字超は冒頭 10 chunk のみ要約。
     /// spec 010 で default を 30 に拡張 (階層化対応で 30000 文字までフルカバー)。
@@ -58,10 +61,11 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         processingMonitor: ProcessingMonitor? = nil,
         minimumTextLength: Int = 200,
         extractionVersion: Int = 1,
-        // spec 051 spike: 1000 → 600 / V3.0 polish: 600 → 400 に縮小。
-        // 実機ログで 600 字 chunked extraction でも英語翻訳後 + Generable schema で 4089-4095 tokens 連発、
-        // 4096 限界に貼り付いて多数 chunk が失敗。400 字 ≈ 600 tokens まで下げて margin 1.5x 確保。
-        chunkSizeChars: Int = 400,
+        // 案A (2026-06-12): 単発パスは full schema (出力予約大) なので閾値を 400 に抑える (短い記事専用)。
+        singleShotMaxChars: Int = 400,
+        // 案A: chunked パスは小型スキーマ ChunkKnowledgeOutput (出力予約を削減) なので chunk を大きく取れる。
+        // 単発の full schema 上限 (~640 tok prompt) に縛られない。900 を狙い、実機 TokenProbe で微調整。
+        chunkSizeChars: Int = 900,
         maxChunks: Int = 30,
         chunkProgressStore: ChunkProgressStoreProtocol? = nil,
         tagStore: TagStore? = nil,
@@ -78,6 +82,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         self.processingMonitor = processingMonitor
         self.minimumTextLength = minimumTextLength
         self.extractionVersion = extractionVersion
+        self.singleShotMaxChars = singleShotMaxChars
         self.chunkSizeChars = chunkSizeChars
         self.maxChunks = maxChunks
         // @MainActor isolated init は default 引数で書けないため nil 受け → fallback で NoopChunkProgressStore
@@ -98,7 +103,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         guard let conceptSynthesisService else { return }
         Task { [weak self] in
             _ = self
-            await conceptSynthesisService.processNewArticle(article: article)
+            // spec 074: 概念階層 (広い概念 + 具体概念) 抽出経路。AI 不可/失敗時は entity 共起に degrade。
+            await conceptSynthesisService.ingestArticle(article)
         }
     }
 
@@ -171,6 +177,11 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         }
     }
 
+    /// 記事抽出パイプライン全体 (translate + 全 chunk FM + hook) を 1 本ずつ直列化するゲート。
+    /// 複数記事を一気に保存しても同時実行させず、オンデバイス AI/翻訳ランタイムの逼迫
+    /// (実機高負荷時の spurious な exceededContextWindowSize / translationd crash) を防ぐ。
+    private static let articleExtractionGate = AsyncSemaphore(1)
+
     func extract(article: Article) async {
         let articleID = article.id
 
@@ -206,8 +217,12 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         }
 
         let task = Task { [weak self] in
-            await self?.performExtraction(article: article, text: text)
-            await self?.removeTask(id: articleID)
+            guard let self else { return }
+            // 記事レベル直列化: 1 記事のパイプラインが完全に終わるまで次を待たせる。
+            await Self.articleExtractionGate.acquire()
+            await self.performExtraction(article: article, text: text)
+            await Self.articleExtractionGate.release()
+            await self.removeTask(id: articleID)
         }
         activeTasks[articleID] = task
         await task.value
@@ -223,8 +238,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
 
         try? store.upsertStatus(article: article, status: .extracting)
 
-        // spec 006: 本文長で chunked / 単発を切り替え
-        if text.count <= chunkSizeChars {
+        // spec 006: 本文長で chunked / 単発を切り替え (案A: 単発は full schema なので閾値小さめ)
+        if text.count <= singleShotMaxChars {
             // === 単発パス (spec 004 既存挙動) ===
             processingMonitor?.start(.knowledge, articleID: articleID, title: articleTitle)
             defer { processingMonitor?.finish(articleID: articleID) }

@@ -12,21 +12,24 @@
 import Foundation
 import FoundationModels
 import Translation
+#if DEBUG
+import os
+#endif
 
 // MARK: - Generable Output Types (transient、生成スキーマ)
 
 @Generable
 struct ExtractedKnowledgeOutput: Codable {
-    @Guide(description: "1 文 / 150 字以内 / 元記事の主題と核心 / 元記事に明示されている内容のみ")
+    @Guide(description: "1-2 文 / 200 字以内 / 元記事の主題と核心 / 元記事に明示されている内容のみ")
     let essence: String
 
-    @Guide(description: "2-3 文 / 300 字以内 / 元記事の構造を維持した説明的要約 / 推測禁止")
+    @Guide(description: "2-4 文 / 400 字以内 / 元記事の構造を維持した説明的要約 / 推測禁止")
     let summary: String
 
     @Guide(description: "最大 10 件、重要度が高い順、元記事に明示されている事実のみ。コード断片や関数呼び出しは含めない。")
     let keyFacts: [KeyFactOutput]
 
-    @Guide(description: "5-10 件、重要な固有名詞")
+    @Guide(description: "5-10 件、記事の主題に関わる重要な固有名詞 (人物・組織・製品・サービス・具体的な技術/概念) に限る。一般名詞・代名詞・地名・日付・数値 (例: 男性, ユーザー, 企業, 彼, 東京駅) は含めない。")
     let entities: [KnowledgeEntityOutput]
 }
 
@@ -50,7 +53,7 @@ enum FactType: String, Codable {
 
 @Generable
 struct KnowledgeEntityOutput: Codable {
-    @Guide(description: "固有名詞 (30 字以内)")
+    @Guide(description: "記事の主題に関わる固有名詞 (人物・組織・製品・具体的な技術/概念)、30 字以内。一般名詞・代名詞・地名は不可。")
     let name: String
 
     @Guide(description: "種別")
@@ -68,6 +71,23 @@ enum EntityType: String, Codable {
     case concept       // 概念・用語
     case product       // 製品・サービス
     case work          // 作品 (本・記事・動画等)
+}
+
+/// spec (案A, 2026-06-12): chunked 抽出専用の小型出力スキーマ。
+/// 各 chunk は小さい (600-900字) ので事実 10 件も entity 10 件も出ない。出力上限を ≤4 に絞り、
+/// per-chunk では使われない summary を持たないことで「出力予約」を削減 → 同じ窓で chunk を大きくできる。
+/// essence + keyFacts + entities のみ (ChunkedKnowledgeAggregator が使うのはこの 3 つ。summary は meta 段で生成)。
+/// 最終的な記事全体の知識は meta-summary が full schema (ExtractedKnowledgeOutput) で作るため品質は不変。
+@Generable
+struct ChunkKnowledgeOutput: Codable {
+    @Guide(description: "1 文 / 120 字以内 / このチャンクの主題と核心 / 明示されている内容のみ")
+    let essence: String
+
+    @Guide(description: "最大 4 件、このチャンクで重要な事実のみ、明示されている内容のみ。コード断片は含めない。")
+    let keyFacts: [KeyFactOutput]
+
+    @Guide(description: "最大 4 件、主題に関わる固有名詞 (人物・組織・製品・具体的な技術/概念)。一般語・代名詞・地名は不可。")
+    let entities: [KnowledgeEntityOutput]
 }
 
 // MARK: - spec 018: 知識 Clip タブ用 Generable Output
@@ -155,18 +175,32 @@ struct ConflictDetectionOutput: Codable {
 
 @Generable
 struct ConceptSynthesisOutput: Codable {
-    @Guide(description: "200〜400 字の日本語、断定調、原文にあることのみ。")
+    // 注 (token fix 2026-06-07): @Generable は宣言した最大サイズ分だけ出力 token を予約する。
+    // 旧 summary 400 字 + insights 7×150 字 = 出力予約だけで 4096 窓の半分超 → 入力と合算で
+    // exceededContextWindowSize (実機ログ ~4090 tokens) が intermittent 発生。出力上限を圧縮して窓に余裕を作る。
+    @Guide(description: "150〜280 字の日本語、断定調、原文にあることのみ。")
     let summary: String
 
-    @Guide(description: "最大 7 件、各 50-150 字の日本語、複数記事を横断して見える発見。")
+    @Guide(description: "最大 4 件、各 40-90 字の日本語、複数記事を横断して見える発見。")
     let crossSourceInsights: [String]
 }
 
 /// hierarchical chunked パスで使う中間 chunk 要約 (3+ 関連記事時)。
 @Generable
 struct ConceptSummaryChunk: Codable {
-    @Guide(description: "100-200 字日本語、断定調、原文のみ。")
+    @Guide(description: "80-140 字日本語、断定調、原文のみ。")
     let chunkSummary: String
+}
+
+/// spec 074: 記事の概念階層 (広い概念 1 + 具体概念 2-4)。
+/// 出力を小さく保つ (broad 1 + specific ≤4、各短い) = token 安全 (docs/ARCHITECTURE.md §12)。
+@Generable
+struct ConceptHierarchyOutput: Codable {
+    @Guide(description: "この記事の最も広い概念 1 つ。短い名詞・専門用語のみ (16 字以内、体言)。例: 生成AI、データエンジニアリング、マクロ経済。文・説明句 (『〜するエンジニア』等) は不可。一般語・地名・代名詞も不可。")
+    let broadConcept: String
+
+    @Guide(description: "記事が論じる具体トピックを 2-4 個。各『短い名詞・専門用語』のみ (体言止め、18 字以内)。例: Text-to-SQL、RAG、ワイドテーブル、コンテキストエンジニアリング。『顧客企業に入り込むエンジニア』『新会社設立』のような説明文・動詞句は禁止。記事に明示されたもののみ、一般語・地名・代名詞は不可。")
+    let specificConcepts: [String]
 }
 
 // MARK: - spec 021: AI Chat (RAG) 用 Generable Output
@@ -196,6 +230,9 @@ extension EntityType {
 protocol LanguageModelSessionProtocol: Sendable {
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput
 
+    /// 案A: chunked 抽出用、小型スキーマ (出力予約を削って chunk を大きくできる)。
+    func generateChunkKnowledge(prompt: String) async throws -> ChunkKnowledgeOutput
+
     /// spec 018: Category 統合ダイジェスト生成
     func generateDigest(prompt: String) async throws -> DigestOutput
 
@@ -220,6 +257,9 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
     func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk
 
+    /// spec 074: 記事の概念階層 (広い概念 + 具体概念) を抽出。
+    func generateConceptHierarchy(prompt: String) async throws -> ConceptHierarchyOutput
+
     /// spec 042: 英語等の本文を日本語に翻訳する。
     /// 実装は Apple Translation framework (iOS 18+ offline)。
     /// Foundation Models は非日本語入力を `unsupportedLanguageOrLocale` で拒否するため、
@@ -242,106 +282,165 @@ protocol LanguageModelSessionProtocol: Sendable {
     func generateAgentAction(prompt: String) async throws -> AgentAction
 }
 
+// MARK: - Foundation Models 直列化ゲート
+
+/// async セマフォ (permit 数だけ同時通過を許可、超過は FIFO で待機)。
+actor AsyncSemaphore {
+    private var permits: Int
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(_ permits: Int) { self.permits = permits }
+
+    func acquire() async {
+        if permits > 0 {
+            permits -= 1
+            return
+        }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func release() {
+        if waiters.isEmpty {
+            permits += 1
+        } else {
+            waiters.removeFirst().resume()
+        }
+    }
+}
+
+/// 全 Foundation Models `respond` 呼び出しの同時実行を制限するゲート。
+/// 実機ログで「多数の LanguageModelSession を同時実行 → ANE 競合 → 偽の
+/// exceededContextWindowSize (4091 tokens) / inference 失敗 / translationd crash」が判明したため、
+/// AI 推論を直列化 (maxConcurrent=1) して競合を排除する。ANE は元々単一なので直列化は実質ノーロス。
+enum FoundationModelGate {
+    /// 同時実行上限。1 = 完全直列。競合が消えたら 2 等に緩めてもよい。
+    static let semaphore = AsyncSemaphore(1)
+    /// spurious overflow / inference 失敗の再試行回数 (実機高負荷で一時的に出るため)。
+    static let maxAttempts = 3
+
+    @MainActor
+    static func run<T>(_ operation: () async throws -> T) async throws -> T {
+        await semaphore.acquire()
+        var lastError: Error?
+        for attempt in 1...maxAttempts {
+            do {
+                let result = try await operation()
+                await semaphore.release()
+                return result
+            } catch {
+                lastError = error
+                // 一時エラー (exceededContextWindowSize / inference 失敗) は待って再試行。
+                // セマフォは保持したまま sleep → 直列性を保ちつつランタイムの回復を待つ。
+                if attempt < maxAttempts {
+                    try? await Task.sleep(nanoseconds: UInt64(attempt) * 500_000_000) // 0.5s, 1.0s
+                }
+            }
+        }
+        await semaphore.release()
+        throw lastError ?? CancellationError()
+    }
+}
+
 // MARK: - Apple Foundation Models 本番実装
 
 @MainActor
 final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
-    func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: ExtractedKnowledgeOutput.self
-        ) {
-            prompt
+    // MARK: - DEBUG token 計測 (全 respond を中枢 1 箇所で計測)
+    #if DEBUG
+    private static let probeLogger = Logger(subsystem: "app.KnowledgeTree", category: "token-probe")
+    /// prompt と (あれば) schema の実トークンをログ。respond の隠れコストは別途 overflow ログで確認。
+    private static func probe(_ label: String, prompt: String, schema: GenerationSchema?) async {
+        let model = SystemLanguageModel.default
+        guard model.isAvailable else { return }
+        let pTok = (try? await model.tokenCount(for: prompt)) ?? -1
+        if let schema {
+            let sTok = (try? await model.tokenCount(for: schema)) ?? -1
+            probeLogger.notice("[TokenProbe] \(label, privacy: .public): prompt \(prompt.count, privacy: .public)字=\(pTok, privacy: .public)tok + schema(compact)=\(sTok, privacy: .public)tok | 窓\(model.contextSize, privacy: .public)")
+        } else {
+            probeLogger.notice("[TokenProbe] \(label, privacy: .public): prompt \(prompt.count, privacy: .public)字=\(pTok, privacy: .public)tok | schema=none(plain) | 窓\(model.contextSize, privacy: .public)")
         }
-        return response.content
+    }
+    #endif
+
+    /// 全 @Generable 生成の共通経路。DEBUG で token を計測してから respond。
+    private func generateStructured<T: Generable>(
+        _ label: String,
+        _ type: T.Type,
+        prompt: String
+    ) async throws -> T {
+        #if DEBUG
+        await Self.probe(label, prompt: prompt, schema: T.generationSchema)
+        #endif
+        return try await FoundationModelGate.run {
+            let session = LanguageModelSession()
+            let response = try await session.respond(generating: type) { prompt }
+            return response.content
+        }
+    }
+
+    /// plain string 生成の共通経路 (Generable schema なし)。
+    private func generatePlain(_ label: String, prompt: String) async throws -> String {
+        #if DEBUG
+        await Self.probe(label, prompt: prompt, schema: nil)
+        #endif
+        return try await FoundationModelGate.run {
+            let session = LanguageModelSession()
+            let response = try await session.respond { prompt }
+            return response.content
+        }
+    }
+
+    func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
+        try await generateStructured("generateKnowledge (知識抽出)", ExtractedKnowledgeOutput.self, prompt: prompt)
+    }
+
+    func generateChunkKnowledge(prompt: String) async throws -> ChunkKnowledgeOutput {
+        try await generateStructured("generateChunkKnowledge (chunk知識/小型)", ChunkKnowledgeOutput.self, prompt: prompt)
     }
 
     /// spec 018: Category 統合ダイジェスト生成
     func generateDigest(prompt: String) async throws -> DigestOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: DigestOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateDigest (Categoryダイジェスト)", DigestOutput.self, prompt: prompt)
     }
 
     /// spec 021: AI Chat (RAG) 回答生成
     func generateChatAnswer(prompt: String) async throws -> ChatAnswerOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: ChatAnswerOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateChatAnswer (AIチャット)", ChatAnswerOutput.self, prompt: prompt)
     }
 
     /// spec 035: 「最近のあなた」差分 3 段落要約生成
     func generateRecentDigest(prompt: String) async throws -> RecentDigestOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: RecentDigestOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateRecentDigest (最近のあなた)", RecentDigestOutput.self, prompt: prompt)
     }
 
     /// spec 037: 2 記事間の事実矛盾検出
     func generateConflictDetection(prompt: String) async throws -> ConflictDetectionOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: ConflictDetectionOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateConflictDetection (矛盾検出)", ConflictDetectionOutput.self, prompt: prompt)
     }
 
     /// spec 036: 動的トピック命名
     func generateTopicName(prompt: String) async throws -> TopicNameOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: TopicNameOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateTopicName (トピック命名)", TopicNameOutput.self, prompt: prompt)
     }
 
     /// spec 040: Knowledge Graph triple 抽出
     func generateGraphTriples(prompt: String) async throws -> GraphTripleOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: GraphTripleOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateGraphTriples (グラフ抽出)", GraphTripleOutput.self, prompt: prompt)
     }
 
     /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
     func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: ConceptSynthesisOutput.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateConceptSynthesis (概念合成)", ConceptSynthesisOutput.self, prompt: prompt)
     }
 
     /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
     func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: ConceptSummaryChunk.self
-        ) {
-            prompt
-        }
-        return response.content
+        try await generateStructured("generateConceptSummaryChunk (概念chunk)", ConceptSummaryChunk.self, prompt: prompt)
+    }
+
+    /// spec 074: 記事の概念階層 (広い概念 + 具体概念) を抽出 (小出力 = token 安全)。
+    func generateConceptHierarchy(prompt: String) async throws -> ConceptHierarchyOutput {
+        try await generateStructured("generateConceptHierarchy (概念階層)", ConceptHierarchyOutput.self, prompt: prompt)
     }
 
     /// spec 042: 英語 → 日本語の翻訳 (Apple Translation framework、iOS 26+ offline)。
@@ -360,31 +459,18 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     /// spec 044: 学習タブ用「家庭教師」自由形 chat 応答 (plain string、Generable 制約なし)。
     /// LanguageModelSession の `respond { prompt }` を直接呼び、`.content` (String) を返却。
     func generateTutorReply(prompt: String) async throws -> String {
-        let session = LanguageModelSession()
-        let response = try await session.respond {
-            prompt
-        }
-        return response.content
+        try await generatePlain("generateTutorReply (家庭教師)", prompt: prompt)
     }
 
     /// spec 063 (LLM Wiki): Wiki 本文 plain string 生成 (Generable schema を渡さず token 節約)。
     func generateWikiBody(prompt: String) async throws -> String {
-        let session = LanguageModelSession()
-        let response = try await session.respond {
-            prompt
-        }
-        return response.content
+        try await generatePlain("generateWikiBody (Wiki本文)", prompt: prompt)
     }
 
     /// spec 057: Agentic Chat 用 AgentActionOutput Generable struct 生成 → AgentAction enum に変換。
     func generateAgentAction(prompt: String) async throws -> AgentAction {
-        let session = LanguageModelSession()
-        let response = try await session.respond(
-            generating: AgentActionOutput.self
-        ) {
-            prompt
-        }
-        return AgentAction(from: response.content)
+        let output = try await generateStructured("generateAgentAction (Agent)", AgentActionOutput.self, prompt: prompt)
+        return AgentAction(from: output)
     }
 }
 

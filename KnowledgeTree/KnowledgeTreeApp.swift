@@ -225,8 +225,15 @@ struct KnowledgeTreeApp: App {
             refreshTrigger: refreshTrigger
         )
 
+        // spec 074: カテゴリレジストリ (動的カテゴリ)。起動時に 10 シードを idempotent に seed。
+        let categoryRegistry = CategoryRegistry(context: context)
+        categoryRegistry.seedIfNeeded()
+
         // spec 015: AutoCategoryClassifier (Foundation Models 経由で Tag → Category 推論)
-        let categoryClassifier: AutoCategoryClassifier = FoundationModelsAutoCategoryClassifier()
+        // spec 074: classifier をレジストリ駆動に (候補 = seed + 動的カテゴリ)
+        let categoryClassifier: AutoCategoryClassifier = FoundationModelsAutoCategoryClassifier(
+            categoryRegistry: categoryRegistry
+        )
 
         // spec 008: TagStore (spec 012 で knowledgeService に inject するため先に構築)
         // spec 015: TagStore に classifier を inject、新規 Tag 作成時の自動 Category 分類を有効化
@@ -483,9 +490,19 @@ struct KnowledgeTreeApp: App {
         // 全 backfill の完了を待つ
         _ = await (autoTag, categoryBackfill, embeddings, concepts)
 
+        // ②③ 概念カテゴリの一括是正 + 同名クロスカテゴリ重複の統合 (純 DB、1 回限り)。
+        // タグ分類 (categoryBackfill) + 概念生成 (concepts) 完了後に走らせ、その他 に倒れた概念を実カテゴリへ。
+        ConceptCategoryBackfillRunner(context: context, store: conceptPageStore).run()
+
         // BGTask 予約は全 backfill 完了後 (最後)
         await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis() // spec 042
         await BackgroundExtractionScheduler.shared.scheduleNextWeeklyLint()         // spec 058
+
+        // spec 071 (token 実測、DEBUG 専用): 各 @Generable スキーマの実トークンをログ出力。
+        // AI 生成は呼ばない (tokenCount のみ)。overflow 真因の確定に使う。
+        #if DEBUG
+        Task.detached { await TokenBudgetProbe.runDiagnostics() }
+        #endif
     }
 
     // spec 061 (P1-7): async let に乗せる throwing / 多段 await を包む @MainActor helper。

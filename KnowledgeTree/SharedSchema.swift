@@ -41,6 +41,7 @@ enum SharedSchema {
             SavedAnswer.self,                      // spec 043
             UnderstandingInteraction.self,         // spec 044
             LintLog.self,                          // spec 058
+            CategoryDefinition.self,               // spec 074 (動的カテゴリ)
         ])
     }
 

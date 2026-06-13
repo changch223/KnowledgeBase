@@ -29,6 +29,16 @@ protocol ConceptSynthesisServiceProtocol: AnyObject {
     /// silent fire-and-forget、例外を throw しない。
     func processNewArticle(article: Article) async
 
+    /// spec 074: 記事 ingest の主経路。AI で概念階層を抽出 → processConceptHierarchy。
+    /// AI 不可 / 失敗時は entity 共起の従来パス (processNewArticle) に degrade。
+    /// KnowledgeExtractionService の hook はこれを呼ぶ。
+    func ingestArticle(_ article: Article) async
+
+    /// spec 074: 抽出済みの概念階層 (広い概念 + 具体概念) を ConceptPage に upsert。
+    /// broad ページ (level=broad) + specific ページ (level=specific, parent=broad.id) を作成/更新し、
+    /// 記事を両者に link、isStale=true → 同セッションで再合成。silent fire-and-forget。
+    func processConceptHierarchy(article: Article, hierarchy: ConceptHierarchyOutput) async
+
     /// 単一 ConceptPage を再合成 (Foundation 経路 or Fallback 経路)。
     func resynthesize(_ conceptPage: ConceptPage) async
 
@@ -69,8 +79,26 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
         await resynthesizeAllStale()
     }
 
+    func processConceptHierarchy(article: Article, hierarchy: ConceptHierarchyOutput) async {
+        ConceptSynthesisCommon.processConceptHierarchy(
+            article: article,
+            hierarchy: hierarchy,
+            context: context,
+            refreshTrigger: refreshTrigger,
+            logger: logger
+        )
+        await resynthesizeAllStale()
+    }
+
+    func ingestArticle(_ article: Article) async {
+        // Fallback (AI 不可) は階層抽出できないので entity 共起の従来パスに degrade。
+        await processNewArticle(article: article)
+    }
+
     func resynthesize(_ conceptPage: ConceptPage) async {
         let articles = (conceptPage.relatedArticles ?? []).sorted { $0.savedAt > $1.savedAt }
+        // ① 自己修復: categoryRaw を relatedArticles から再計算。
+        ConceptSynthesisCommon.healCategory(conceptPage, articles: articles)
         let essences = articles.compactMap { $0.extractedKnowledge?.essence }.filter { !$0.isEmpty }
 
         if essences.isEmpty {
@@ -148,16 +176,16 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// hierarchical 経路 = 1 article ずつ chunk 化 + meta-summary で統合。
     /// @Generable schema + FM overhead で 3000+ tokens 消費するため、user 入力余地 ~1000 tokens に圧縮必須。
     static let chunkSize = 1
-    /// 各 article の essence を prompt に含める最大文字数 (token 超過対策)。
-    /// spec 042: 300 → 200 → 150 → V3.0 polish: 150 → 80。
-    /// 実機ログで articles=2 でも `concept synthesis failed: 4090 tokens` で破綻、更に圧縮。
-    static let perArticleEssenceMaxChars = 80
-    /// 各 article から prompt に含める KeyFact 件数。3 → 2 → V3.0 polish: 2 → 1。
-    static let perArticleKeyFactCount = 1
-    /// 1 件あたり KeyFact 文字数上限。100 → 60 → 40 → V3.0 polish: 40 → 30。
-    static let perKeyFactMaxChars = 30
-    /// 各 article の title 上限 (長文 title 対策)。V3.0 polish: 80 → 50。
-    static let perArticleTitleMaxChars = 50
+    /// 各 article の essence を prompt に含める最大文字数。
+    /// 強化 (2026-06-11): 真因は token でなく記事並列のランタイム逼迫と判明 → 直列化で解消。
+    /// 実測でプロンプトは窓に余裕 → 80→200 (essence は元々 ~200 字なので全文活用)。
+    static let perArticleEssenceMaxChars = 200
+    /// 各 article から prompt に含める KeyFact 件数。強化 (2026-06-11): 1→3。
+    static let perArticleKeyFactCount = 3
+    /// 1 件あたり KeyFact 文字数上限。強化 (2026-06-11): 30→80。
+    static let perKeyFactMaxChars = 80
+    /// 各 article の title 上限。強化 (2026-06-11): 50→80。
+    static let perArticleTitleMaxChars = 80
     /// spec 064 (LLM Wiki): embedding 近傍で relatedConceptIDs に補完する上限。
     static let relatedConceptLimit = 8
     /// spec 064: cosine 類似度の下限 (これ未満は無関係として除外)。
@@ -194,6 +222,86 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         await resynthesizeAllStale()
     }
 
+    func processConceptHierarchy(article: Article, hierarchy: ConceptHierarchyOutput) async {
+        // upsert は DB 操作のみで availability 非依存。
+        ConceptSynthesisCommon.processConceptHierarchy(
+            article: article,
+            hierarchy: hierarchy,
+            context: context,
+            refreshTrigger: refreshTrigger,
+            logger: logger
+        )
+        await resynthesizeAllStale()
+    }
+
+    func ingestArticle(_ article: Article) async {
+        // AI 不可 → entity 共起の従来パスに degrade。
+        guard availability.isAvailable else {
+            await processNewArticle(article: article)
+            return
+        }
+        do {
+            let prompt = buildConceptHierarchyPrompt(article: article)
+            let hierarchy = try await session.generateConceptHierarchy(prompt: prompt)
+            let broad = hierarchy.broadConcept.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard broad.count >= ConceptSynthesisCommon.minEntityNameLength else {
+                // AI が広い概念を出せなかった → 従来パスに degrade
+                logger.notice("concept hierarchy empty broad for article, fallback to entity path")
+                await processNewArticle(article: article)
+                return
+            }
+            await processConceptHierarchy(article: article, hierarchy: hierarchy)
+        } catch {
+            logger.error("concept hierarchy extraction failed: \(String(describing: error), privacy: .public)")
+            await processNewArticle(article: article)
+        }
+    }
+
+    /// spec 074: 概念階層抽出 prompt。出力が小さい (broad + ≤4 specific) ので入力に余裕がある
+    /// (essence 300 字まで許容、token 安全)。広い概念候補シード + schema ルールを embed。
+    private func buildConceptHierarchyPrompt(article: Article) -> String {
+        let title = Self.truncate(article.title, max: 80)
+        let essence = Self.truncate(article.extractedKnowledge?.essence ?? "", max: 300)
+        let keyFacts = (article.extractedKnowledge?.keyFacts ?? [])
+            .sorted { $0.order < $1.order }
+            .prefix(3)
+            .map { Self.truncate($0.statement, max: 60) }
+            .joined(separator: "、")
+        let categoryRaw = ConceptSynthesisCommon.resolveCategoryRaw(for: article)
+        let categoryDisplay = CategorySeed.category(for: categoryRaw).name
+        let seedHint = BroadConceptSeed.promptHint(for: categoryRaw)
+        let seedBlock = seedHint.isEmpty
+            ? ""
+            : "\n\n# 広い概念の候補 (この中から最も合うものを優先。無ければ簡潔に命名)\n\(seedHint)"
+        let rules = SchemaLoader.shared.section(named: "概念階層抽出ルール") ?? Self.defaultHierarchyRules
+
+        return """
+        次の記事を 2 階層の概念に整理してください。
+        - 広い概念 (broadConcept): この記事が属する最も広い概念を 1 つ。分野の代表概念。
+        - 具体概念 (specificConcepts): その広い概念の下で、この記事が実際に論じている具体トピックを 2〜4 個。
+
+        \(rules)\(seedBlock)
+
+        # 記事
+        カテゴリー: \(categoryDisplay)
+        タイトル: \(title)
+        要点: \(essence)
+        事実: \(keyFacts.isEmpty ? "(なし)" : keyFacts)
+        """
+    }
+
+    /// schema.md 不在時の概念階層抽出ルール (production 安全 fallback)。
+    static let defaultHierarchyRules = """
+    # ルール
+    - 記事に明示されている概念のみ。推測・一般知識での補強は禁止。
+    - 広い概念は「生成AI」「データエンジニアリング」のような分野レベルの短い名詞。
+    - 具体概念は「Text-to-SQL」「RAG」のような記事が論じる個別トピックの短い名詞。
+    - ★体言で書く: 概念名は短い名詞・専門用語のみ。文・説明句・動詞句は禁止。
+      NG「顧客企業に深く入り込むエンジニア」「金融機関の共同出資による新会社設立」→ OK「現場常駐エンジニア」「合弁会社」。
+    - 一般語・代名詞・地名 (男性 / ユーザー / 企業 / 彼女 / 東京駅 等) は概念にしない。
+    - 広い概念と具体概念に同じ名前を入れない。
+    """
+
     func resynthesize(_ conceptPage: ConceptPage) async {
         guard availability.isAvailable else {
             await fallback.resynthesize(conceptPage)
@@ -201,6 +309,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         }
 
         let articles = conceptPage.relatedArticles ?? []
+        // ① 自己修復: categoryRaw を relatedArticles から再計算 (その他 → 実カテゴリ に直る)。
+        ConceptSynthesisCommon.healCategory(conceptPage, articles: articles)
         guard !articles.isEmpty else {
             // 関連記事 0 件 → 何もせず stale 解除 (孤立 ConceptPage、Wikilint で別 spec)
             conceptPage.isStale = false
@@ -213,7 +323,10 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         do {
             logger.notice("concept synthesis start for \(conceptPage.name, privacy: .public) [\(conceptPage.categoryRaw, privacy: .public)]: articles=\(articles.count) hierarchical=\(articles.count >= Self.hierarchicalThreshold)")
             let output: ConceptSynthesisOutput
-            if articles.count >= Self.hierarchicalThreshold {
+            if conceptPage.isBroadConcept {
+                // spec 074: 広い概念は子トピック + 記事要点を俯瞰して synth (token 安全な小入力)。
+                output = try await synthesizeBroadConcept(conceptPage: conceptPage, articles: articles)
+            } else if articles.count >= Self.hierarchicalThreshold {
                 output = try await synthesizeHierarchical(conceptPage: conceptPage, articles: articles)
             } else {
                 output = try await synthesizeOneShot(conceptPage: conceptPage, articles: articles)
@@ -511,6 +624,52 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         return try await session.generateConceptSynthesis(prompt: metaPrompt)
     }
 
+    /// spec 074: 広い概念 (L1) の synth。子トピック名 + 自身の関連記事要点を俯瞰して統合。
+    /// 入力は子名リスト + 記事 essence 4 件 (capped) = token 安全。
+    private func synthesizeBroadConcept(
+        conceptPage: ConceptPage,
+        articles: [Article]
+    ) async throws -> ConceptSynthesisOutput {
+        let allPages = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        let childNames = allPages
+            .filter { $0.parentConceptID == conceptPage.id && !$0.isHidden }
+            .map(\.name)
+        let prompt = buildBroadConceptPrompt(conceptPage: conceptPage, childNames: childNames, articles: articles)
+        return try await session.generateConceptSynthesis(prompt: prompt)
+    }
+
+    private func buildBroadConceptPrompt(
+        conceptPage: ConceptPage,
+        childNames: [String],
+        articles: [Article]
+    ) -> String {
+        let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
+        let childText = childNames.isEmpty ? "(まだなし)" : childNames.prefix(12).joined(separator: "、")
+        let essences = articles.sorted { $0.savedAt > $1.savedAt }.prefix(4).compactMap { a -> String? in
+            guard let e = a.extractedKnowledge?.essence, !e.isEmpty else { return nil }
+            return "- " + Self.truncate(e, max: Self.perArticleEssenceMaxChars)
+        }
+        let essenceText = essences.isEmpty ? "(なし)" : essences.joined(separator: "\n")
+
+        return """
+        あなたは「\(conceptPage.name)」という広い分野概念について「今わかっていること」を統合する役割です。
+
+        ## 概念 (広い概念)
+        名前: \(conceptPage.name)
+        カテゴリー: \(categoryDisplay)
+
+        ## この概念に含まれる具体トピック
+        \(childText)
+
+        ## 関連記事の要点
+        \(essenceText)
+
+        ## 出力要件
+        - summary: 150〜280 字、上記の具体トピックと要点を俯瞰した分野全体像、推測禁止、断定調
+        - crossSourceInsights: 最大 4 件、各 40〜90 字、トピックを横断して見える傾向
+        """
+    }
+
     // MARK: - Prompt builders
 
     private func buildOneShotPrompt(conceptPage: ConceptPage, articles: [Article]) -> String {
@@ -544,8 +703,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(lines)
 
         ## 出力要件
-        - summary: 200〜400 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
-        - crossSourceInsights: 最大 7 件、各 50〜150 字、複数記事を並べて初めて見える発見
+        - summary: 150〜280 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
+        - crossSourceInsights: 最大 4 件、各 40〜90 字、複数記事を並べて初めて見える発見
         - 推測 / 一般知識からの補強禁止
         """
     }
@@ -584,7 +743,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(lines)
 
         ## 出力要件
-        - chunkSummary: 100〜200 字、原文に明示された内容のみ、断定調
+        - chunkSummary: 80〜140 字、原文に明示された内容のみ、断定調
         """
     }
 
@@ -596,10 +755,9 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         let aliasesText = conceptPage.nameAliases.isEmpty ? "(なし)" : conceptPage.nameAliases.joined(separator: "、")
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
 
-        // V3.0 polish (2026-05-28): 4096 token 超過 fix。
-        // 7 chunks × 150 字 = 1050 字 + Generable schema overhead で 4089-4091 tokens に達していた。
-        // 最大 5 件 + 各 100 字に圧縮 (500 字 + schema で margin 確保)。
-        let cappedChunks = chunkSummaries.prefix(5).map { String($0.prefix(100)) }
+        // 強化 (2026-06-11): 真因は token でなく記事並列のランタイム逼迫と判明 → 直列化で解消。
+        // meta 入力に余裕ができたので 4件×90字 → 6件×150字 (元記事多数の概念を richer に統合)。
+        let cappedChunks = chunkSummaries.prefix(6).map { String($0.prefix(150)) }
         let chunkText = cappedChunks.isEmpty
             ? "(中間要約が生成できませんでした)"
             : cappedChunks.enumerated().map { idx, summary in "## チャンク \(idx + 1)\n\(summary)" }.joined(separator: "\n\n")
@@ -616,8 +774,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(chunkText)
 
         ## 出力要件
-        - summary: 200〜400 字、チャンク要約のみから統合、推測禁止、断定調
-        - crossSourceInsights: 最大 5 件、各 50〜100 字、チャンクを横断して見える知見
+        - summary: 150〜280 字、チャンク要約のみから統合、推測禁止、断定調
+        - crossSourceInsights: 最大 4 件、各 40〜90 字、チャンクを横断して見える知見
         """
     }
 
@@ -721,15 +879,134 @@ enum ConceptSynthesisCommon {
         refreshTrigger?.bump()
     }
 
+    // MARK: - spec 074: 概念階層の upsert
+
+    /// 抽出済み階層 (広い概念 + 具体概念) を ConceptPage に upsert。
+    /// broad ページ (level=broad) + specific ページ (level=specific, parent=broad.id) を作成/更新し、
+    /// 記事を両者に link、isStale=true。entity 共起の閾値 (2 記事) は使わず、1 記事目から階層を作る
+    /// (記事が論じる具体概念はその記事だけでもページ化する。重複/正規化は agent loop = spec 076)。
+    static func processConceptHierarchy(
+        article: Article,
+        hierarchy: ConceptHierarchyOutput,
+        context: ModelContext,
+        refreshTrigger: RefreshTrigger?,
+        logger: Logger
+    ) {
+        let categoryRaw = resolveCategoryRaw(for: article)
+        let broadName = hierarchy.broadConcept.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard broadName.count >= minEntityNameLength else { return }
+
+        var pages: [ConceptPage] = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+
+        // 1. 広い概念ページ (L1)
+        let broadPage = upsertHierarchyPage(
+            name: broadName, level: .broad, parentID: nil,
+            categoryRaw: categoryRaw, article: article,
+            pages: &pages, context: context, logger: logger
+        )
+
+        // 2. 具体概念ページ (L2、parent = broad)。広い概念と同名は skip。
+        var seen = Set<String>([broadName.lowercased()])
+        for raw in hierarchy.specificConcepts {
+            let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard name.count >= minEntityNameLength else { continue }
+            let lower = name.lowercased()
+            guard !seen.contains(lower) else { continue }
+            seen.insert(lower)
+            _ = upsertHierarchyPage(
+                name: name, level: .specific, parentID: broadPage.id,
+                categoryRaw: categoryRaw, article: article,
+                pages: &pages, context: context, logger: logger
+            )
+        }
+
+        try? context.save()
+        refreshTrigger?.bump()
+    }
+
+    /// 名前 + categoryRaw で既存ページを検索し link/昇格、無ければ新規作成。
+    private static func upsertHierarchyPage(
+        name: String,
+        level: ConceptLevel,
+        parentID: UUID?,
+        categoryRaw: String,
+        article: Article,
+        pages: inout [ConceptPage],
+        context: ModelContext,
+        logger: Logger
+    ) -> ConceptPage {
+        let lower = name.lowercased()
+        if let existing = pages.first(where: {
+            $0.categoryRaw == categoryRaw && $0.searchableNames.contains(lower)
+        }) {
+            // 記事 link (重複なし)
+            if !(existing.relatedArticles?.contains(where: { $0.id == article.id }) ?? false) {
+                if existing.relatedArticles == nil { existing.relatedArticles = [] }
+                existing.relatedArticles?.append(article)
+            }
+            // level/parent 調整: broad target は broad に昇格。specific target は parent 補完のみ
+            // (既に broad のページは降格させない = 過剰降格防止)。
+            if level == .broad {
+                existing.level = .broad
+                existing.parentConceptID = nil
+            } else if existing.level != .broad, existing.parentConceptID == nil, let parentID {
+                existing.parentConceptID = parentID
+            }
+            existing.isStale = true
+            existing.updatedAt = .now
+            return existing
+        } else {
+            let page = ConceptPage(
+                name: name,
+                categoryRaw: categoryRaw,
+                relatedArticles: [article],
+                isStale: true,
+                parentConceptID: parentID,
+                conceptLevelRaw: level.rawValue
+            )
+            context.insert(page)
+            pages.append(page)
+            logger.notice("concept page created: \(name, privacy: .public) [\(categoryRaw, privacy: .public)] (\(level.rawValue, privacy: .public))")
+            return page
+        }
+    }
+
     /// Article から代表 categoryRaw を解決。
     /// 複数 tag があれば最頻出、tag が無ければ「その他」。
     static func resolveCategoryRaw(for article: Article) -> String {
+        let other = CategorySeed.otherCategory.name
         let raws = (article.tags ?? []).compactMap(\.categoryRaw).filter { !$0.isEmpty }
-        if raws.isEmpty {
-            return CategorySeed.otherCategory.name
+        guard !raws.isEmpty else { return other }
+        // 「その他」は人名等のノイズ entity からも付きやすく多数決を歪める (例: tech 記事が
+        // 著者名の その他 票に負けて LLM技術[その他] になる)。実カテゴリが 1 つでもあれば
+        // その他 を投票から除外し、最頻出の実カテゴリを採用。全部 その他 の時だけ その他。
+        let real = raws.filter { $0 != other }
+        let pool = real.isEmpty ? raws : real
+        let counted = Dictionary(grouping: pool, by: { $0 }).mapValues(\.count)
+        return counted.max(by: { $0.value < $1.value })?.key ?? other
+    }
+
+    /// ① 自己修復: 概念の categoryRaw を relatedArticles から再計算し、変化があれば更新。
+    /// 記事 0 件や算出不能時は据え置き (既存値を壊さない)。save は呼び出し側に任せる。
+    static func healCategory(_ conceptPage: ConceptPage, articles: [Article]) {
+        guard !articles.isEmpty else { return }
+        let newCat = resolveCategoryRaw(forArticles: articles)
+        if !newCat.isEmpty && newCat != conceptPage.categoryRaw {
+            conceptPage.categoryRaw = newCat
         }
-        // 最頻出を返す (同数なら最初のもの)
-        let counted = Dictionary(grouping: raws, by: { $0 }).mapValues(\.count)
-        return counted.max(by: { $0.value < $1.value })?.key ?? CategorySeed.otherCategory.name
+    }
+
+    /// 複数記事 (= 概念の relatedArticles) のタグから代表 categoryRaw を解決。
+    /// 概念の categoryRaw 再計算 (① 自己修復 / ② backfill) で使う。その他 は実カテゴリがあれば除外。
+    static func resolveCategoryRaw(forArticles articles: [Article]) -> String {
+        let other = CategorySeed.otherCategory.name
+        let raws = articles
+            .flatMap { ($0.tags ?? []).compactMap(\.categoryRaw) }
+            .filter { !$0.isEmpty }
+        guard !raws.isEmpty else { return other }
+        let real = raws.filter { $0 != other }
+        let pool = real.isEmpty ? raws : real
+        let counted = Dictionary(grouping: pool, by: { $0 }).mapValues(\.count)
+        return counted.max(by: { $0.value < $1.value })?.key ?? other
     }
 }
