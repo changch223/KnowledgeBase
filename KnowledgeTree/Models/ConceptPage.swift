@@ -80,6 +80,19 @@ final class ConceptPage {
     /// ユーザーが bodyMarkdown を手で訂正したフラグ。true の間は自動再生成で無断上書きしない (FR-007)。
     var bodyEditedByUser: Bool = false
 
+    // MARK: - spec 074 (概念階層) 追加フィールド
+
+    /// 上位 (広い) 概念ページの id。nil = L1 広い概念ページ自身 or 未分類。
+    /// 階層: カテゴリ(L0=既存 categoryRaw) > 広い概念(L1) > 具体概念(L2)。
+    /// 例: 「Text-to-SQL」(L2, parent=「生成AI」) / 「生成AI」(L1, parent=nil)。
+    /// @Relationship でなく ID 参照 (relatedConceptIDs と同方針、スキーマ進化に柔軟)。
+    var parentConceptID: UUID? = nil
+
+    /// 概念のレベル rawValue (ConceptLevel: broad / specific)。
+    /// Generable enum 非対応・CloudKit 安全のため String 保存 + computed `level` で enum 変換。
+    /// default "specific" = 既存フラットページは具体概念扱い (backfill で広い概念へ昇格 = spec 076)。
+    var conceptLevelRaw: String = "specific"
+
     var createdAt: Date = Date.now
     var updatedAt: Date = Date.now
 
@@ -100,6 +113,8 @@ final class ConceptPage {
         kindRaw: String = "concept",
         isHidden: Bool = false,
         bodyEditedByUser: Bool = false,
+        parentConceptID: UUID? = nil,
+        conceptLevelRaw: String = "specific",
         createdAt: Date = .now,
         updatedAt: Date = Date.now
     ) {
@@ -119,9 +134,20 @@ final class ConceptPage {
         self.kindRaw = kindRaw
         self.isHidden = isHidden
         self.bodyEditedByUser = bodyEditedByUser
+        self.parentConceptID = parentConceptID
+        self.conceptLevelRaw = conceptLevelRaw
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
+}
+
+// MARK: - ConceptLevel (spec 074, 概念階層)
+
+/// 概念のレベル。ConceptPage.conceptLevelRaw に rawValue 保存。
+/// 階層: カテゴリ(L0) > 広い概念(broad/L1) > 具体概念(specific/L2)。
+enum ConceptLevel: String, CaseIterable {
+    case broad     // 広い概念 (例: 生成AI / LLM、データエンジニアリング)
+    case specific  // 具体概念 (例: Text-to-SQL、コンテキストエンジニアリング)
 }
 
 // MARK: - WikiPageKind (spec 063, LLM Wiki)
@@ -151,6 +177,15 @@ extension ConceptPage {
         get { WikiPageKind(rawValue: kindRaw) ?? .concept }
         set { kindRaw = newValue.rawValue }
     }
+
+    /// spec 074: conceptLevelRaw <-> ConceptLevel 変換。不正値は .specific に fallback。
+    var level: ConceptLevel {
+        get { ConceptLevel(rawValue: conceptLevelRaw) ?? .specific }
+        set { conceptLevelRaw = newValue.rawValue }
+    }
+
+    /// 広い概念ページか (L1)。
+    var isBroadConcept: Bool { level == .broad }
 
     /// 同名判定用 (大文字小文字無視 + aliases 含む) のキー文字列配列。
     /// in-memory fetch で `searchableNames.contains(lowercased(name))` のように使う。

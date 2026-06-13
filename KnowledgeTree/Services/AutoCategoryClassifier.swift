@@ -40,9 +40,15 @@ extension AutoCategoryClassifier {
 final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
     private let logger = Logger(subsystem: "app.KnowledgeTree", category: "auto-category")
     private let availabilityChecker: AvailabilityChecker
+    /// spec 074: 動的カテゴリのレジストリ。nil なら CategorySeed (固定 10) に fallback。
+    private let categoryRegistry: CategoryRegistry?
 
-    init(availabilityChecker: AvailabilityChecker = SystemLanguageModelAvailabilityChecker()) {
+    init(
+        availabilityChecker: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
+        categoryRegistry: CategoryRegistry? = nil
+    ) {
         self.availabilityChecker = availabilityChecker
+        self.categoryRegistry = categoryRegistry
     }
 
     func classify(tagName: String, context: String? = nil) async -> String {
@@ -65,13 +71,19 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
             contextBlock = ""
         }
 
+        // spec 074: 候補はレジストリ駆動 (動的カテゴリ対応)。nil なら CategorySeed に fallback。
+        let candidatesText = categoryRegistry?.promptCandidatesWithDefinitions()
+            ?? CategorySeed.promptCandidatesWithDefinitions
+        let validNames = categoryRegistry?.validNames()
+            ?? Set(CategorySeed.allSeeds.map { $0.name })
+
         let prompt = """
             次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
             必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
             判断に迷う人名・組織名・一般語は「その他」にしてください。
 
             # カテゴリー候補 (定義と例)
-            \(CategorySeed.promptCandidatesWithDefinitions)
+            \(candidatesText)
 
             # 分類するタグ
             \(trimmed)\(contextBlock)
@@ -85,8 +97,8 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
                 prompt
             }
             let candidate = response.content.categoryName
-            // 出力が CategorySeed に存在するか検証
-            if CategorySeed.allSeeds.contains(where: { $0.name == candidate }) {
+            // 出力が有効カテゴリ (レジストリ or CategorySeed) に存在するか検証
+            if validNames.contains(candidate) {
                 logger.notice("classify '\(trimmed, privacy: .public)' -> '\(candidate, privacy: .public)'")
                 return candidate
             } else {

@@ -38,6 +38,8 @@ struct KnowledgeExtractor {
     /// FM internal overhead (~1500 tokens) で実質 user 入力余地は ~1000 tokens のみ。
     /// 実機ログで 600 字 chunked でも英語翻訳後 + Generable schema で 4089-4095 tokens 連発 →
     /// 安全のため 400 字 ≈ 600 tokens まで下げる (margin 1.5x)。
+    /// 単発パスは full schema (ExtractedKnowledgeOutput、出力予約大) なので短い記事専用。
+    /// 案A (2026-06-12): 長文は小型スキーマの chunked パスに回すため、単発の上限は 400 に据える。
     static let defaultMaxBodyChars = 400
 
     func extract(
@@ -56,9 +58,17 @@ struct KnowledgeExtractor {
     func extractFromChunk(_ chunk: Chunk) async -> ChunkResult {
         let stripped = Self.stripCodeBlocks(from: chunk.text)
         let prepared = await prepareForExtraction(stripped)
-        let prompt = Self.buildPrompt(text: prepared)
+        // 案A: chunk は小型スキーマ (ChunkKnowledgeOutput) で抽出 → 出力予約が減り chunk を大きくできる。
+        let prompt = Self.buildChunkPrompt(text: prepared)
         do {
-            let output = try await session.generateKnowledge(prompt: prompt)
+            let slim = try await session.generateChunkKnowledge(prompt: prompt)
+            // aggregator は ExtractedKnowledgeOutput を期待するので変換 (summary は per-chunk 不使用 → 空)。
+            let output = ExtractedKnowledgeOutput(
+                essence: slim.essence,
+                summary: "",
+                keyFacts: slim.keyFacts,
+                entities: slim.entities
+            )
             return ChunkResult(chunkIndex: chunk.index, output: output, error: nil)
         } catch {
             return ChunkResult(chunkIndex: chunk.index, output: nil, error: error)
@@ -132,9 +142,27 @@ struct KnowledgeExtractor {
         - essence と summary と key facts は互いに矛盾しないでください
         - key facts は重要度が高い順に最大 10 件まで返してください
         - コード片・関数呼び出し・コマンド出力は key facts に含めないでください (自然言語の事実のみ)
-        - すべて日本語で出力してください
+        - entities は主題に関わる固有名詞 (人物・組織・製品・具体的な技術/概念) のみ。一般語・代名詞・地名・日付 (男性/ユーザー/企業/東京駅 等) は除外し、表記を統一 (クロード→Claude)
+        - すべて日本語で出力してください (固有名詞の原語表記は維持可)
 
         # 元記事本文
+        \(text)
+        """
+    }
+
+    /// 案A: chunked 抽出用の簡潔な prompt (小型スキーマ ChunkKnowledgeOutput とペア)。
+    /// 定型部を短くして chunk 本文に枠を回す + 出力 ≤4 件を明示。
+    static func buildChunkPrompt(text: String) -> String {
+        """
+        以下は記事の一部です。この部分から構造化された知識を抽出してください。
+
+        # ルール (厳守)
+        - 元記事に明示されている内容のみ。推測・補完は禁止
+        - keyFacts は重要な事実を最大 4 件 (自然言語の事実のみ、コード片は除く)
+        - entities は主題に関わる固有名詞 (人物・組織・製品・具体的な技術/概念) を最大 4 件。一般語・代名詞・地名・日付は除外
+        - すべて日本語で出力 (固有名詞の原語表記は維持可)
+
+        # 本文の一部
         \(text)
         """
     }
