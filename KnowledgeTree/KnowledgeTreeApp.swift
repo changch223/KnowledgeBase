@@ -498,6 +498,10 @@ struct KnowledgeTreeApp: App {
         await BackgroundExtractionScheduler.shared.scheduleNextConceptResynthesis() // spec 042
         await BackgroundExtractionScheduler.shared.scheduleNextWeeklyLint()         // spec 058
 
+        // spec 076: 起動毎に整理ループを 1 バッチ進める (resumable・軽量、NEVER STOP)。
+        // fire-and-forget で起動をブロックしない。AI 呼び出しは FM ゲートで直列化される。
+        Task { _ = await lintEngine.runBatch(maxTags: 15) }
+
         // spec 071 (token 実測、DEBUG 専用): 各 @Generable スキーマの実トークンをログ出力。
         // AI 生成は呼ばない (tokenCount のみ)。overflow 真因の確定に使う。
         #if DEBUG

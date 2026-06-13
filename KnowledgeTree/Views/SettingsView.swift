@@ -49,6 +49,9 @@ struct SettingsView: View {
             Section {
                 HealthScoreCard()
                 LintNowButton()
+                #if DEBUG
+                DebugReprocessButton()
+                #endif
             } header: {
                 Text("settings.health.section.title")
             }
