@@ -341,6 +341,37 @@ struct LintEngineTests {
         #expect(page.categoryRaw == "テクノロジー")
     }
 
+    // MARK: - spec 077: 安定タグの再分類スキップ (NEVER STOP の浪費防止)
+
+    @Test func testReclassifySkipsRecentlyClassifiedStableTags() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // step3 (孤児タグ削除) で消えないよう各タグに記事を紐付ける
+        let art1 = Article(url: "https://example.com/s", title: "s", savedAt: .now)
+        let art2 = Article(url: "https://example.com/f", title: "f", savedAt: .now)
+        context.insert(art1)
+        context.insert(art2)
+        // 直近に分類済の安定タグ (categoryRaw=経済、lastLintedAt=今) → 再分類スキップされるべき
+        let stable = KnowledgeTree.Tag(name: "安定タグ", categoryRaw: "経済")
+        stable.lastLintedAt = .now
+        context.insert(stable)
+        art1.tags = [stable]
+        // 未分類タグ → 処理されるべき
+        let fresh = KnowledgeTree.Tag(name: "新タグ", categoryRaw: nil)
+        context.insert(fresh)
+        art2.tags = [fresh]
+        try context.save()
+
+        // classifier は全部 テクノロジー に倒す
+        let classifier = InMemoryAutoCategoryClassifier(mapping: [:], defaultCategory: "テクノロジー")
+        let engine = DefaultLintEngine(context: context, categoryClassifier: classifier, loopMarker: InMemoryLintLoopMarker())
+        _ = await engine.runBatch(maxTags: 15)
+
+        #expect(stable.categoryRaw == "経済")        // 直近分類済 → スキップ (テクノロジーに変わらない)
+        #expect(fresh.categoryRaw == "テクノロジー")  // 未分類 → 処理された
+    }
+
     // MARK: - spec 077: 新カテゴリ昇格 (その他 クラスタ → AI 命名 → 動的追加)
 
     @Test func testInsertCategoryIsIdempotent() throws {

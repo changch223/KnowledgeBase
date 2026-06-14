@@ -113,6 +113,9 @@ final class DefaultLintEngine: LintEngineProtocol {
     private let promoteMinClusterSize: Int = 5
     /// spec 077: 昇格クラスタの cosine 類似度しきい値
     private let promoteClusterThreshold: Float = 0.55
+    /// spec 077: 確定済みタグの再分類 TTL (日)。直近これ以内に分類されたタグは再分類しない
+    /// (NEVER STOP ループが安定タグを毎周回 AI 再確認する浪費を防ぐ)。
+    private let reclassifyTTLDays: Double = 30
 
     init(
         context: ModelContext,
@@ -392,10 +395,24 @@ final class DefaultLintEngine: LintEngineProtocol {
     private func reclassifyTagBatch(maxTags: Int, loopStart: Date) async -> (reclassified: Int, remaining: Int) {
         guard let classifier = categoryClassifier else { return (0, 0) }
         let allTags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        let staleCutoff = Date.now.addingTimeInterval(-reclassifyTTLDays * 86_400)
 
-        // 今周回の未処理 = lastLintedAt が nil または loopStart より前
+        // spec 077 fix: 確定済みの安定タグ (カテゴリ設定済 + 直近に分類済) は毎周回再分類しない。
+        // NEVER STOP ループが「クラウディアモデル → テクノロジー」のような確定タグを無限に
+        // 再確認し AI を浪費 + ログ汚染する問題を防ぐ。再分類対象 = 以下のいずれか:
+        //  - categoryRaw 未設定 (まだ分類されていない)
+        //  - lastLintedAt なし (一度も整理されていない)
+        //  - 最終分類が TTL(reclassifyTTLDays=30日) より古い (drift / prompt 更新の取りこぼし対策)
+        // → 全タグが新しく分類済なら pending=0 で即完走し、ループは静かに収束する。
+        func isDueForReclassify(_ tag: Tag) -> Bool {
+            if (tag.categoryRaw ?? "").isEmpty { return true }
+            guard let last = tag.lastLintedAt else { return true }
+            return last < staleCutoff
+        }
+
+        // 今周回の未処理 (lastLintedAt < loopStart) かつ「再分類が必要」なタグのみ。
         let pending = allTags
-            .filter { ($0.lastLintedAt ?? .distantPast) < loopStart }
+            .filter { ($0.lastLintedAt ?? .distantPast) < loopStart && isDueForReclassify($0) }
             .sorted { ($0.lastLintedAt ?? .distantPast) < ($1.lastLintedAt ?? .distantPast) }
         let batch = Array(pending.prefix(maxTags))
         var reclassifyCount = 0
