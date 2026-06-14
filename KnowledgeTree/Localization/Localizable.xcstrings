@@ -154,6 +154,9 @@
     "×%lld" : {
 
     },
+    "▸" : {
+
+    },
     "⚠️ 更新が必要 (%lld)" : {
 
     },
@@ -519,6 +522,193 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "+%lld 件のタグ ▼"
+          }
+        }
+      }
+    },
+    "category.edit.action.hide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示にする"
+          }
+        }
+      }
+    },
+    "category.edit.action.merge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合する"
+          }
+        }
+      }
+    },
+    "category.edit.action.unhide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再表示する"
+          }
+        }
+      }
+    },
+    "category.edit.confirmMerge.message %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ に統合します。元の分野は非表示になります。"
+          }
+        }
+      }
+    },
+    "category.edit.confirmMerge.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野を統合しますか?"
+          }
+        }
+      }
+    },
+    "category.edit.error.duplicate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じ名前の分野が既にあります。統合をお使いください。"
+          }
+        }
+      }
+    },
+    "category.edit.section.definition" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "定義 (AI 分類用)"
+          }
+        }
+      }
+    },
+    "category.edit.section.definition.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI がタグをこの分野に分類するときのヒントになります。"
+          }
+        }
+      }
+    },
+    "category.edit.section.merge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他の分野に統合"
+          }
+        }
+      }
+    },
+    "category.edit.section.merge.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この分野のタグ・概念を統合先に移し、この分野は非表示になります。"
+          }
+        }
+      }
+    },
+    "category.edit.section.rename" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前"
+          }
+        }
+      }
+    },
+    "category.edit.section.rename.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この分野に属するタグ・概念の分類が、すべて新しい名前に更新されます。"
+          }
+        }
+      }
+    },
+    "category.edit.section.visibility.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示にしても分野のデータは残り、いつでも再表示できます。"
+          }
+        }
+      }
+    },
+    "category.edit.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野を編集"
+          }
+        }
+      }
+    },
+    "category.management.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野がありません"
+          }
+        }
+      }
+    },
+    "category.management.hidden.suffix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（非表示）"
+          }
+        }
+      }
+    },
+    "category.management.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野をタップして名前・定義の編集、統合、非表示ができます。"
           }
         }
       }
@@ -1362,6 +1552,28 @@
         }
       }
     },
+    "concept.children.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細トピック"
+          }
+        }
+      }
+    },
+    "concept.parent.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上位概念"
+          }
+        }
+      }
+    },
     "ConceptPage.card.relatedCount" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2062,6 +2274,28 @@
         }
       }
     },
+    "feed.concept.articleCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事 %lld"
+          }
+        }
+      }
+    },
+    "feed.concept.childCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "子トピック %lld"
+          }
+        }
+      }
+    },
     "feed.digest.count" : {
       "localizations" : {
         "ja" : {
@@ -2092,12 +2326,23 @@
         }
       }
     },
+    "feed.new.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新着"
+          }
+        }
+      }
+    },
     "feed.recommend.title" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "おすすめ"
+            "value" : "おすすめのまとめ"
           }
         }
       }
@@ -2906,6 +3151,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存した記事"
+          }
+        }
+      }
+    },
+    "manage.segment.categories" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野"
+          }
+        }
+      }
+    },
+    "manage.segment.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示"
+          }
+        }
+      }
+    },
+    "manage.segment.tags" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ"
+          }
+        }
+      }
+    },
+    "manage.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ・分野の管理"
           }
         }
       }
@@ -3918,7 +4207,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "タグ管理"
+            "value" : "タグ・分野の管理"
           }
         }
       }

@@ -229,6 +229,9 @@ struct KnowledgeTreeApp: App {
         let categoryRegistry = CategoryRegistry(context: context)
         categoryRegistry.seedIfNeeded()
 
+        // spec 075: カテゴリ編集 store (rename cascade / merge / hide / 定義編集)
+        let categoryStore = CategoryStore(context: context, refreshTrigger: refreshTrigger)
+
         // spec 015: AutoCategoryClassifier (Foundation Models 経由で Tag → Category 推論)
         // spec 074: classifier をレジストリ駆動に (候補 = seed + 動的カテゴリ)
         let categoryClassifier: AutoCategoryClassifier = FoundationModelsAutoCategoryClassifier(
@@ -424,6 +427,7 @@ struct KnowledgeTreeApp: App {
         serviceContainer.bodyService = bodyService
         serviceContainer.knowledgeService = knowledgeService
         serviceContainer.tagStore = tagStore
+        serviceContainer.categoryStore = categoryStore  // spec 075
         serviceContainer.backgroundQueue = bgQueue
         serviceContainer.digestService = digestService  // spec 018
         serviceContainer.embeddingService = embeddingService  // spec 021

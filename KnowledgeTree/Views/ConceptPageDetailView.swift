@@ -26,6 +26,11 @@ struct ConceptPageDetailView: View {
     /// プロパティ (crossSourceInsights / relatedArticles 等) を一切読まず crash 回避。
     @Query private var liveMatches: [ConceptPage]
 
+    /// spec 075: 親子階層の解決用 (非表示除外)。parentConceptID は #Predicate 直クエリ不可なので
+    /// in-memory filter (件数は小)。子セクション・上位概念ブレッドクラムに使う。
+    @Query(filter: #Predicate<ConceptPage> { !$0.isHidden })
+    private var hierarchyPages: [ConceptPage]
+
     init(conceptPage: ConceptPage) {
         self.conceptPage = conceptPage
         let id = conceptPage.id
@@ -34,6 +39,19 @@ struct ConceptPageDetailView: View {
 
     /// page がまだ DB に存在しているか (削除 / merge で消えた直後は false)。
     private var isAlive: Bool { !liveMatches.isEmpty }
+
+    /// spec 075: 上位概念 (親) ページ。parentConceptID が指す先、無ければ nil。
+    private var parentPage: ConceptPage? {
+        guard let pid = conceptPage.parentConceptID else { return nil }
+        return hierarchyPages.first { $0.id == pid }
+    }
+
+    /// spec 075: この概念の子 specific 概念 (updatedAt 降順)。
+    private var childPages: [ConceptPage] {
+        hierarchyPages
+            .filter { $0.parentConceptID == conceptPage.id }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
 
     /// 「つながる人物・モノ」セクションで表示する他 ConceptPage を resolve。
     /// relatedConceptIDs 配列を fetch、最大 8 件まで。
@@ -86,10 +104,12 @@ struct ConceptPageDetailView: View {
     private var aliveBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Spacing.section) {
+                parentBreadcrumb
                 headerSection
                 summarySection
                 wikiBodySection
                 crossSourceInsightsSection
+                childConceptsSection
                 relatedArticlesSection
                 // spec 043: この概念についての質問と答え (SavedAnswer セクション)
                 SavedAnswerSection(conceptPageID: conceptPage.id)
@@ -340,6 +360,74 @@ struct ConceptPageDetailView: View {
                 }
             }
             .accessibilityIdentifier("conceptPageDetail_relatedConceptsSection")
+        }
+    }
+
+    // MARK: - spec 075: 階層ドリルダウン
+
+    /// 上位概念 (親) へのブレッドクラムリンク。親がいる specific 概念のみ表示。
+    @ViewBuilder
+    private var parentBreadcrumb: some View {
+        if let parent = parentPage {
+            NavigationLink(value: ConceptPageDetailDestination(id: parent.id)) {
+                HStack(spacing: DS.Spacing.xs) {
+                    Image(systemName: "arrow.up.left")
+                        .font(.caption2)
+                    Text("concept.parent.label")
+                    Text("▸")
+                    Text(parent.name)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                }
+                .font(.caption)
+                .foregroundStyle(DS.Color.actionBlue)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("conceptPageDetail_parentBreadcrumb")
+        }
+    }
+
+    /// 「詳細トピック (子 N)」セクション。子 specific 概念へドリルダウン。子がいる broad のみ表示。
+    @ViewBuilder
+    private var childConceptsSection: some View {
+        let children = childPages
+        if !children.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                Text(String(format: String(localized: "concept.children.title") + " (%lld)", children.count))
+                    .font(.title3.bold())
+                ForEach(children, id: \.id) { child in
+                    NavigationLink(value: ConceptPageDetailDestination(id: child.id)) {
+                        HStack(alignment: .top, spacing: DS.Spacing.md) {
+                            Image(systemName: child.kind.symbolName)
+                                .font(.body)
+                                .foregroundStyle(DS.Color.actionBlue)
+                                .frame(width: 24, alignment: .center)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                                Text(child.name)
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                if !child.summaryPreview.isEmpty {
+                                    Text(child.summaryPreview)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, DS.Spacing.sm)
+                    }
+                    .buttonStyle(.plain)
+                    Divider()
+                }
+            }
+            .accessibilityIdentifier("conceptPageDetail_childConceptsSection")
         }
     }
 }

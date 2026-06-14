@@ -36,66 +36,43 @@ struct KnowledgeClipView: View {
         sort: [SortDescriptor(\ConceptPage.updatedAt, order: .reverse)]
     )
     private var feedWikiPages: [ConceptPage]
-    /// spec 068: カテゴリー/タグ ハイライト用の全 Tag。
-    @Query private var allTags: [Tag]
-
-    /// spec 068: 時系列 mix (記事 + Wiki) に カテゴリー/タグ ハイライトを差し込んだ最終フィード。
-    private var feedItems: [FeedItem] {
-        let base = FeedBuilder.assemble(articles: feedArticles, wikiPages: feedWikiPages, now: Date())
-        return FeedBuilder.interleaveHighlights(into: base, highlights: highlightItems)
+    /// spec 075: 縦フィードの主役 = トップレベル概念 (広い概念 + 孤立 specific)。
+    /// 子 specific を畳み込み、記事数を解決した ConceptFeedEntry を updatedAt 降順で返す。
+    private var conceptEntries: [ConceptFeedEntry] {
+        FeedBuilder.topLevelConcepts(pages: feedWikiPages, now: Date())
     }
 
-    /// spec 068: 「For You Wiki」横棚 (一番上固定)。Wiki のみ recommend (記事多い+最近更新)。
-    /// recommend に空 articles を渡すと Wiki だけが返る。
-    private var forYouWikiItems: [FeedItem] {
-        FeedBuilder.recommend(articles: [], wikiPages: feedWikiPages, now: Date())
+    /// spec 075: 上部「新着」棚 = まだ概念に束ねられていない新着記事。概念化されると消える。
+    private var newShelfArticles: [Article] {
+        FeedBuilder.newArticleShelf(articles: feedArticles, now: Date())
     }
 
-    /// spec 068: カテゴリー/タグ ハイライトカード (縦 mix のバリエーション、AI ゼロ)。
-    private var highlightItems: [FeedItem] {
-        var wikiCountByCategory: [String: Int] = [:]
-        for page in feedWikiPages where !page.isHidden {
-            wikiCountByCategory[page.categoryRaw, default: 0] += 1
-        }
-        return FeedBuilder.highlights(
-            articles: feedArticles,
-            tags: allTags,
-            wikiCountByCategory: wikiCountByCategory,
-            now: Date()
-        )
+    /// spec 075: 「おすすめのまとめ」横棚 (一番上)。トップレベル概念を活動量+recency で上位 N。
+    /// 既存 RecommendCarousel / WikiShelfCard を流用するため FeedItem.wikiUpdate に map。
+    private var recommendItems: [FeedItem] {
+        FeedBuilder.recommendConcepts(pages: feedWikiPages, now: Date()).map { .wikiUpdate($0) }
     }
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: DS.Spacing.xxl) {
-                    // spec 068: 一番上に「For You Wiki」横スクロール棚 (Wiki のみ)。候補不足なら非表示。
-                    if forYouWikiItems.count >= FeedBuilder.carouselMinItems {
-                        RecommendCarousel(items: forYouWikiItems)
+                    // spec 075: 上部「新着」棚 — まだ概念化されていない新着記事 (概念化で消える)。
+                    if !newShelfArticles.isEmpty {
+                        newArticleShelf
                     }
 
-                    if feedItems.isEmpty {
+                    // spec 075: 「おすすめのまとめ」横棚 — トップレベル概念。候補不足なら非表示。
+                    if recommendItems.count >= FeedBuilder.carouselMinItems {
+                        RecommendCarousel(items: recommendItems)
+                    }
+
+                    if conceptEntries.isEmpty {
                         feedEmptyState
                     } else {
-                        // spec 068: 縦 mix (記事 / Wiki / カテゴリー / タグ の 4 種カード)。
-                        ForEach(feedItems) { item in
-                            switch item {
-                            case .article(let article):
-                                ArticleFeedCard(article: article)
-                            case .wikiUpdate(let page):
-                                WikiFeedCard(page: page)
-                            case .periodicDigest(let pages):
-                                PeriodicDigestCard(pages: pages)
-                            case .categoryHighlight(let category, let articleCount, let wikiCount, let recentCount):
-                                CategoryHighlightCard(
-                                    category: category,
-                                    articleCount: articleCount,
-                                    wikiCount: wikiCount,
-                                    recentCount: recentCount
-                                )
-                            case .tagHighlight(let tag, let totalCount, let recentCount):
-                                TagHighlightCard(tag: tag, totalCount: totalCount, recentCount: recentCount)
-                            }
+                        // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
+                        ForEach(conceptEntries) { entry in
+                            ConceptSummaryCard(entry: entry)
                         }
                     }
                 }
@@ -195,6 +172,29 @@ struct KnowledgeClipView: View {
                 services.pendingDeepLinkCardID = nil
             }
         }
+    }
+
+    /// spec 075: 上部「新着」棚 — まだ概念に束ねられていない新着記事を横スクロールで。
+    /// 既存 ArticleShelfCard 流用。概念化されると newShelfArticles から外れて自動的に消える。
+    private var newArticleShelf: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            Text("feed.new.title")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, DS.Spacing.xxl)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: DS.Spacing.md) {
+                    ForEach(newShelfArticles, id: \.id) { article in
+                        ArticleShelfCard(article: article)
+                    }
+                }
+                .padding(.horizontal, DS.Spacing.xxl)
+            }
+        }
+        .padding(.vertical, DS.Spacing.sm)
+        .accessibilityIdentifier("clip.newShelf")
     }
 
     /// spec 066: フィードが空のときの穏やかな空状態。
