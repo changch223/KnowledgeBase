@@ -80,4 +80,27 @@ final class CategoryRegistry {
     func categoryExists(name: String) -> Bool {
         validNames().contains { $0.lowercased() == name.lowercased() }
     }
+
+    /// spec 077: agent loop (lint) がクラスタ検知した新カテゴリを動的追加する (auto-adopt)。
+    /// 既存 (非表示・seed 含む全件) と同名 (大文字小文字無視) なら追加せず false。idempotent。
+    /// order は末尾、isSeed=false。CloudKit: record type 追加済ゆえ insert は非破壊。
+    @discardableResult
+    func insertCategory(name: String, definition: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        let all = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+        if all.contains(where: { $0.name.lowercased() == trimmed.lowercased() }) { return false }
+        let maxOrder = all.map(\.order).max() ?? (CategorySeed.allSeeds.count - 1)
+        let def = CategoryDefinition(
+            name: trimmed,
+            definition: definition,
+            isSeed: false,
+            isHidden: false,
+            order: maxOrder + 1
+        )
+        context.insert(def)
+        try? context.save()
+        logger.notice("category registry inserted dynamic category '\(trimmed, privacy: .public)'")
+        return true
+    }
 }

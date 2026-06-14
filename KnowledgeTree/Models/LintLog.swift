@@ -52,5 +52,6 @@ enum LintAction: String, CaseIterable {
     case linkConceptPage
     case reclassifyTag
     case refreshSavedAnswer
+    case promoteCategory  // spec 077: その他 クラスタ → 新カテゴリ自動昇格
     case unknown
 }

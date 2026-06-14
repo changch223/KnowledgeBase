@@ -243,7 +243,11 @@ struct KnowledgeTreeApp: App {
         let tagStore = TagStore(
             context: context,
             refreshTrigger: refreshTrigger,
-            categoryClassifier: categoryClassifier
+            categoryClassifier: categoryClassifier,
+            // spec 077: タグ分類完了 → 紐づく [その他] 概念を再ヒール (ingest タイミング競合の解消、AI 不要)
+            onTagClassified: { tag in
+                ConceptSynthesisCommon.healConcepts(forTag: tag, context: context, refreshTrigger: refreshTrigger)
+            }
         )
 
         // spec 018: KnowledgeDigestService (Foundation + Fallback) を先に構築、
@@ -371,7 +375,10 @@ struct KnowledgeTreeApp: App {
         let lintEngine: LintEngineProtocol = DefaultLintEngine(
             context: context,
             refreshTrigger: refreshTrigger,
-            categoryClassifier: categoryClassifier
+            categoryClassifier: categoryClassifier,
+            // spec 077: 新カテゴリ昇格 (その他 クラスタ → AI 命名 → 動的追加)
+            session: session,
+            categoryRegistry: categoryRegistry
         )
         BackgroundExtractionScheduler.shared.lintEngineProvider = { lintEngine }
 

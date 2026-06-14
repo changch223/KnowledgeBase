@@ -105,6 +105,14 @@ final class DefaultLintEngine: LintEngineProtocol {
     private let loopMarker: LintLoopMarkerStoring
     /// spec 076: 1 batch で再分類するタグ数の既定
     private let defaultBatchSize: Int
+    /// spec 077: 新カテゴリ昇格の AI 命名用 (nil でステップ skip)
+    private let session: LanguageModelSessionProtocol?
+    /// spec 077: 動的カテゴリ追加用レジストリ (nil でステップ skip)
+    private let categoryRegistry: CategoryRegistry?
+    /// spec 077: 昇格クラスタの最小件数 (これ未満は昇格しない)
+    private let promoteMinClusterSize: Int = 5
+    /// spec 077: 昇格クラスタの cosine 類似度しきい値
+    private let promoteClusterThreshold: Float = 0.55
 
     init(
         context: ModelContext,
@@ -113,7 +121,9 @@ final class DefaultLintEngine: LintEngineProtocol {
         chatService: ChatServiceProtocol? = nil,
         inactiveCleanupDays: Int = 60,
         loopMarker: LintLoopMarkerStoring = UserDefaultsLintLoopMarker(),
-        defaultBatchSize: Int = 15
+        defaultBatchSize: Int = 15,
+        session: LanguageModelSessionProtocol? = nil,
+        categoryRegistry: CategoryRegistry? = nil
     ) {
         self.context = context
         self.refreshTrigger = refreshTrigger
@@ -122,6 +132,8 @@ final class DefaultLintEngine: LintEngineProtocol {
         self.inactiveCleanupDays = inactiveCleanupDays
         self.loopMarker = loopMarker
         self.defaultBatchSize = defaultBatchSize
+        self.session = session
+        self.categoryRegistry = categoryRegistry
     }
 
     /// 1 周完走するまで batch を回す。resumable (中断後は続きから)。週1 BGTask / ボタン用。
@@ -166,6 +178,8 @@ final class DefaultLintEngine: LintEngineProtocol {
             result.deletedConceptPageCount = await stepDeleteOrphanedConceptPages()
             result.deletedTagCount = await stepDeleteOrphanedTags()
             result.linkedCount = await stepLinkOrphanedConceptPages()
+            // spec 077: その他 概念の凝集クラスタを 1 つ新カテゴリに昇格 (週1 + 整理ボタンの新周回で 1 回)
+            await stepPromoteCategories()
         }
         let loopStart = loopMarker.loopStartedAt ?? .now
 
@@ -411,6 +425,12 @@ final class DefaultLintEngine: LintEngineProtocol {
         }
         try? context.save()
 
+        // spec 077: 再分類でカテゴリが確定したタグに紐づく [その他] 概念を再ヒール (AI 不要)。
+        // → 「今すぐ整理」で再分類だけでなく概念カテゴリも実カテゴリに直る。
+        for tag in batch {
+            ConceptSynthesisCommon.healConcepts(forTag: tag, context: context, refreshTrigger: refreshTrigger)
+        }
+
         let remaining = max(0, pending.count - batch.count)
         return (reclassifyCount, remaining)
     }
@@ -451,6 +471,81 @@ final class DefaultLintEngine: LintEngineProtocol {
         }
         try? context.save()
         return refreshCount
+    }
+
+    // MARK: - spec 077: 新カテゴリ自動昇格 (その他 クラスタ → AI 命名 → 動的追加 → 再割当)
+
+    /// `その他` 概念を embedding で貪欲クラスタリングし、最大クラスタが minClusterSize 以上なら
+    /// generateTopicName で命名 → CategoryRegistry に動的追加 → クラスタ概念 + その その他/空タグを新名へ。
+    /// 1 周回 (= 1 整理) で最大 1 昇格。session/registry が nil、availability/失敗時は skip (graceful)。
+    private func stepPromoteCategories() async {
+        guard let session, let categoryRegistry else { return }
+        let other = CategorySeed.otherCategory.name
+
+        // その他 かつ embedding 有りの ConceptPage (非表示除外)
+        let vectors: [(page: ConceptPage, vec: [Float])] = ((try? context.fetch(FetchDescriptor<ConceptPage>())) ?? [])
+            .filter { !$0.isHidden && $0.categoryRaw == other }
+            .compactMap { page in
+                guard let v = page.embedding?.asFloatArray, !v.isEmpty else { return nil }
+                return (page, v)
+            }
+        guard vectors.count >= promoteMinClusterSize else { return }
+
+        // 貪欲クラスタリング: 各 seed 中心に threshold 以上を集め、最大クラスタを採用。
+        var best: [(page: ConceptPage, vec: [Float])] = []
+        for seed in vectors {
+            let cluster = vectors.filter {
+                $0.vec.count == seed.vec.count
+                    && EmbeddingService.cosineSimilarity(seed.vec, $0.vec) >= promoteClusterThreshold
+            }
+            if cluster.count > best.count { best = cluster }
+        }
+        guard best.count >= promoteMinClusterSize else { return }
+
+        // AI 命名 (generateTopicName 流用、小出力 = token 安全)
+        let memberNames = best.map { $0.page.name }
+        let prompt = """
+            次の概念グループに共通する「分野・カテゴリー名」を 1 つ、2〜6 字の短い日本語で命名してください。
+            具体的すぎず、分野レベルの名詞にすること (例: 不動産, 法律, 料理)。
+            既存カテゴリー (テクノロジー / 経済 / 健康 / デザイン / 学術 / アート / ニュース / スポーツ / エンタメ / その他) と同じものは避けてください。
+
+            # 概念グループ
+            \(memberNames.prefix(12).joined(separator: "、"))
+            """
+        let candidateName: String
+        do {
+            let out = try await session.generateTopicName(prompt: prompt)
+            candidateName = out.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            logger.error("LintEngine: category naming failed: \(String(describing: error), privacy: .public)")
+            return
+        }
+        guard !candidateName.isEmpty, candidateName != other,
+              !categoryRegistry.categoryExists(name: candidateName) else { return }
+
+        // 動的追加 (idempotent)
+        let definition = "自動検出された分野。例: " + memberNames.prefix(4).joined(separator: ", ")
+        guard categoryRegistry.insertCategory(name: candidateName, definition: definition) else { return }
+
+        // クラスタ概念 + その記事の その他/空タグを新カテゴリへ (concept だけ移すと heal で その他 に戻るため tag も移す)
+        for member in best {
+            member.page.categoryRaw = candidateName
+            for article in (member.page.relatedArticles ?? []) {
+                for tag in (article.tags ?? []) {
+                    let raw = tag.categoryRaw ?? ""
+                    if raw.isEmpty || raw == other { tag.categoryRaw = candidateName }
+                }
+            }
+        }
+        try? context.save()
+        logLintAction(
+            .promoteCategory,
+            targetName: candidateName,
+            before: "その他 クラスタ \(best.count) 概念",
+            after: "新カテゴリ『\(candidateName)』に昇格"
+        )
+        refreshTrigger?.bump()
+        logger.notice("LintEngine: promoted category '\(candidateName, privacy: .public)' from \(best.count) その他 concepts")
     }
 
     // MARK: - LintLog 永続化 + cap 維持
