@@ -16,15 +16,19 @@ final class TagStore {
     private let refreshTrigger: RefreshTrigger?
     /// spec 015: 新規 Tag 作成時の Category 自動分類用 (optional、nil なら classify せず)
     private let categoryClassifier: AutoCategoryClassifier?
+    /// spec 077: タグ分類完了時に呼ぶ closure (概念の [その他] 再ヒール用、疎結合 DI)。
+    private let onTagClassified: ((Tag) -> Void)?
 
     init(
         context: ModelContext,
         refreshTrigger: RefreshTrigger? = nil,
-        categoryClassifier: AutoCategoryClassifier? = nil
+        categoryClassifier: AutoCategoryClassifier? = nil,
+        onTagClassified: ((Tag) -> Void)? = nil
     ) {
         self.context = context
         self.refreshTrigger = refreshTrigger
         self.categoryClassifier = categoryClassifier
+        self.onTagClassified = onTagClassified
     }
 
     /// raw タグ名を正規化して article に追加。
@@ -81,6 +85,8 @@ final class TagStore {
                     tag.categoryRaw = categoryName
                     try? self.context.save()
                     self.refreshTrigger?.bump()
+                    // spec 077: 分類完了 → この tag に紐づく [その他] 概念を再ヒール (タイミング競合の解消)
+                    self.onTagClassified?(tag)
                 }
             }
         }

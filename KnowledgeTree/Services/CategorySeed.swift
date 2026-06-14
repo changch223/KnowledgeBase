@@ -54,7 +54,7 @@ enum CategorySeed {
     /// spec 072: 各カテゴリの「定義 + 例 + 反例」(name 順)。単一の真実源。
     /// promptCandidatesWithDefinitions と CategoryDefinition seed (spec 074) の両方がここから派生する。
     static let seedDefinitions: [(name: String, definition: String)] = [
-        ("テクノロジー", "AI/プログラミング/ソフトウェア/ガジェット/IT 全般。例: Claude, RAG, embedding, GitHub, ハルシネーション。"),
+        ("テクノロジー", "AI/プログラミング/ソフトウェア/ガジェット/IT 全般。例: Claude, RAG, embedding, GitHub, ハルシネーション, 人工知能, 機械学習, LLM, 生成AI。※AI・人工知能・機械学習・LLM は迷わずテクノロジー。"),
         ("経済", "ビジネス/金融/市場/企業経営/マーケティング。例: 株価, 決算, スタートアップ資金調達。"),
         ("健康", "医療/身体/栄養/メンタルヘルス/病気。例: 腸内細菌, 睡眠, ワクチン。※AI のハルシネーションは健康ではなくテクノロジー。"),
         ("デザイン", "UI/UX/グラフィック/プロダクトデザイン/建築意匠。例: Figma, タイポグラフィ。"),

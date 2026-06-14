@@ -175,13 +175,14 @@ struct ConflictDetectionOutput: Codable {
 
 @Generable
 struct ConceptSynthesisOutput: Codable {
-    // 注 (token fix 2026-06-07): @Generable は宣言した最大サイズ分だけ出力 token を予約する。
-    // 旧 summary 400 字 + insights 7×150 字 = 出力予約だけで 4096 窓の半分超 → 入力と合算で
-    // exceededContextWindowSize (実機ログ ~4090 tokens) が intermittent 発生。出力上限を圧縮して窓に余裕を作る。
-    @Guide(description: "150〜280 字の日本語、断定調、原文にあることのみ。")
+    // 注 (token fix 2026-06-07 / spec 077): @Generable は宣言した最大サイズ分だけ出力 token を予約する。
+    // 旧 summary 400 字 + insights 7×150 字 = 出力予約だけで窓の半分超 → exceededContextWindowSize 多発。
+    // spec 077: broad/specific 両経路の境界 overflow (4089-4091) 余裕確保のため summary 280→180・insights 4→2 に縮小。
+    // 控えめ (240/3) でも境界ケースが残ったため もっと短く (180/2) に再調整 (Apple 固定オーバーヘッドが支配的)。
+    @Guide(description: "120〜180 字の日本語、断定調、原文にあることのみ。")
     let summary: String
 
-    @Guide(description: "最大 4 件、各 40-90 字の日本語、複数記事を横断して見える発見。")
+    @Guide(description: "最大 2 件、各 40-90 字の日本語、複数記事を横断して見える発見。")
     let crossSourceInsights: [String]
 }
 

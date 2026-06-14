@@ -398,7 +398,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 && !conceptPage.summary.isEmpty
             if !preserveExisting {
                 conceptPage.summary = trimmedSummary
-                conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(7))
+                conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(2))
             }
 
             // embedding 再生成 (summary が更新されたので)
@@ -721,8 +721,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(essenceText)
 
         ## 出力要件
-        - summary: 150〜280 字、上記の具体トピックと要点を俯瞰した分野全体像、推測禁止、断定調
-        - crossSourceInsights: 最大 4 件、各 40〜90 字、トピックを横断して見える傾向
+        - summary: 120〜180 字、上記の具体トピックと要点を俯瞰した分野全体像、推測禁止、断定調
+        - crossSourceInsights: 最大 2 件、各 40〜90 字、トピックを横断して見える傾向
         """
     }
 
@@ -759,8 +759,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(lines)
 
         ## 出力要件
-        - summary: 150〜280 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
-        - crossSourceInsights: 最大 4 件、各 40〜90 字、複数記事を並べて初めて見える発見
+        - summary: 120〜180 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
+        - crossSourceInsights: 最大 2 件、各 40〜90 字、複数記事を並べて初めて見える発見
         - 推測 / 一般知識からの補強禁止
         """
     }
@@ -830,8 +830,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(chunkText)
 
         ## 出力要件
-        - summary: 150〜280 字、チャンク要約のみから統合、推測禁止、断定調
-        - crossSourceInsights: 最大 4 件、各 40〜90 字、チャンクを横断して見える知見
+        - summary: 120〜180 字、チャンク要約のみから統合、推測禁止、断定調
+        - crossSourceInsights: 最大 2 件、各 40〜90 字、チャンクを横断して見える知見
         """
     }
 
@@ -1064,5 +1064,29 @@ enum ConceptSynthesisCommon {
         let pool = real.isEmpty ? raws : real
         let counted = Dictionary(grouping: pool, by: { $0 }).mapValues(\.count)
         return counted.max(by: { $0.value < $1.value })?.key ?? other
+    }
+
+    /// spec 077: タグ分類完了時の再ヒール (AI 不要)。
+    /// ingest のタイミング競合 (概念作成が tag 分類の完了を待たない) で `その他` に固着した概念を、
+    /// タグ分類完了後 (TagStore の fire-and-forget) / lint 再分類後に実カテゴリへ修正する。
+    /// tag の articles に紐づく ConceptPage のうち categoryRaw == その他 のものに healCategory を適用。
+    static func healConcepts(forTag tag: Tag, context: ModelContext, refreshTrigger: RefreshTrigger?) {
+        let other = CategorySeed.otherCategory.name
+        let articles = tag.articles ?? []
+        guard !articles.isEmpty else { return }
+        var seen = Set<UUID>()
+        var changed = false
+        for article in articles {
+            for page in (article.relatedConcepts ?? []) where page.categoryRaw == other {
+                guard seen.insert(page.id).inserted else { continue }
+                let before = page.categoryRaw
+                healCategory(page, articles: page.relatedArticles ?? [])
+                if page.categoryRaw != before { changed = true }
+            }
+        }
+        if changed {
+            try? context.save()
+            refreshTrigger?.bump()
+        }
     }
 }

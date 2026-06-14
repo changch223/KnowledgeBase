@@ -50,6 +50,7 @@ private struct LintLogRow: View {
         case .linkConceptPage:      return "lintLog.action.linkConceptPage"
         case .reclassifyTag:        return "lintLog.action.reclassifyTag"
         case .refreshSavedAnswer:   return "lintLog.action.refreshSavedAnswer"
+        case .promoteCategory:      return "lintLog.action.promoteCategory"
         case .unknown:              return "lintLog.action.unknown"
         }
     }
@@ -62,6 +63,7 @@ private struct LintLogRow: View {
         case .linkConceptPage:      return "link"
         case .reclassifyTag:        return "tag.fill"
         case .refreshSavedAnswer:   return "arrow.clockwise"
+        case .promoteCategory:      return "sparkles"
         case .unknown:              return "questionmark.circle"
         }
     }

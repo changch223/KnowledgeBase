@@ -318,4 +318,109 @@ struct LintEngineTests {
         #expect(b2.loopComplete == true)
         #expect(b2.reclassifiedCount == 2)  // 続きの 2 件だけ (最初の 2 件は再処理しない)
     }
+
+    // MARK: - spec 077: 再ヒール (タイミング競合の解消)
+
+    @Test func testHealConceptsForTagFixesOtherConcept() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = Article(url: "https://example.com/ai", title: "AI 記事", savedAt: .now)
+        context.insert(article)
+        let tag = KnowledgeTree.Tag(name: "人工知能", categoryRaw: "テクノロジー")  // 分類完了済を模す
+        context.insert(tag)
+        article.tags = [tag]
+        let page = ConceptPage(name: "人工知能", categoryRaw: "その他", summary: "x", updatedAt: .now)
+        context.insert(page)
+        page.relatedArticles = [article]  // inverse で article.relatedConcepts に page が入る
+        try context.save()
+
+        // タグ分類完了時に呼ばれる再ヒール → [その他] 概念が実カテゴリへ
+        ConceptSynthesisCommon.healConcepts(forTag: tag, context: context, refreshTrigger: nil)
+
+        #expect(page.categoryRaw == "テクノロジー")
+    }
+
+    // MARK: - spec 077: 新カテゴリ昇格 (その他 クラスタ → AI 命名 → 動的追加)
+
+    @Test func testInsertCategoryIsIdempotent() throws {
+        let container = try makeContainer()
+        let registry = CategoryRegistry(context: container.mainContext)
+        #expect(registry.insertCategory(name: "不動産", definition: "d") == true)
+        #expect(registry.insertCategory(name: "不動産", definition: "d2") == false)  // 重複は skip
+        #expect(registry.insertCategory(name: "ふどうさん", definition: "d") == true)  // 別名は別物
+    }
+
+    @Test func testPromoteCategoryFromOtherCluster() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // 凝集した その他 概念 6 件 (同一 embedding = cosine 1.0 ≥ 0.55)。
+        // ※名前は編集距離の大きい別物にする (step1 merge は編集距離≤2+同カテゴリで統合するため、
+        //   似た名前だと昇格前に merge されてクラスタが縮む)。
+        let clusterVec: [Float] = [1, 0, 0, 0]
+        let clusterNames = ["賃貸契約", "住宅ローン", "建ぺい率", "登記簿謄本", "定期借地権", "物件価格査定"]
+        for name in clusterNames {
+            let p = ConceptPage(name: name, categoryRaw: "その他", summary: "s", updatedAt: .now)
+            p.embedding = clusterVec.asEmbeddingData
+            context.insert(p)
+        }
+        // 無関係な その他 概念 (別方向 = クラスタに入らない)
+        let outlier = ConceptPage(name: "孤立", categoryRaw: "その他", summary: "s", updatedAt: .now)
+        outlier.embedding = ([0, 0, 0, 1] as [Float]).asEmbeddingData
+        context.insert(outlier)
+        try context.save()
+
+        let mock = MockLanguageModelSession()
+        mock.nextTopicNameResult = .success(TopicNameOutput(name: "不動産"))
+        let registry = CategoryRegistry(context: context)
+        let engine = DefaultLintEngine(
+            context: context,
+            loopMarker: InMemoryLintLoopMarker(),
+            session: mock,
+            categoryRegistry: registry
+        )
+
+        _ = await engine.runBatch(maxTags: 15)
+
+        // 新カテゴリ「不動産」が動的追加された
+        let cats = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+        #expect(cats.contains { $0.name == "不動産" && !$0.isSeed })
+        // クラスタ 6 概念が「不動産」に再割当
+        let pages = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        let promoted = pages.filter { $0.categoryRaw == "不動産" }
+        #expect(promoted.count == 6)
+        // 孤立は その他 のまま
+        #expect(pages.first { $0.name == "孤立" }?.categoryRaw == "その他")
+        // LintLog 記録
+        let logs = (try? context.fetch(FetchDescriptor<LintLog>())) ?? []
+        #expect(logs.contains { $0.action == .promoteCategory })
+    }
+
+    @Test func testPromoteSkippedBelowMinClusterSize() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        // 3 件のみ (minClusterSize=5 未満) → 昇格しない
+        let vec: [Float] = [1, 0, 0, 0]
+        for i in 0..<3 {
+            let p = ConceptPage(name: "概念\(i)", categoryRaw: "その他", summary: "s", updatedAt: .now)
+            p.embedding = vec.asEmbeddingData
+            context.insert(p)
+        }
+        try context.save()
+
+        let mock = MockLanguageModelSession()
+        mock.nextTopicNameResult = .success(TopicNameOutput(name: "不動産"))
+        let registry = CategoryRegistry(context: context)
+        let engine = DefaultLintEngine(
+            context: context,
+            loopMarker: InMemoryLintLoopMarker(),
+            session: mock,
+            categoryRegistry: registry
+        )
+        _ = await engine.runBatch(maxTags: 15)
+
+        let cats = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+        #expect(!cats.contains { $0.name == "不動産" })  // 昇格なし
+    }
 }
