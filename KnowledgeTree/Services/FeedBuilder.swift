@@ -140,6 +140,89 @@ final class FeedBuilder: FeedBuilding {
         return max(0, 1 - days / recommendRecencyWindowDays)
     }
 
+    // MARK: - spec 075: 概念中心フィード (AI 呼び出しゼロ、純 fetch + in-memory merge)
+
+    /// 上部「新着」棚の件数上限。
+    static let newShelfLimit = 10
+    /// 新着棚に出す記事の鮮度上限 (日)。これを超えた未概念化記事は出さない (失敗記事の永久居座り防止)。
+    static let newShelfRecencyDays = 30.0
+
+    /// まだ概念に束ねられていない新着記事 (上部「新着」棚用)。
+    /// 条件: AI 処理完了済 + `relatedConcepts` が空 (= まだどの概念ページにも紐づいていない)
+    /// + 直近 newShelfRecencyDays 以内。savedAt 降順で limit 件。
+    /// 概念化される (relatedConcepts に概念が付く) と自動的に棚から消える。
+    static func newArticleShelf(
+        articles: [Article],
+        now: Date,
+        limit: Int = -1,
+        recencyDays: Double = -1
+    ) -> [Article] {
+        let limit = limit < 0 ? newShelfLimit : limit
+        let recencyDays = recencyDays < 0 ? newShelfRecencyDays : recencyDays
+        let cutoff = now.addingTimeInterval(-recencyDays * 86_400)
+        return articles
+            .filter { isProcessingComplete($0) }
+            .filter { ($0.relatedConcepts ?? []).isEmpty }
+            .filter { $0.savedAt >= cutoff }
+            .sorted { $0.savedAt > $1.savedAt }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// 縦フィードの主役 = トップレベル概念 (広い概念 + 孤立 specific = `parentConceptID == nil`)。
+    /// 子 specific を親に畳み込み、記事数を解決した ConceptFeedEntry を updatedAt 降順で返す。
+    /// pre-spec-074 のフラットページ (level=specific, parent=nil) も孤立として拾うので消えない。
+    /// 中身が空のページ (summary/body/子/記事 すべて無し) はノイズなので除外。
+    static func topLevelConcepts(pages: [ConceptPage], now: Date) -> [ConceptFeedEntry] {
+        let visible = pages.filter { !$0.isHidden }
+
+        // 親ID → 子ページ群
+        var childrenByParent: [UUID: [ConceptPage]] = [:]
+        for page in visible {
+            if let pid = page.parentConceptID {
+                childrenByParent[pid, default: []].append(page)
+            }
+        }
+
+        return visible
+            .filter { $0.parentConceptID == nil }
+            .map { page -> ConceptFeedEntry in
+                let children = (childrenByParent[page.id] ?? [])
+                    .sorted { $0.updatedAt > $1.updatedAt }
+                return ConceptFeedEntry(
+                    page: page,
+                    children: children,
+                    articleCount: (page.relatedArticles ?? []).count
+                )
+            }
+            .filter { entry in
+                !entry.page.summary.isEmpty
+                    || !entry.page.bodyMarkdown.isEmpty
+                    || !entry.children.isEmpty
+                    || entry.articleCount > 0
+            }
+            .sorted { $0.page.updatedAt > $1.page.updatedAt }
+    }
+
+    /// 上部カルーセル用おすすめ = トップレベル概念を活動量 (関連記事数) + 更新 recency で採点し上位 limit。
+    static func recommendConcepts(
+        pages: [ConceptPage],
+        now: Date,
+        limit: Int = -1
+    ) -> [ConceptPage] {
+        let limit = limit < 0 ? recommendLimit : limit
+        return pages
+            .filter { !$0.isHidden && $0.parentConceptID == nil }
+            .filter { !$0.summary.isEmpty || !$0.bodyMarkdown.isEmpty }
+            .map { page -> (page: ConceptPage, score: Double) in
+                let articleCount = Double((page.relatedArticles ?? []).count)
+                return (page, articleCount * wikiArticleWeight + recencyBonus(page.updatedAt, now: now))
+            }
+            .sorted { $0.score > $1.score }
+            .prefix(limit)
+            .map(\.page)
+    }
+
     // MARK: - spec 068: カテゴリー / タグ ハイライト
 
     /// 縦フィードのバリエーション用に、カテゴリーカード・タグカードを生成する (AI 呼び出しゼロ)。

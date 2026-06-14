@@ -279,4 +279,81 @@ struct FeedBuilderTests {
         // 7 番目 (index 6) が最初の highlight
         if case .tagHighlight = merged[6] {} else { Issue.record("index 6 は最初の highlight のはず") }
     }
+
+    // MARK: - spec 075: 新着棚 (未概念化記事)
+
+    @Test func newArticleShelfShowsOnlyUnfoldedRecentProcessed() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        insertArticle(ctx, title: "新着未分類", savedAt: fixedNow.addingTimeInterval(-3_600), status: .succeeded)
+        let folded = insertArticle(ctx, title: "概念化済", savedAt: fixedNow.addingTimeInterval(-3_600), status: .succeeded)
+        // folded を Wiki に紐付け → relatedConcepts 非空 = 棚から除外
+        let w = insertWiki(ctx, name: "概念", updatedAt: fixedNow)
+        w.relatedArticles = [folded]
+        insertArticle(ctx, title: "処理中", savedAt: fixedNow, status: .pending)
+        insertArticle(ctx, title: "古い未分類", savedAt: fixedNow.addingTimeInterval(-40 * 86_400), status: .succeeded)
+
+        let arts = try ctx.fetch(FetchDescriptor<Article>())
+        let titles = FeedBuilder.newArticleShelf(articles: arts, now: fixedNow).map(\.title)
+        #expect(titles.contains("新着未分類"))
+        #expect(!titles.contains("概念化済"))   // relatedConcepts 非空
+        #expect(!titles.contains("処理中"))      // 未処理
+        #expect(!titles.contains("古い未分類"))  // 鮮度超過 (>30d)
+    }
+
+    // MARK: - spec 075: トップレベル概念フィード
+
+    @Test func topLevelConceptsFoldsChildrenAndIncludesOrphans() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        let broad = insertWiki(ctx, name: "生成AI", updatedAt: fixedNow, summary: "広い概念")
+        broad.conceptLevelRaw = "broad"
+        let child1 = insertWiki(ctx, name: "Text-to-SQL", updatedAt: fixedNow.addingTimeInterval(-100), summary: "子1")
+        child1.parentConceptID = broad.id
+        let child2 = insertWiki(ctx, name: "RAG", updatedAt: fixedNow.addingTimeInterval(-200), summary: "子2")
+        child2.parentConceptID = broad.id
+        // 孤立 specific (parent=nil) も top-level に拾われる
+        insertWiki(ctx, name: "孤立概念", updatedAt: fixedNow.addingTimeInterval(-300), summary: "孤立")
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let entries = FeedBuilder.topLevelConcepts(pages: pages, now: fixedNow)
+        let names = entries.map(\.page.name)
+        #expect(names.contains("生成AI"))
+        #expect(names.contains("孤立概念"))
+        #expect(!names.contains("Text-to-SQL"))  // 子は top-level に出ない
+        #expect(!names.contains("RAG"))
+        let broadEntry = entries.first { $0.page.name == "生成AI" }
+        #expect(broadEntry?.children.count == 2)
+        #expect(entries.first?.page.name == "生成AI")  // updatedAt 降順で先頭
+    }
+
+    @Test func topLevelConceptsExcludesEmptyAndHidden() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        insertWiki(ctx, name: "空ページ", updatedAt: fixedNow, body: "", summary: "")  // 中身ゼロ
+        insertWiki(ctx, name: "非表示", updatedAt: fixedNow, isHidden: true)
+        insertWiki(ctx, name: "良ページ", updatedAt: fixedNow, summary: "中身あり")
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let names = FeedBuilder.topLevelConcepts(pages: pages, now: fixedNow).map(\.page.name)
+        #expect(names.contains("良ページ"))
+        #expect(!names.contains("空ページ"))
+        #expect(!names.contains("非表示"))
+    }
+
+    @Test func recommendConceptsRanksTopLevelByArticlesAndRecency() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        let popular = insertWiki(ctx, name: "人気", updatedAt: fixedNow, articleCount: 8)
+        popular.conceptLevelRaw = "broad"
+        insertWiki(ctx, name: "地味", updatedAt: fixedNow.addingTimeInterval(-10 * 86_400), articleCount: 1)
+        // 子 specific (parent あり) は記事多くても top-level でないので除外
+        let child = insertWiki(ctx, name: "子トピック", updatedAt: fixedNow, articleCount: 20)
+        child.parentConceptID = popular.id
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let recs = FeedBuilder.recommendConcepts(pages: pages, now: fixedNow, limit: 5)
+        #expect(recs.first?.name == "人気")
+        #expect(!recs.contains { $0.name == "子トピック" })  // top-level でない
+    }
 }

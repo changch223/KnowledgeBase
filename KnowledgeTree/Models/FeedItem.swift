@@ -46,3 +46,17 @@ enum FeedItem: Identifiable, Hashable {
         }
     }
 }
+
+/// spec 075 (iKnow 概念中心フィード) — 縦フィードの主役カード 1 枚分のデータ。
+/// トップレベル概念 (広い概念 or 孤立 specific) に、その子 specific 概念と記事数を束ねた transient。
+/// @Model ではない (毎回 FeedBuilder.topLevelConcepts が組み立てる)。
+struct ConceptFeedEntry: Identifiable, Hashable {
+    /// 広い概念ページ or 孤立した specific ページ (parentConceptID == nil)。
+    let page: ConceptPage
+    /// 子 specific 概念 (broad のみ非空、updatedAt 降順)。
+    let children: [ConceptPage]
+    /// このページの関連記事数。
+    let articleCount: Int
+
+    var id: UUID { page.id }
+}

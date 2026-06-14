@@ -18,6 +18,8 @@ final class ServiceContainer {
     var knowledgeService: KnowledgeExtractionServiceProtocol?
     /// spec 008: タグの CRUD を担当
     var tagStore: TagStore?
+    /// spec 075: 動的カテゴリ (CategoryDefinition) の rename / merge / hide / 定義編集
+    var categoryStore: CategoryStore?
     /// spec 009: BG queue (Detail UI で「待機中」表示判定 + chunked 開始時の enqueue)
     var backgroundQueue: BackgroundExtractionQueueProtocol?
     /// spec 018: Category 統合 AI ダイジェスト生成 service
