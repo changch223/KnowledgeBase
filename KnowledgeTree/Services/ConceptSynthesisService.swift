@@ -503,6 +503,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             var trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
             // spec 064: 捏造/候補外の concept-id:// リンクをプレーン化 (dead link 防止)
             trimmed = Self.sanitizeConceptLinks(in: trimmed, validIDs: validIDs)
+            // spec 079: AI が「関連ページ候補」指示ブロックを本文へ丸写しした漏れ (生 concept-id 等) を除去
+            trimmed = WikiBodySanitizer.sanitize(trimmed)
             if !trimmed.isEmpty {
                 conceptPage.bodyMarkdown = trimmed
             }
@@ -559,7 +561,9 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             candidatesBlock = """
 
 
-            # 関連ページ候補 (本文に名前が出たら [名前](concept-id://UUID) リンクにする。候補外にリンクしない。UUID は創作しない)
+            # 相互リンクの参考表 (★この表・見出し・UUID 自体は本文に出力しない)
+            本文中に下記の名前が自然に登場したときだけ、その語を `[名前](concept-id://UUID)` のインラインリンクにする。
+            「関連ページ候補」などの見出しや UUID の羅列を本文に書いてはいけない。候補外にリンクしない。UUID は創作しない。
             \(lines)
             """
         }
