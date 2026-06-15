@@ -189,6 +189,8 @@ extension ConceptPage {
 
     /// 同名判定用 (大文字小文字無視 + aliases 含む) のキー文字列配列。
     /// in-memory fetch で `searchableNames.contains(lowercased(name))` のように使う。
+    /// (spec 078 の canonical 照合は app target 専用 `ConceptNameNormalizer.canonicalNames(of:)` で行う。
+    ///  ConceptPage は Share/Safari extension とも共有するため Services 依存をここに持たせない。)
     var searchableNames: [String] {
         ([name] + nameAliases).map { $0.lowercased() }
     }

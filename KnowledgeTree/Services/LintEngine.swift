@@ -91,8 +91,8 @@ final class DefaultLintEngine: LintEngineProtocol {
 
     /// merge 編集距離閾値 (≤ 2 で merge 候補)
     private let mergeEditDistanceThreshold: Int = 2
-    /// merge embedding similarity 閾値 (≥ 0.85 で merge 候補)
-    private let mergeEmbeddingThreshold: Float = 0.85
+    /// spec 078: merge embedding similarity 閾値 (同 kind + 同 category で cosine ≥ これ なら意味的重複として統合)
+    private let mergeEmbeddingThreshold: Float = 0.88
     /// auto-link 上限 (relatedConceptIDs max)
     private let maxLinks: Int = 5
     /// LintLog cap (FIFO で最古から削除)
@@ -237,17 +237,22 @@ final class DefaultLintEngine: LintEngineProtocol {
         // 同 category のみで比較 (cross-category merge は誤統合リスク)
         guard a.categoryRaw == b.categoryRaw else { return false }
 
-        // 編集距離 ≤ 2 (case insensitive)
-        let nameA = a.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let nameB = b.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        // spec 078: canonical 名 (全角半角/かな/case/空白 正規化) で語彙的近接を判定。
+        // 完全一致 (表記ゆれ含む) + 編集距離 ≤ 2 (OpenAI/Open AI 等)。
+        let nameA = ConceptNameNormalizer.canonical(a.name)
+        let nameB = ConceptNameNormalizer.canonical(b.name)
+        if nameA == nameB { return true }
         if Self.levenshtein(nameA, nameB) <= mergeEditDistanceThreshold {
             return true
         }
 
-        // embedding similarity (両者が essence embedding を持つ場合のみ)
-        // ConceptPage 自体に embedding は無いが、relatedArticles の essence embedding 平均で代替
-        // 簡易実装: 名前完全一致 (case insensitive) を embedding 経路の fallback として
-        if nameA == nameB {
+        // spec 078: 意味的重複 (Apple/Apple Inc、生成AI/LLM 等、語は違うが同じもの) を embedding で統合。
+        // 過剰統合ガード: 同 kind (人物/概念/プロジェクト) + 両者 embedding 有り + 次元一致 +
+        // cosine ≥ mergeEmbeddingThreshold(0.88) のときだけ。embedding nil (未合成) はスキップ → 合成後の周回で再評価。
+        if a.kind == b.kind,
+           let da = a.embedding?.asFloatArray, let db = b.embedding?.asFloatArray,
+           !da.isEmpty, da.count == db.count,
+           EmbeddingService.cosineSimilarity(da, db) >= mergeEmbeddingThreshold {
             return true
         }
 
