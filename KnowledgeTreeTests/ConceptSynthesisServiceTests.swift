@@ -386,4 +386,33 @@ struct ConceptSynthesisServiceTests {
         #expect(pages.count == 1)
         #expect((pages[0].relatedArticles ?? []).count == 2)
     }
+
+    // MARK: - 11. spec 078: 全角/かな 表記ゆれ → 同 ConceptPage に統合 (canonical 照合)
+
+    @Test func testCanonicalVariantLinksToExistingPageNotDuplicate() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // "Apple" を 2 記事に登場させて ConceptPage を生成
+        let articleA = makeArticle(url: "a", title: "A", categoryRaw: "テクノロジー", entityNames: ["Apple"], in: context)
+        let articleB = makeArticle(url: "b", title: "B", categoryRaw: "テクノロジー", entityNames: ["Apple"], in: context)
+        _ = articleA
+        // 全角変種 "ＡＰＰＬＥ" を持つ 3 本目 → canonical "apple" で既存にリンク (重複ページを作らない)
+        let articleC = makeArticle(url: "c", title: "C", categoryRaw: "テクノロジー", entityNames: ["ＡＰＰＬＥ"], in: context)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextConceptSynthesisResult = .success(ConceptSynthesisOutput(
+            summary: "Apple summary (mock)", crossSourceInsights: ["insight"]
+        ))
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.processNewArticle(article: articleB)  // → "Apple" ページ (A+B)
+        await service.processNewArticle(article: articleC)   // ＡＰＰＬＥ → canonical "apple" で既存にリンク
+
+        let pages = try context.fetch(FetchDescriptor<ConceptPage>())
+        let applePages = pages.filter { ConceptNameNormalizer.canonical($0.name) == "apple" }
+        #expect(applePages.count == 1)  // 全角変種で重複ページが作られない
+        #expect((applePages.first?.relatedArticles ?? []).count == 3)  // A+B+C すべてリンク
+    }
 }

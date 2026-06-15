@@ -885,10 +885,11 @@ enum ConceptSynthesisCommon {
             guard !processedNames.contains(lowercased) else { continue }
             processedNames.insert(lowercased)
 
-            // 既存 ConceptPage 検索 (大文字小文字無視 + categoryRaw 一致)
+            // 既存 ConceptPage 検索 (spec 078: canonical キー照合で表記ゆれ吸収 + categoryRaw 一致)
+            let canonical = ConceptNameNormalizer.canonical(name)
             let existingPage = allConceptPages.first { page in
                 page.categoryRaw == articleCategoryRaw &&
-                page.searchableNames.contains(lowercased)
+                ConceptNameNormalizer.canonicalNames(of: page).contains(canonical)
             }
 
             if let existingPage {
@@ -991,9 +992,10 @@ enum ConceptSynthesisCommon {
         context: ModelContext,
         logger: Logger
     ) -> ConceptPage {
-        let lower = name.lowercased()
+        // spec 078: canonical キー照合で表記ゆれ (全角半角/かな/case/空白) の重複を入口で防ぐ。
+        let canonical = ConceptNameNormalizer.canonical(name)
         if let existing = pages.first(where: {
-            $0.categoryRaw == categoryRaw && $0.searchableNames.contains(lower)
+            $0.categoryRaw == categoryRaw && ConceptNameNormalizer.canonicalNames(of: $0).contains(canonical)
         }) {
             // 記事 link (重複なし)
             if !(existing.relatedArticles?.contains(where: { $0.id == article.id }) ?? false) {

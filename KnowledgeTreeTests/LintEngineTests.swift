@@ -355,19 +355,24 @@ struct LintEngineTests {
         let container = try makeContainer()
         let context = container.mainContext
 
-        // 凝集した その他 概念 6 件 (同一 embedding = cosine 1.0 ≥ 0.55)。
-        // ※名前は編集距離の大きい別物にする (step1 merge は編集距離≤2+同カテゴリで統合するため、
-        //   似た名前だと昇格前に merge されてクラスタが縮む)。
-        let clusterVec: [Float] = [1, 0, 0, 0]
+        // 凝集した その他 概念 6 件。
+        // ※名前は編集距離の大きい別物 (step1 merge は編集距離≤2+同カテゴリで統合するため)。
+        // ※embedding は pairwise cosine ≈0.6: 昇格クラスタ閾値(0.55)は超えるが、spec 078 の
+        //   意味統合閾値(0.88)未満 → 昇格前に merge されない (各概念に直交した個別成分を与える)。
         let clusterNames = ["賃貸契約", "住宅ローン", "建ぺい率", "登記簿謄本", "定期借地権", "物件価格査定"]
-        for name in clusterNames {
+        for (i, name) in clusterNames.enumerated() {
+            var vec = [Float](repeating: 0, count: 8)
+            vec[0] = 0.7746        // 共有成分
+            vec[i + 1] = 0.6325    // 各概念に直交した個別成分 → pairwise cosine = 0.7746² ≈ 0.6
             let p = ConceptPage(name: name, categoryRaw: "その他", summary: "s", updatedAt: .now)
-            p.embedding = clusterVec.asEmbeddingData
+            p.embedding = vec.asEmbeddingData
             context.insert(p)
         }
         // 無関係な その他 概念 (別方向 = クラスタに入らない)
         let outlier = ConceptPage(name: "孤立", categoryRaw: "その他", summary: "s", updatedAt: .now)
-        outlier.embedding = ([0, 0, 0, 1] as [Float]).asEmbeddingData
+        var outlierVec = [Float](repeating: 0, count: 8)
+        outlierVec[7] = 1
+        outlier.embedding = outlierVec.asEmbeddingData
         context.insert(outlier)
         try context.save()
 
@@ -422,5 +427,65 @@ struct LintEngineTests {
 
         let cats = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
         #expect(!cats.contains { $0.name == "不動産" })  // 昇格なし
+    }
+
+    // MARK: - spec 078: embedding 意味統合 (Apple/Apple Inc, 生成AI/LLM)
+
+    @Test func testMergeBySemanticEmbedding() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        // 語彙的に遠い (Levenshtein>2) が embedding 同一 (cosine 1.0) + 同 kind + 同カテゴリ → 統合
+        let vec: [Float] = [1, 0, 0, 0]
+        let p1 = ConceptPage(name: "Apple", categoryRaw: "テクノロジー", isStale: false)
+        p1.embedding = vec.asEmbeddingData
+        p1.updatedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let p2 = ConceptPage(name: "Apple Inc", categoryRaw: "テクノロジー", isStale: false)  // canonical "apple inc"、距離4
+        p2.embedding = vec.asEmbeddingData
+        p2.updatedAt = Date(timeIntervalSince1970: 1_700_000_100)  // 新しい = winner
+        context.insert(p1)
+        context.insert(p2)
+        try context.save()
+
+        let result = await DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker()).runFullLintLoop()
+        #expect(result.mergedCount == 1)
+        let remaining = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        #expect(remaining.count == 1)
+        #expect(remaining[0].name == "Apple Inc")
+        #expect(remaining[0].nameAliases.contains("Apple"))  // loser 名は alias で保持 (可逆)
+    }
+
+    @Test func testNoMergeWhenKindDiffers() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let vec: [Float] = [1, 0, 0, 0]
+        let p1 = ConceptPage(name: "Apple", categoryRaw: "テクノロジー", isStale: false)
+        p1.embedding = vec.asEmbeddingData
+        p1.kind = .person
+        let p2 = ConceptPage(name: "Apple Inc", categoryRaw: "テクノロジー", isStale: false)
+        p2.embedding = vec.asEmbeddingData
+        p2.kind = .concept
+        context.insert(p1)
+        context.insert(p2)
+        try context.save()
+
+        let result = await DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker()).runFullLintLoop()
+        #expect(result.mergedCount == 0)  // kind 不一致 → 統合しない
+        #expect(((try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []).count == 2)
+    }
+
+    @Test func testNoMergeWhenEmbeddingDissimilar() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let p1 = ConceptPage(name: "Apple", categoryRaw: "テクノロジー", isStale: false)
+        p1.embedding = ([1, 0, 0, 0] as [Float]).asEmbeddingData
+        let p2 = ConceptPage(name: "Orange Corp", categoryRaw: "テクノロジー", isStale: false)  // 名前も遠い
+        p2.embedding = ([0, 1, 0, 0] as [Float]).asEmbeddingData  // cosine 0
+        context.insert(p1)
+        context.insert(p2)
+        try context.save()
+
+        let result = await DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker()).runFullLintLoop()
+        #expect(result.mergedCount == 0)  // 低 cosine → 統合しない
     }
 }
