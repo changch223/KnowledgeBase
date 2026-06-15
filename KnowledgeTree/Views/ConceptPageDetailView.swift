@@ -222,10 +222,8 @@ struct ConceptPageDetailView: View {
         if !conceptPage.bodyMarkdown.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 Text("wiki.body.sectionTitle").font(.title3.bold())
-                Text(Self.renderMarkdown(conceptPage.bodyMarkdown))
-                    .font(.body)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // spec 079: 行ベースレンダラで見出し/箇条書きを整形 + 生 concept-id 漏れを除去。
+                WikiBodyView(markdown: conceptPage.bodyMarkdown)
                     .environment(\.openURL, OpenURLAction { url in
                         // spec 064: concept-id:// は自前遷移、それ以外は OS 標準動作
                         if let id = Self.extractConceptID(from: url) {
