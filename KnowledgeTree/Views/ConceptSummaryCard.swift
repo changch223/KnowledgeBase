@@ -12,13 +12,22 @@ import SwiftUI
 
 struct ConceptSummaryCard: View {
     let entry: ConceptFeedEntry
+    /// spec 080拡張: カードが表示されたら呼ぶ (既読マーク用)。
+    var onSeen: () -> Void = {}
 
     /// 子トピックチップに出す最大件数。
     private static let maxChildChips = 4
 
     private var page: ConceptPage { entry.page }
 
-    /// 1-2 行サマリ。空なら関連記事の先頭 essence、それも無ければ「整理中…」。
+    /// spec 080: カードの主役 = 要点 (crossSourceInsights) の上位 1-2 点。
+    private var displayPoints: [String] {
+        page.crossSourceInsights
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// 要点が無いとき用の 1-2 行サマリ。空なら関連記事の先頭 essence、それも無ければ「整理中…」。
     private var previewText: String {
         let summary = page.summaryPreview.trimmingCharacters(in: .whitespacesAndNewlines)
         if !summary.isEmpty { return summary }
@@ -34,12 +43,17 @@ struct ConceptSummaryCard: View {
         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
                 header
-                Text(previewText)
-                    .font(.subheadline)
-                    .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // spec 080: 答え先出し。要点があれば 1-2 点を箇条書き、無ければ従来のサマリ。
+                if !displayPoints.isEmpty {
+                    keyPointsView
+                } else {
+                    Text(previewText)
+                        .font(.subheadline)
+                        .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
                 if !entry.children.isEmpty {
                     childChips
@@ -55,6 +69,7 @@ struct ConceptSummaryCard: View {
         .padding(.horizontal, DS.Spacing.xxl)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("conceptSummaryCard_\(page.id.uuidString)")
+        .onAppear { onSeen() }  // spec 080拡張: 表示で既読マーク
     }
 
     private var header: some View {
@@ -76,6 +91,26 @@ struct ConceptSummaryCard: View {
             }
             Spacer(minLength: 0)
         }
+    }
+
+    /// spec 080: 最重要の要点 1-2 点を青•箇条書きで (答え先出し)。
+    private var keyPointsView: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            ForEach(Array(displayPoints.prefix(2).enumerated()), id: \.offset) { _, point in
+                HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                    Text("•")
+                        .font(.subheadline)
+                        .foregroundStyle(DS.Color.actionBlue)
+                    Text(point)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        // spec 080拡張: クリック不要で読めるよう全文表示 (lineLimit 撤去)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var childChips: some View {

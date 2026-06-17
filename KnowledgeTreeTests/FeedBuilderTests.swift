@@ -356,4 +356,22 @@ struct FeedBuilderTests {
         #expect(recs.first?.name == "人気")
         #expect(!recs.contains { $0.name == "子トピック" })  // top-level でない
     }
+
+    // MARK: - spec 080拡張: topLevelConcepts は fresh-first + 重要(記事数)×最新
+
+    @Test func topLevelConceptsFreshFirstThenImportance() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        // 未読(lastSeenAt nil): 記事 5 / 記事 2。既読(lastSeenAt > updatedAt): 記事 10。
+        insertWiki(ctx, name: "未読大", updatedAt: fixedNow, articleCount: 5)
+        insertWiki(ctx, name: "未読小", updatedAt: fixedNow, articleCount: 2)
+        let seen = insertWiki(ctx, name: "既読大", updatedAt: fixedNow.addingTimeInterval(-3_600), articleCount: 10)
+        seen.lastSeenAt = fixedNow  // 最終閲覧 > 更新 → 既読 (下げる)
+        try ctx.save()
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let names = FeedBuilder.topLevelConcepts(pages: pages, now: fixedNow).map(\.page.name)
+        // 未読が先 (記事数降順)、既読は記事 10 でも最後
+        #expect(names == ["未読大", "未読小", "既読大"])
+    }
 }

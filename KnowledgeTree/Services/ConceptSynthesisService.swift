@@ -376,15 +376,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         do {
             logger.notice("concept synthesis start for \(conceptPage.name, privacy: .public) [\(conceptPage.categoryRaw, privacy: .public)]: articles=\(articles.count) hierarchical=\(articles.count >= Self.hierarchicalThreshold)")
-            let output: ConceptSynthesisOutput
-            if conceptPage.isBroadConcept {
-                // spec 074: 広い概念は子トピック + 記事要点を俯瞰して synth (token 安全な小入力)。
-                output = try await synthesizeBroadConcept(conceptPage: conceptPage, articles: articles)
-            } else if articles.count >= Self.hierarchicalThreshold {
-                output = try await synthesizeHierarchical(conceptPage: conceptPage, articles: articles)
-            } else {
-                output = try await synthesizeOneShot(conceptPage: conceptPage, articles: articles)
-            }
+            // spec 080拡張: overflow なら 1 回だけ小型スキーマで再試行 (essence-list fallback より良い)。
+            let output = try await synthesizeWithAdaptiveRetry(conceptPage: conceptPage, articles: articles)
 
             // post-process: 500 chars 超 trim、insights 7 件超 truncate
             let trimmedSummary: String
@@ -398,7 +391,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 && !conceptPage.summary.isEmpty
             if !preserveExisting {
                 conceptPage.summary = trimmedSummary
-                conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(2))
+                conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(5))
             }
 
             // embedding 再生成 (summary が更新されたので)
@@ -645,16 +638,57 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// 1-shot prompt (4 件以下、context window 内に収まる)。
     private func synthesizeOneShot(
         conceptPage: ConceptPage,
-        articles: [Article]
+        articles: [Article],
+        compact: Bool = false
     ) async throws -> ConceptSynthesisOutput {
         let prompt = buildOneShotPrompt(conceptPage: conceptPage, articles: articles)
+        return try await runSynthesis(prompt: prompt, compact: compact)
+    }
+
+    /// spec 080拡張: compact=true は小型スキーマ (出力予約小) で生成し ConceptSynthesisOutput に map。
+    /// overflow 時の 1 回再試行で使う (大概念だけ要点≤2 に落として窓内に収める)。
+    private func runSynthesis(prompt: String, compact: Bool) async throws -> ConceptSynthesisOutput {
+        if compact {
+            let out = try await session.generateConceptSynthesisCompact(prompt: prompt)
+            return ConceptSynthesisOutput(summary: out.summary, crossSourceInsights: out.crossSourceInsights)
+        }
         return try await session.generateConceptSynthesis(prompt: prompt)
+    }
+
+    /// spec 080拡張: 概念合成を実行。overflow (exceededContextWindowSize) を検知したら
+    /// 1 回だけ compact (小型スキーマ) で再試行する。compact も失敗 / 別エラーは rethrow → 上位で fallback。
+    private func synthesizeWithAdaptiveRetry(
+        conceptPage: ConceptPage,
+        articles: [Article]
+    ) async throws -> ConceptSynthesisOutput {
+        func run(compact: Bool) async throws -> ConceptSynthesisOutput {
+            if conceptPage.isBroadConcept {
+                return try await synthesizeBroadConcept(conceptPage: conceptPage, articles: articles, compact: compact)
+            } else if articles.count >= Self.hierarchicalThreshold {
+                return try await synthesizeHierarchical(conceptPage: conceptPage, articles: articles, compact: compact)
+            } else {
+                return try await synthesizeOneShot(conceptPage: conceptPage, articles: articles, compact: compact)
+            }
+        }
+        do {
+            return try await run(compact: false)
+        } catch {
+            guard Self.isContextOverflow(error) else { throw error }
+            logger.notice("concept synthesis overflow for \(conceptPage.name, privacy: .public) → compact retry (要点≤2)")
+            return try await run(compact: true)
+        }
+    }
+
+    /// exceededContextWindowSize 系エラーか (型 import 不要で頑健に文字列判定)。
+    static func isContextOverflow(_ error: Error) -> Bool {
+        String(describing: error).contains("exceededContextWindowSize")
     }
 
     /// hierarchical + meta-summary (5+ 件、chunk_size=4 で分割 → 各 chunk 要約 → meta prompt で最終合成)。
     private func synthesizeHierarchical(
         conceptPage: ConceptPage,
-        articles: [Article]
+        articles: [Article],
+        compact: Bool = false
     ) async throws -> ConceptSynthesisOutput {
         let sortedArticles = articles.sorted { $0.savedAt > $1.savedAt }
         let chunks = stride(from: 0, to: sortedArticles.count, by: Self.chunkSize).map {
@@ -681,21 +715,22 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         }
 
         let metaPrompt = buildMetaPrompt(conceptPage: conceptPage, chunkSummaries: chunkSummaries, totalArticles: articles.count)
-        return try await session.generateConceptSynthesis(prompt: metaPrompt)
+        return try await runSynthesis(prompt: metaPrompt, compact: compact)
     }
 
     /// spec 074: 広い概念 (L1) の synth。子トピック名 + 自身の関連記事要点を俯瞰して統合。
     /// 入力は子名リスト + 記事 essence 4 件 (capped) = token 安全。
     private func synthesizeBroadConcept(
         conceptPage: ConceptPage,
-        articles: [Article]
+        articles: [Article],
+        compact: Bool = false
     ) async throws -> ConceptSynthesisOutput {
         let allPages = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
         let childNames = allPages
             .filter { $0.parentConceptID == conceptPage.id && !$0.isHidden }
             .map(\.name)
         let prompt = buildBroadConceptPrompt(conceptPage: conceptPage, childNames: childNames, articles: articles)
-        return try await session.generateConceptSynthesis(prompt: prompt)
+        return try await runSynthesis(prompt: prompt, compact: compact)
     }
 
     private func buildBroadConceptPrompt(
@@ -726,7 +761,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         ## 出力要件
         - summary: 120〜180 字、上記の具体トピックと要点を俯瞰した分野全体像、推測禁止、断定調
-        - crossSourceInsights: 最大 2 件、各 40〜90 字、トピックを横断して見える傾向
+        - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この分野で最も大事な要点・結論を重要度順
         """
     }
 
@@ -764,7 +799,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         ## 出力要件
         - summary: 120〜180 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
-        - crossSourceInsights: 最大 2 件、各 40〜90 字、複数記事を並べて初めて見える発見
+        - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この概念で最も大事な要点・結論を重要度順
         - 推測 / 一般知識からの補強禁止
         """
     }
@@ -835,7 +870,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         ## 出力要件
         - summary: 120〜180 字、チャンク要約のみから統合、推測禁止、断定調
-        - crossSourceInsights: 最大 2 件、各 40〜90 字、チャンクを横断して見える知見
+        - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この概念で最も大事な要点・結論を重要度順
         """
     }
 

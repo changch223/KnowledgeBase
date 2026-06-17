@@ -182,7 +182,21 @@ struct ConceptSynthesisOutput: Codable {
     @Guide(description: "120〜180 字の日本語、断定調、原文にあることのみ。")
     let summary: String
 
-    @Guide(description: "最大 2 件、各 40-90 字の日本語、複数記事を横断して見える発見。")
+    // spec 080: 「答え先出し」の要点レイヤー。最大 2→5 に拡張、各 90→60 字に短縮 (token 予約は微増)。
+    // iKnow カードの主役 + 概念詳細の最上段に表示。結論・要点を重要度順で。
+    @Guide(description: "最大 5 件、各 60 字以内の日本語、この概念で最も大事な要点・結論を重要度順に。断定調、原文にあることのみ。")
+    let crossSourceInsights: [String]
+}
+
+/// spec 080拡張: overflow 時の adaptive retry 用、出力予約を絞った小型版。
+/// 記事の多い大概念 (生成AI 19 記事等) で ConceptSynthesisOutput (要点5×60字) の出力予約が
+/// 窓を超える場合の 1 回再試行に使う。summary 短め + 要点 2 件で予約を縮め窓内に収める。
+@Generable
+struct ConceptSynthesisCompactOutput: Codable {
+    @Guide(description: "100 字以内の日本語、断定調、原文にあることのみ。")
+    let summary: String
+
+    @Guide(description: "最大 2 件、各 40 字以内の日本語、この概念で最も大事な要点を重要度順に。")
     let crossSourceInsights: [String]
 }
 
@@ -254,6 +268,9 @@ protocol LanguageModelSessionProtocol: Sendable {
 
     /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
     func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput
+
+    /// spec 080拡張: overflow 時の小型再試行 (出力予約を絞る)。
+    func generateConceptSynthesisCompact(prompt: String) async throws -> ConceptSynthesisCompactOutput
 
     /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
     func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk
@@ -432,6 +449,11 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
     func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
         try await generateStructured("generateConceptSynthesis (概念合成)", ConceptSynthesisOutput.self, prompt: prompt)
+    }
+
+    /// spec 080拡張: overflow 時の小型再試行 (出力予約を絞る)。
+    func generateConceptSynthesisCompact(prompt: String) async throws -> ConceptSynthesisCompactOutput {
+        try await generateStructured("generateConceptSynthesisCompact (概念合成/小型)", ConceptSynthesisCompactOutput.self, prompt: prompt)
     }
 
     /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
