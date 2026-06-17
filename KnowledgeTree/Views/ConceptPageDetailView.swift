@@ -106,9 +106,10 @@ struct ConceptPageDetailView: View {
             VStack(alignment: .leading, spacing: DS.Spacing.section) {
                 parentBreadcrumb
                 headerSection
+                // spec 080: 答え先出し。要点 (crossSourceInsights) を最上段に。
+                crossSourceInsightsSection
                 summarySection
                 wikiBodySection
-                crossSourceInsightsSection
                 childConceptsSection
                 relatedArticlesSection
                 // spec 043: この概念についての質問と答え (SavedAnswer セクション)

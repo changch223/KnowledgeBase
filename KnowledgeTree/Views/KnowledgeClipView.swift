@@ -20,7 +20,13 @@ import SwiftData
 struct KnowledgeClipView: View {
     @Environment(ServiceContainer.self) private var services
     @Environment(ProcessingMonitor.self) private var monitor
+    @Environment(\.modelContext) private var modelContext
+    /// spec 080拡張: アプリ復帰で「重要×最新×既読」並びを更新する契機。
+    @Environment(\.scenePhase) private var scenePhase
     @State private var path = NavigationPath()
+    /// spec 080拡張: フィード表示順の session snapshot (スクロール/詳細往復で再並びしない)。
+    /// .task / アプリ復帰 / 引っ張り更新で更新 → 既読が下がる「次回」並び替え。
+    @State private var orderedConceptIDs: [UUID] = []
     /// spec 035 + 056: タブ表示時に lock した「前回開いた時刻」(view ライフタイム中は固定)
     @State private var sinceForRecent: Date?
     /// spec 056: FAB tap で URL 入力 sheet
@@ -40,6 +46,30 @@ struct KnowledgeClipView: View {
     /// 子 specific を畳み込み、記事数を解決した ConceptFeedEntry を updatedAt 降順で返す。
     private var conceptEntries: [ConceptFeedEntry] {
         FeedBuilder.topLevelConcepts(pages: feedWikiPages, now: Date())
+    }
+
+    /// spec 080拡張: 表示順は session snapshot に固定 (既読化やスクロールで live 再並びしない)。
+    /// snapshot に無い新概念は先頭 (新着=重要)。snapshot 未設定 (初回前) は fresh-first をそのまま。
+    private var displayedConceptEntries: [ConceptFeedEntry] {
+        let entries = conceptEntries
+        guard !orderedConceptIDs.isEmpty else { return entries }
+        let byID = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let known = Set(orderedConceptIDs)
+        let newcomers = entries.filter { !known.contains($0.id) }
+        let snapshotOrdered = orderedConceptIDs.compactMap { byID[$0] }
+        return newcomers + snapshotOrdered
+    }
+
+    /// spec 080拡張: 並び順 snapshot を現在の fresh-first 順で取り直す (.task / 復帰 / 更新時)。
+    private func refreshFeedOrder() {
+        orderedConceptIDs = conceptEntries.map(\.id)
+    }
+
+    /// spec 080拡張: カードを見たら既読化 (未読のときだけ書込、live 再並びは snapshot で防ぐ)。
+    private func markConceptSeen(_ page: ConceptPage) {
+        guard FeedBuilder.isFresh(page) else { return }
+        page.lastSeenAt = .now
+        try? modelContext.save()
     }
 
     /// spec 075: 上部「新着」棚 = まだ概念に束ねられていない新着記事。概念化されると消える。
@@ -67,12 +97,13 @@ struct KnowledgeClipView: View {
                         RecommendCarousel(items: recommendItems)
                     }
 
-                    if conceptEntries.isEmpty {
+                    if displayedConceptEntries.isEmpty {
                         feedEmptyState
                     } else {
                         // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
-                        ForEach(conceptEntries) { entry in
-                            ConceptSummaryCard(entry: entry)
+                        // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
+                        ForEach(displayedConceptEntries) { entry in
+                            ConceptSummaryCard(entry: entry, onSeen: { markConceptSeen(entry.page) })
                         }
                     }
                 }
@@ -131,6 +162,7 @@ struct KnowledgeClipView: View {
             }
             .refreshable {
                 try? await services.digestService?.regenerateAllStale()
+                refreshFeedOrder()  // spec 080拡張: 引っ張り更新で重要×最新×既読 並びを取り直す
             }
             .overlay(alignment: .bottomTrailing) {
                 FABButton(icon: "plus") {
@@ -147,6 +179,11 @@ struct KnowledgeClipView: View {
         .task {
             captureRecentSinceAndTouch()
             checkV3MigrationTooltip()
+            refreshFeedOrder()  // spec 080拡張: 初回表示時に並び順 snapshot を確定
+        }
+        // spec 080拡張: アプリ復帰 (.active) で並び順を取り直す → 既読が下がる「次回」並び替え
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active { refreshFeedOrder() }
         }
         // spec 056 polish: V3 migration tooltip (初回起動 1 回限り)
         .overlay(alignment: .top) {

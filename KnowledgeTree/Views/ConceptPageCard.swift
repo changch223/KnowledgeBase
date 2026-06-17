@@ -14,8 +14,13 @@ struct ConceptPageCard: View {
     /// 関連記事数。Card preview に表示。
     private var relatedCount: Int { (conceptPage.relatedArticles ?? []).count }
 
-    /// summary preview (1 行表示用)。空 or stale 時は「整理中…」placeholder。
+    /// 1 行表示用。spec 080: 答え先出しで先頭の要点 (crossSourceInsights) を優先、無ければ summary。
+    /// 空 or stale 時は「整理中…」placeholder。
     private var previewText: String {
+        if let point = conceptPage.crossSourceInsights
+            .first(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            return point
+        }
         if conceptPage.isSynthesisInProgress {
             return String(localized: "ConceptPage.card.synthesisInProgress")
         }

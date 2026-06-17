@@ -265,6 +265,12 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var conceptSynthesisCallCount = 0
     var lastConceptSynthesisPrompt: String?
 
+    /// spec 080拡張: compact 再試行用 mock。デフォルトは空。
+    var nextConceptSynthesisCompactResult: Result<ConceptSynthesisCompactOutput, Error> = .success(
+        ConceptSynthesisCompactOutput(summary: "", crossSourceInsights: [])
+    )
+    var conceptSynthesisCompactCallCount = 0
+
     /// spec 042: ConceptSummaryChunk 用 mock 出力 (hierarchical パス用)
     var nextConceptSummaryChunkResult: Result<ConceptSummaryChunk, Error> = .success(
         ConceptSummaryChunk(chunkSummary: "")
@@ -382,6 +388,14 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
         conceptSynthesisCallCount += 1
         lastConceptSynthesisPrompt = prompt
         switch nextConceptSynthesisResult {
+        case .success(let output): return output
+        case .failure(let error): throw error
+        }
+    }
+
+    func generateConceptSynthesisCompact(prompt: String) async throws -> ConceptSynthesisCompactOutput {
+        conceptSynthesisCompactCallCount += 1
+        switch nextConceptSynthesisCompactResult {
         case .success(let output): return output
         case .failure(let error): throw error
         }

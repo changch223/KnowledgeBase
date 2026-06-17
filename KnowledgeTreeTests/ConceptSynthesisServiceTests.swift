@@ -415,4 +415,59 @@ struct ConceptSynthesisServiceTests {
         #expect(applePages.count == 1)  // 全角変種で重複ページが作られない
         #expect((applePages.first?.relatedArticles ?? []).count == 3)  // A+B+C すべてリンク
     }
+
+    // MARK: - 12. spec 080: 要点 (crossSourceInsights) は最大 5 件に cap
+
+    @Test func testResynthesizeCapsKeyPointsAtFive() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let a = makeArticle(url: "a", title: "A", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let b = makeArticle(url: "b", title: "B", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let page = ConceptPage(name: "X", categoryRaw: "テクノロジー", relatedArticles: [a, b], isStale: true)
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        // AI が 6 件返しても prefix(5) で 5 件に cap される
+        session.nextConceptSynthesisResult = .success(ConceptSynthesisOutput(
+            summary: "要約",
+            crossSourceInsights: ["要点1", "要点2", "要点3", "要点4", "要点5", "要点6"]
+        ))
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(page.crossSourceInsights.count == 5)  // spec 080: 最大 5
+    }
+
+    // MARK: - 13. spec 080拡張: overflow → compact adaptive retry
+
+    @Test func testResynthesizeAdaptiveRetryOnOverflow() async throws {
+        struct OverflowErr: Error, CustomStringConvertible {
+            var description: String { "exceededContextWindowSize(Content contains 4091 tokens)" }
+        }
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let a = makeArticle(url: "a", title: "A", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let b = makeArticle(url: "b", title: "B", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let page = ConceptPage(name: "X", categoryRaw: "テクノロジー", relatedArticles: [a, b], isStale: true)
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        // 通常合成は overflow → compact 再試行は成功
+        session.nextConceptSynthesisResult = .failure(OverflowErr())
+        session.nextConceptSynthesisCompactResult = .success(
+            ConceptSynthesisCompactOutput(summary: "compact 要約", crossSourceInsights: ["要点1", "要点2"])
+        )
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(page.summary == "compact 要約")          // compact 再試行が反映 (essence-list fallback に落ちない)
+        #expect(page.isStale == false)
+        #expect(session.conceptSynthesisCompactCallCount == 1)  // compact が 1 回呼ばれた
+    }
 }

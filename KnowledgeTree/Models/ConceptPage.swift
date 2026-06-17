@@ -96,6 +96,10 @@ final class ConceptPage {
     var createdAt: Date = Date.now
     var updatedAt: Date = Date.now
 
+    /// spec 080拡張: ユーザーが iKnow フィードでこの概念カードを見た最終時刻。
+    /// `updatedAt > lastSeenAt` (or nil) = 未読/更新あり → フィード上位に。CloudKit lightweight 安全 (default nil)。
+    var lastSeenAt: Date? = nil
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -116,7 +120,8 @@ final class ConceptPage {
         parentConceptID: UUID? = nil,
         conceptLevelRaw: String = "specific",
         createdAt: Date = .now,
-        updatedAt: Date = Date.now
+        updatedAt: Date = Date.now,
+        lastSeenAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -138,6 +143,7 @@ final class ConceptPage {
         self.conceptLevelRaw = conceptLevelRaw
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.lastSeenAt = lastSeenAt
     }
 }
 

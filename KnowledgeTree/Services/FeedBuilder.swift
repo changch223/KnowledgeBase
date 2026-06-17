@@ -201,7 +201,21 @@ final class FeedBuilder: FeedBuilding {
                     || !entry.children.isEmpty
                     || entry.articleCount > 0
             }
-            .sorted { $0.page.updatedAt > $1.page.updatedAt }
+            // spec 080拡張: 「未読/更新あり」を先に、各グループ内は「重要(記事数)×最新」。
+            // fresh = updatedAt > lastSeenAt (未読 or 最終閲覧後に更新)。既読で未更新は下げる。
+            .sorted { a, b in
+                let aFresh = isFresh(a.page), bFresh = isFresh(b.page)
+                if aFresh != bFresh { return aFresh }            // 未読/更新を上に
+                if a.articleCount != b.articleCount {
+                    return a.articleCount > b.articleCount         // 重要 = 記事が溜まっている
+                }
+                return a.page.updatedAt > b.page.updatedAt         // 最新 tiebreak
+            }
+    }
+
+    /// spec 080拡張: 未読 or 最終閲覧後に更新された概念か (フィード上位判定)。
+    static func isFresh(_ page: ConceptPage) -> Bool {
+        page.updatedAt > (page.lastSeenAt ?? .distantPast)
     }
 
     /// 上部カルーセル用おすすめ = トップレベル概念を活動量 (関連記事数) + 更新 recency で採点し上位 limit。
