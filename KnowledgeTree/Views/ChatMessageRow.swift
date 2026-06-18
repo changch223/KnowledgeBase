@@ -52,6 +52,11 @@ struct ChatMessageRow: View {
 
     private var assistantBubble: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            // spec 081: ナレッジベース外の一般回答には『一般知識』バッジ
+            if message.answeredFromGeneralKnowledge {
+                GeneralKnowledgeBadge()
+            }
+
             // streaming 中は AttributedString による inline link が崩れないよう、plain Text にフォールバック
             if let streamingText = streamingTextOverride {
                 Text(streamingText)
@@ -80,12 +85,20 @@ struct ChatMessageRow: View {
                     suggestions: message.clarificationSuggestions,
                     onTap: { selected in
                         ChatMessageRow.clarificationTapNotificationPublisher.send(selected)
+                    },
+                    onOther: {
+                        // spec 083: 「その他（自由に入力）」→ 送信せず入力欄にフォーカス
+                        ChatMessageRow.clarificationOtherTapNotificationPublisher.send(())
                     }
                 )
             }
 
+            // spec 081: ChatGPT/Gemini スタイルの番号付き「出典」リスト
+            let sources = citationResult.sources
+            if !sources.isEmpty {
+                CitationSourcesSection(sources: sources)
+            }
             if !message.citedArticleIDs.isEmpty {
-                CitedArticlesSection(articleIDs: message.citedArticleIDs)
                 // spec 047: 引用記事から関連 ConceptPage chips を導出
                 RelatedConceptsChips(articleIDs: message.citedArticleIDs)
             }
@@ -106,6 +119,9 @@ struct ChatMessageRow: View {
 
     /// spec 057: clarification chip tap を ChatTabView に通知する Combine subject (static)。
     static let clarificationTapNotificationPublisher = PassthroughSubject<String, Never>()
+
+    /// spec 083: clarification「その他（自由に入力）」tap を ChatTabView に通知 (入力欄フォーカス用)。
+    static let clarificationOtherTapNotificationPublisher = PassthroughSubject<Void, Never>()
 
     /// spec 057: assistant message に紐付く直前の user message text (long press 「保存」用)。
     /// 同 session 内で本 message より前の user message を探す。
@@ -135,50 +151,30 @@ struct ChatMessageRow: View {
         }
     }
 
-    /// AttributedString を生成 — `[タイトル](article-id://UUID)` を inline link 化、
-    /// 同時に下線 + actionBlue 色を付ける。
+    /// spec 081: 本文 + citedArticleIDs を番号引用 segments + 出典リストに整形 (純粋関数)。
+    private var citationResult: ChatCitationFormatter.Result {
+        ChatCitationFormatter.format(body: message.text, citedArticleIDs: message.citedArticleIDs)
+    }
+
+    /// spec 081: 本文を組み立て — 引用マーカーを上付き青 `[n]` リンク (tap で記事へ) に変換。
+    /// 旧形式 `[タイトル](article-id://UUID)` も formatter が後方互換で番号化する。
     private var attributedAnswerText: AttributedString {
-        let raw = message.text
-        var attributed = AttributedString(raw)
-
-        // Markdown link 形式を regex で抽出
-        let pattern = #"\[([^\]]+)\]\(article-id://([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return attributed
-        }
-        let nsText = raw as NSString
-        let matches = regex.matches(in: raw, range: NSRange(location: 0, length: nsText.length))
-
-        // 後ろから置換 (range が前から処理すると壊れるため)
         var output = AttributedString()
-        var cursor = raw.startIndex
-        for match in matches {
-            guard let fullRange = Range(match.range, in: raw),
-                  let titleRange = Range(match.range(at: 1), in: raw),
-                  let uuidRange = Range(match.range(at: 2), in: raw) else { continue }
-
-            // 前置部分
-            output.append(AttributedString(raw[cursor..<fullRange.lowerBound]))
-
-            // link 部分
-            let title = String(raw[titleRange])
-            let uuidString = String(raw[uuidRange])
-            var linkAttr = AttributedString(title)
-            if let url = URL(string: "article-id://\(uuidString)") {
-                linkAttr.link = url
+        for segment in citationResult.segments {
+            switch segment {
+            case .text(let text):
+                output.append(AttributedString(text))
+            case .citation(let number, let articleID):
+                var marker = AttributedString("[\(number)]")
+                if let url = URL(string: "article-id://\(articleID.uuidString)") {
+                    marker.link = url
+                }
+                marker.foregroundColor = DS.Color.actionBlue
+                marker.font = .footnote
+                output.append(marker)
             }
-            linkAttr.foregroundColor = DS.Color.actionBlue
-            linkAttr.underlineStyle = .single
-            output.append(linkAttr)
-
-            cursor = fullRange.upperBound
         }
-        // 残り
-        if cursor < raw.endIndex {
-            output.append(AttributedString(raw[cursor..<raw.endIndex]))
-        }
-        attributed = output
-        return attributed
+        return output
     }
 
     /// `article-id://UUID` URL から UUID を抽出
@@ -189,49 +185,70 @@ struct ChatMessageRow: View {
     }
 }
 
-private struct CitedArticlesSection: View {
-    let articleIDs: [String]
+/// spec 081: ChatGPT/Gemini スタイルの番号付き「出典」リスト。
+/// `[n] 記事タイトル` を常時表示、tap で ArticleDetailView 遷移。引用元 Article が削除済なら行を省く。
+private struct CitationSourcesSection: View {
+    let sources: [ChatCitationFormatter.Source]
     @Query private var allArticles: [Article]
 
-    private var citedArticles: [Article] {
-        let idSet = Set(articleIDs)
-        // 順序を citedArticleIDs の順に保つ
-        let mapped = allArticles.filter { idSet.contains($0.id.uuidString) }
-        let dict = Dictionary(uniqueKeysWithValues: mapped.map { ($0.id.uuidString, $0) })
-        return articleIDs.compactMap { dict[$0] }
+    private var resolved: [(number: Int, article: Article)] {
+        let byID = Dictionary(uniqueKeysWithValues: allArticles.map { ($0.id, $0) })
+        return sources.compactMap { source in
+            guard let article = byID[source.articleID] else { return nil }
+            return (source.number, article)
+        }
     }
 
     var body: some View {
-        if citedArticles.isEmpty {
+        let rows = resolved
+        if rows.isEmpty {
             EmptyView()
         } else {
-            DisclosureGroup {
-                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                    ForEach(citedArticles) { article in
-                        NavigationLink(value: article) {
-                            HStack(spacing: DS.Spacing.sm) {
-                                Text(article.title)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding(.vertical, DS.Spacing.xs)
-                        }
-                        .accessibilityIdentifier("chat.message.citedRow")
-                    }
-                }
-                .padding(.top, DS.Spacing.sm)
-            } label: {
-                Text("chat.message.cited.count \(citedArticles.count)")
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                Text("chat.message.sources.title")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                ForEach(rows, id: \.number) { row in
+                    NavigationLink(value: row.article) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
+                            Text("[\(row.number)]")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(DS.Color.actionBlue)
+                            Text(row.article.title)
+                                .font(.caption)
+                                .lineLimit(2)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, DS.Spacing.xs)
+                    }
+                    .accessibilityIdentifier("chat.message.citedRow")
+                }
             }
+            .padding(.top, DS.Spacing.sm)
             .accessibilityIdentifier("chat.message.citedSection")
         }
+    }
+}
+
+/// spec 081: ナレッジベース外の一般回答を示す控えめなバッジ。
+private struct GeneralKnowledgeBadge: View {
+    var body: some View {
+        HStack(spacing: DS.Spacing.xs) {
+            Image(systemName: "info.circle")
+                .font(.caption2)
+            Text("chat.message.generalKnowledge.badge")
+                .font(.caption2)
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, DS.Spacing.sm)
+        .padding(.vertical, DS.Spacing.xs)
+        .background(DS.Color.tagFill, in: Capsule())
+        .accessibilityIdentifier("chat.message.generalKnowledgeBadge")
     }
 }
 

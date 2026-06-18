@@ -11,6 +11,8 @@ import SwiftUI
 struct ClarificationChipsView: View {
     let suggestions: [String]
     let onTap: (String) -> Void
+    /// spec 083: 4 つ目「その他（自由に入力）」タップ時 (送信せず入力欄にフォーカス)。
+    var onOther: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
@@ -36,6 +38,31 @@ struct ClarificationChipsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("clarification.chip.\(suggestion.prefix(20))")
+            }
+
+            // spec 083: 4 つ目 — 自由入力 (Claude の AskUserQuestion の「その他」相当)
+            if onOther != nil {
+                Button {
+                    onOther?()
+                } label: {
+                    HStack(spacing: DS.Spacing.sm) {
+                        Text("chat.clarification.other")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.leading)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                        Image(systemName: "square.and.pencil")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, DS.Spacing.lg)
+                    .padding(.vertical, DS.Spacing.md)
+                    .background(
+                        Capsule()
+                            .stroke(Color.secondary.opacity(0.5), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("clarification.chip.other")
             }
         }
     }

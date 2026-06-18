@@ -32,6 +32,8 @@ struct ChatTabView: View {
     @State private var pinnedSessionID: UUID?
 
     @State private var inputText: String = ""
+    /// spec 083: clarification「その他（自由に入力）」から入力欄にフォーカスする。
+    @FocusState private var inputFocused: Bool
     @State private var isThinking: Bool = false
     @State private var errorMessage: String?
 
@@ -62,10 +64,10 @@ struct ChatTabView: View {
         return allMessages.filter { $0.session?.id == sessionID }
     }
 
-    /// spec 033: multi-turn context = 直前 4 message (= 2 ペア)
+    /// spec 033/083: multi-turn context = 直前 6 message (= 3 ペア)。会話の記憶を強化。
     private var contextMessages: [ChatMessage] {
         let sorted = currentSessionMessages.sorted { $0.timestamp < $1.timestamp }
-        return Array(sorted.suffix(4))
+        return Array(sorted.suffix(6))
     }
 
     var body: some View {
@@ -90,7 +92,8 @@ struct ChatTabView: View {
                 ChatInputField(
                     text: $inputText,
                     isThinking: $isThinking,
-                    onSend: { Task { await sendQuestion() } }
+                    onSend: { Task { await sendQuestion() } },
+                    focused: $inputFocused
                 )
             }
             .navigationTitle("chat.tab.title")
@@ -166,6 +169,10 @@ struct ChatTabView: View {
         .onReceive(ChatMessageRow.clarificationTapNotificationPublisher) { tappedChip in
             inputText = tappedChip
             Task { await sendQuestion() }
+        }
+        // spec 083: clarification「その他（自由に入力）」tap → 送信せず入力欄にフォーカス
+        .onReceive(ChatMessageRow.clarificationOtherTapNotificationPublisher) { _ in
+            inputFocused = true
         }
         // spec 045: SavedAnswer の「再生成」trigger を消費
         // - 新 ChatSession を作る + question を pin + 自動 send
@@ -331,8 +338,8 @@ struct ChatTabView: View {
         streamingMessageID = message.id
         streamingDisplayedText = ""
 
-        // 文字ごとに 15ms ずつ追加 (体感は本物 streaming に近い)
-        let perCharDelayNs: UInt64 = 15_000_000
+        // spec 082: 文字ごとの追加遅延を 15ms → 4ms に短縮 (生成完了後のタイプ表示の体感を ~1/4 に)
+        let perCharDelayNs: UInt64 = 4_000_000
         for char in fullText {
             streamingDisplayedText.append(char)
             try? await Task.sleep(nanoseconds: perCharDelayNs)

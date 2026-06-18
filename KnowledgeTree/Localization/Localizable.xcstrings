@@ -1,17 +1,6 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
-    "lintLog.action.promoteCategory" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分野を新設"
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -28,6 +17,9 @@
 
     },
     "(%lld)" : {
+
+    },
+    "[%lld]" : {
 
     },
     "「%@」とこのノードの関係 (edge) を削除します。記事自体は残ります。" : {
@@ -779,6 +771,39 @@
         }
       }
     },
+    "chat.clarification.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他（自由に入力）"
+          }
+        }
+      }
+    },
+    "chat.general.disclaimer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレッジベースに該当する情報が見つかりませんでした。一般的な回答をします。"
+          }
+        }
+      }
+    },
+    "chat.general.fallbackBody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私の理解では、もう少し具体的に質問いただけると、お手伝いできるかもしれません。"
+          }
+        }
+      }
+    },
     "chat.input.placeholder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -834,9 +859,6 @@
         }
       }
     },
-    "chat.message.cited.count %lld" : {
-
-    },
     "chat.message.cited.section" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -855,6 +877,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "回答の生成に失敗しました。もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "chat.message.generalKnowledge.badge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一般知識 (ナレッジベース外)"
+          }
+        }
+      }
+    },
+    "chat.message.sources.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出典"
           }
         }
       }
@@ -3085,6 +3129,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "統合"
+          }
+        }
+      }
+    },
+    "lintLog.action.promoteCategory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野を新設"
           }
         }
       }

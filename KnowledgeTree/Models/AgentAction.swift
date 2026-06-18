@@ -21,7 +21,7 @@ struct AgentActionOutput: Sendable {
     @Guide(description: "アクション種別。'immediate' (即答可能) / 'askClarification' (聞き返し必要) / 'searchArticles' (記事検索必要) / 'finalAnswer' (検索結果統合後の最終答え) のいずれか。")
     var actionType: String
 
-    @Guide(description: "主要テキスト。immediate なら answer 本文、askClarification なら聞き返し question、searchArticles なら検索 query、finalAnswer なら answer 本文。")
+    @Guide(description: "主要テキスト。immediate なら answer 本文、askClarification なら聞き返し question、searchArticles なら検索 query (会話履歴を踏まえ指示語・追質問・略語を解決した『独立した検索クエリ』。元の質問文そのままでなくキーワードに分解)、finalAnswer なら answer 本文。")
     var text: String
 
     @Guide(description: "askClarification の場合の 3 候補 (各 30 字以内)、それ以外は空配列。")

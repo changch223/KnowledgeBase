@@ -222,10 +222,10 @@ struct ConceptHierarchyOutput: Codable {
 
 @Generable
 struct ChatAnswerOutput: Codable {
-    @Guide(description: "ユーザーの質問への回答。日本語で 3 段落以内。参考記事に答えがない場合は『分かりません。保存された記事の中に該当する情報が見つかりませんでした。』と回答する。")
+    @Guide(description: "ユーザーの質問への回答。日本語で 3 段落以内。根拠にした記事は、その根拠となる文の直後に `(article-id://UUID)` というマーカーだけを置く (記事タイトルや番号は本文に書かない)。参考記事に答えがない場合は空文字を返す。")
     let answer: String
 
-    @Guide(description: "回答に使った記事の ID 配列 (Article.id の UUID 文字列)。参考記事に答えがない場合は空配列を返す。一般知識から推測した内容には ID を載せてはいけない。")
+    @Guide(description: "回答の根拠に使った記事の ID 配列 (Article.id の UUID 文字列)。参考記事に答えがない場合は空配列。一般知識から推測した内容には ID を載せてはいけない。")
     let citedArticleIDs: [String]
 }
 

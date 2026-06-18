@@ -82,20 +82,78 @@ struct ChatServiceTests {
         #expect(result.citedArticleIDs.isEmpty)
     }
 
+    // MARK: - 1b. spec 081: KB ミス → 一般知識バッジ + 明示 disclaimer
+
+    @Test func testSendEmptyCorpusSetsGeneralKnowledgeBadge() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let mockSession = MockLanguageModelSession()
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            agentLoopEnabled: false
+        )
+        let session = try service.createSession()
+        let result = try await service.send(question: "存在しない話題について教えて", in: session)
+
+        // spec 081: 一般知識バッジ + 「ナレッジベース」明示 disclaimer
+        #expect(result.answeredFromGeneralKnowledge == true)
+        #expect(result.text.contains("ナレッジベース"))
+        #expect(result.citedArticleIDs.isEmpty)
+    }
+
+    // MARK: - 1c. spec 081: KB 接地回答にはバッジを付けない
+
+    @Test func testGroundedAnswerHasNoBadge() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 が登場した", embedding: nil, in: context)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "Swift 6 は並行性が強化されました。",
+            citedArticleIDs: [article.id.uuidString]
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            agentLoopEnabled: false
+        )
+        let session = try service.createSession()
+        let result = try await service.send(question: "Swift 6 について", in: session)
+
+        #expect(result.answeredFromGeneralKnowledge == false)
+        #expect(!result.citedArticleIDs.isEmpty)
+    }
+
     // MARK: - 2. cited 空 → 「分かりません」上書き
 
-    @Test func testSendWithEmptyCitedRewritesToUnknown() async throws {
+    // spec 083: 関連記事あり + LM が cited 空 + 回答が実質非空 → 回答を保持し出典を補完 (一般回答に落とさない)
+    @Test func testEmptyCitedFallsBackToRetrievedArticles() async throws {
         let container = try makeContainer()
         let context = container.mainContext
 
         // 関連記事を作成 (keyword マッチで取得される前提)
-        makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 が登場した", embedding: nil, in: context)
+        let article = makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 が登場した", embedding: nil, in: context)
         try context.save()
 
         let mockSession = MockLanguageModelSession()
-        // LM が cited を空で返した
+        // LM が実質的な回答を返すが cited を空で返した (ID 列挙忘れ)
         mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
-            answer: "詳しいことは記憶にない",
+            answer: "Swift 6 は並行性などの新機能を含むメジャーリリースです。",
             citedArticleIDs: []
         ))
         let availability = MockAvailabilityChecker()
@@ -111,8 +169,39 @@ struct ChatServiceTests {
         let session = try service.createSession()
         let result = try await service.send(question: "Swift について", in: session)
 
-        // spec 057: 「分かりません」廃止、cited 空時は hedge phrase 入りメッセージに置換
-        #expect(!HedgePhraseFilter.containsBanned(result.text))
+        // 回答は破棄されず保持、出典は取得済み記事で補完、一般知識バッジは付かない
+        #expect(result.text.contains("Swift 6"))
+        #expect(result.citedArticleIDs.contains(article.id.uuidString))
+        #expect(result.answeredFromGeneralKnowledge == false)
+    }
+
+    // spec 083: 関連記事あり + LM が回答を空で返した (= 記事に答えがない) → 一般回答 + バッジ
+    @Test func testEmptyAnswerFallsToGeneralKnowledge() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 が登場した", embedding: nil, in: context)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "",
+            citedArticleIDs: []
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            agentLoopEnabled: false
+        )
+        let session = try service.createSession()
+        let result = try await service.send(question: "Swift について", in: session)
+
+        #expect(result.answeredFromGeneralKnowledge == true)
         #expect(result.citedArticleIDs.isEmpty)
     }
 
@@ -393,21 +482,173 @@ struct ChatServiceTests {
         #expect(messagesAfter.first?.text == "msg in s2")
     }
 
-    // MARK: - 11. inline link 形式の prompt 指示 (spec 033)
+    // MARK: - spec 082: agent prompt が検索優先 (retrieve-first) に biased
 
-    @Test func testBuildPromptIncludesInlineLinkInstruction() {
-        let container = try? makeContainer()
-        let context = container?.mainContext
+    @Test func testAgentPromptBiasesToSearch() {
+        let prompt = ChatService.buildAgentPrompt(
+            question: "最近のAI関連の記事について教えて",
+            contextMessages: []
+        )
+        // searchArticles が既定動作として強調されている
+        #expect(prompt.contains("searchArticles"))
+        #expect(prompt.contains("迷ったら"))
+        // バグ元の「正確なカテゴリ名がある時だけ検索」ルールは撤廃済
+        #expect(!prompt.contains("Category 名のキーワードがあれば必ず searchArticles"))
+    }
 
+    // MARK: - spec 084: recency/meta 質問判定 (純関数)
+
+    @Test func testIsRecencyQuery() {
+        #expect(ChatService.isRecencyQuery("最近保存した記事の要点は?") == true)
+        #expect(ChatService.isRecencyQuery("最近読んだ記事まとめて") == true)
+        #expect(ChatService.isRecencyQuery("最近のAIについて教えて") == false) // recency のみ・meta 語なし
+        #expect(ChatService.isRecencyQuery("こんにちは") == false)
+    }
+
+    // MARK: - spec 084: 「最近保存した記事の要点」→ 一般回答でなく直近記事を要約・引用
+
+    @Test func testRecencyQuerySummarizesRecentArticles() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 が登場した", embedding: nil, in: context)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "最近の記事の要点は Swift 6 の新機能です。",
+            citedArticleIDs: []
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            agentLoopEnabled: false
+        )
+        let session = try service.createSession()
+        let result = try await service.send(question: "最近保存した記事の要点は?", in: session)
+
+        // 一般回答でなく、直近記事を要約・引用 (spec 083 ゲートで出典補完)
+        #expect(result.answeredFromGeneralKnowledge == false)
+        #expect(result.citedArticleIDs.contains(article.id.uuidString))
+    }
+
+    // MARK: - spec 083: agent prompt が会話履歴を踏まえた独立検索クエリを指示
+
+    @Test func testAgentPromptInstructsStandaloneQuery() {
+        let prompt = ChatService.buildAgentPrompt(
+            question: "プロダクトマネージャー",
+            contextMessages: []
+        )
+        #expect(prompt.contains("独立した検索クエリ"))
+        #expect(prompt.contains("会話履歴"))
+    }
+
+    // MARK: - spec 082: 分類器が immediate でも関連記事があれば引用回答に上書き (検索優先セーフティネット)
+
+    @Test func testImmediateOverriddenByMatchingArticles() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = makeArticle(url: "a", title: "Swift 6 リリース", essence: "Swift 6 が登場した", embedding: nil, in: context)
+        try context.save()
+
+        let mockSession = MockLanguageModelSession()
+        // 分類器は immediate (一般知識) を返す
+        mockSession.nextAgentActions = [.immediate(answer: "一般知識の答え")]
+        // しかし関連記事があるので RAG 回答に上書きされ、この cited が使われる
+        mockSession.nextChatAnswerResult = .success(ChatAnswerOutput(
+            answer: "Swift 6 は並行性が強化されました (article-id://\(article.id.uuidString))。",
+            citedArticleIDs: [article.id.uuidString]
+        ))
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            agentLoopEnabled: true  // agent path ON で immediate を返させる
+        )
+        let session = try service.createSession()
+        let result = try await service.send(question: "Swift について", in: session)
+
+        // 一般知識でなく、記事を引用した回答になっている
+        #expect(result.citedArticleIDs.contains(article.id.uuidString))
+        #expect(result.answeredFromGeneralKnowledge == false)
+    }
+
+    // MARK: - spec 082: immediate + 関連記事なし → 従来通り即答 (挨拶等、バッジなし)
+
+    @Test func testImmediatePreservedWhenNoMatchingArticles() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let mockSession = MockLanguageModelSession()
+        mockSession.nextAgentActions = [.immediate(answer: "こんにちは！")]
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = ChatService(
+            context: context,
+            embeddingService: makeMockEmbedding(available: false),
+            session: mockSession,
+            availability: availability,
+            agentLoopEnabled: true
+        )
+        let session = try service.createSession()
+        let result = try await service.send(question: "こんにちは", in: session)
+
+        #expect(result.text == "こんにちは！")
+        #expect(result.citedArticleIDs.isEmpty)
+        #expect(result.answeredFromGeneralKnowledge == false)
+    }
+
+    // MARK: - 11. spec 081: 番号引用契約 (裸マーカー) の prompt 指示
+
+    @Test func testBuildPromptIncludesBareMarkerInstruction() {
         let article = Article(url: "https://example.com", title: "テスト")
         let prompt = ChatService.buildPrompt(
             question: "Swift について",
             articles: [article],
             contextMessages: []
         )
-        // inline link の指示文が prompt に含まれる
-        #expect(prompt.contains("[記事タイトル](article-id://"))
-        _ = context
+        // 裸マーカー契約の指示文が prompt に含まれる (タイトルリンク形式は廃止)
+        #expect(prompt.contains("(article-id://UUID)"))
+        #expect(!prompt.contains("[記事タイトル](article-id://"))
+    }
+
+    // MARK: - 11b. spec 081: Wiki まとめは文脈に入るが引用させない
+
+    @Test func testBuildPromptIncludesWikiContextNotCited() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let article = Article(url: "https://example.com", title: "テスト記事")
+        let page = ConceptPage(
+            name: "生成AI",
+            categoryRaw: "テクノロジー",
+            crossSourceInsights: ["LLM は大規模言語モデルの略", "用途は文章生成"]
+        )
+        context.insert(page)
+
+        let prompt = ChatService.buildPrompt(
+            question: "生成AI とは",
+            articles: [article],
+            conceptPages: [page],
+            contextMessages: []
+        )
+        // Wiki まとめが補足文脈として注入される
+        #expect(prompt.contains("補足文脈"))
+        #expect(prompt.contains("生成AI"))
+        #expect(prompt.contains("LLM は大規模言語モデルの略"))
+        // 引用は参考記事だけ、という制約文が含まれる
+        #expect(prompt.contains("引用できるのは"))
     }
 
     // MARK: - 12. stripUUIDsFromBody が inline link を保護 (spec 033)

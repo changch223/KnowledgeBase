@@ -14,10 +14,12 @@ struct ChatInputField: View {
     @Binding var text: String
     @Binding var isThinking: Bool
     let onSend: () -> Void
+    /// spec 083: clarification「その他」から入力欄にフォーカスするための binding (optional)。
+    var focused: FocusState<Bool>.Binding? = nil
 
     var body: some View {
         HStack(alignment: .bottom, spacing: DS.Spacing.md) {
-            TextField("chat.input.placeholder", text: $text, axis: .vertical)
+            inputTextField
                 .lineLimit(1...4)
                 .textFieldStyle(.roundedBorder)
                 .disabled(isThinking)
@@ -36,6 +38,16 @@ struct ChatInputField: View {
         }
         .padding(DS.Spacing.lg)
         .background(.ultraThinMaterial)
+    }
+
+    @ViewBuilder
+    private var inputTextField: some View {
+        if let focused {
+            TextField("chat.input.placeholder", text: $text, axis: .vertical)
+                .focused(focused)
+        } else {
+            TextField("chat.input.placeholder", text: $text, axis: .vertical)
+        }
     }
 
     private var canSend: Bool {
