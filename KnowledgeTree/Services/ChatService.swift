@@ -598,21 +598,21 @@ final class ChatService: ChatServiceProtocol {
 
         if embeddingService.isAvailable, let queryVector = embeddingService.embed(question) {
             // Embedding 経路
-            let corpus: [(id: String, embedding: [Float], article: Article)] = allArticles.compactMap { article in
+            // メインスレッドで external-storage embedding を取り出し (faulting)、
+            // spec 086: cosine + sort はメインスレッド外で実行 (全記事スキャンは維持 = recall 不変)。
+            let corpus: [(id: String, embedding: [Float])] = allArticles.compactMap { article in
                 guard let data = article.essenceEmbedding else { return nil }
-                let vector = data.asFloatArray
-                return (id: article.id.uuidString, embedding: vector, article: article)
+                return (id: article.id.uuidString, embedding: data.asFloatArray)
             }
-            let scored: [(article: Article, similarity: Float)] = corpus.map { entry in
-                let sim = EmbeddingService.cosineSimilarity(queryVector, entry.embedding)
-                return (article: entry.article, similarity: sim)
+            let byID = Dictionary(allArticles.map { ($0.id.uuidString, $0) }, uniquingKeysWith: { a, _ in a })
+            let ranked = await Self.rankByCosine(query: queryVector, corpus: corpus, k: topK)
+            let topResults: [(article: Article, similarity: Float)] = ranked.compactMap { entry in
+                guard let article = byID[entry.id] else { return nil }
+                return (article: article, similarity: entry.similarity)
             }
-            let topResults = scored
-                .sorted { $0.similarity > $1.similarity }
-                .prefix(topK)
             // spec 081: 同じ query vector で Wiki/概念ページも検索 (文脈 + 引用候補の補完用)
-            let topConcepts = retrieveConcepts(queryVector: queryVector)
-            return ChatRetrievalResult(articles: Array(topResults), conceptPages: topConcepts, mode: .embedding)
+            let topConcepts = await retrieveConcepts(queryVector: queryVector)
+            return ChatRetrievalResult(articles: topResults, conceptPages: topConcepts, mode: .embedding)
         } else {
             // Keyword 経路 (embedding 不可、Wiki 文脈はスキップ)
             let scored = Self.keywordScore(question: question, articles: allArticles)
@@ -625,21 +625,39 @@ final class ChatService: ChatServiceProtocol {
 
     /// spec 081: query vector に対し ConceptPage を cosine top-k で検索。
     /// `!isHidden`・embedding 非 nil・次元一致のみ、conceptMinSimilarity 以上を similarity desc で返す。
-    private func retrieveConcepts(queryVector: [Float]) -> [(page: ConceptPage, similarity: Float)] {
+    /// spec 086: 有効ページの取り出しはメイン、cosine + sort はメインスレッド外。
+    private func retrieveConcepts(queryVector: [Float]) async -> [(page: ConceptPage, similarity: Float)] {
         let descriptor = FetchDescriptor<ConceptPage>()
         let allConcepts = (try? context.fetch(descriptor)) ?? []
-        let scored: [(page: ConceptPage, similarity: Float)] = allConcepts.compactMap { page in
+        // 次元一致 + 非 hidden の有効ページのみ corpus 化 (faulting はメインで)
+        var byID: [String: ConceptPage] = [:]
+        let corpus: [(id: String, embedding: [Float])] = allConcepts.compactMap { page in
             guard !page.isHidden, let data = page.embedding else { return nil }
             let vector = data.asFloatArray
             guard vector.count == queryVector.count else { return nil }
-            let sim = EmbeddingService.cosineSimilarity(queryVector, vector)
-            return (page: page, similarity: sim)
+            let key = page.id.uuidString
+            byID[key] = page
+            return (id: key, embedding: vector)
         }
-        return scored
+        // 全件ランク → threshold filter → top-k (現挙動と同一: 閾値通過の中から上位)
+        let ranked = await Self.rankByCosine(query: queryVector, corpus: corpus, k: corpus.count)
+        return ranked
             .filter { $0.similarity >= conceptMinSimilarity }
-            .sorted { $0.similarity > $1.similarity }
             .prefix(conceptTopK)
-            .map { ($0.page, $0.similarity) }
+            .compactMap { entry in byID[entry.id].map { ($0, entry.similarity) } }
+    }
+
+    /// spec 086: cosine ランキングをメインスレッド外で実行 (純関数 EmbeddingService.topK)。
+    /// 空 corpus は即 []。全記事スキャンの CPU をメインから退避しスクロール/入力の jank を防ぐ。
+    nonisolated private static func rankByCosine(
+        query: [Float],
+        corpus: [(id: String, embedding: [Float])],
+        k: Int
+    ) async -> [(id: String, similarity: Float)] {
+        guard !corpus.isEmpty, k > 0 else { return [] }
+        return await Task.detached(priority: .userInitiated) {
+            EmbeddingService.topK(query: query, corpus: corpus, k: k)
+        }.value
     }
 
     /// embedding 用テキスト。essence 優先、なければ title。

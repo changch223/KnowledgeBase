@@ -41,10 +41,10 @@ enum CategorySeed {
     }
 
     /// fallback 用「その他」カテゴリー (allSeeds 末尾)。
-    static var otherCategory: Category {
-        // allSeeds は 10 個固定なので force unwrap は安全
-        allSeeds.last!
-    }
+    /// allSeeds は 10 個固定だが、force unwrap を避けリテラル fallback で防御 (クラッシュ回避)。
+    static let otherCategory = Category(
+        name: "その他", englishName: "Other", order: 9, symbolName: "ellipsis.circle"
+    )
 
     /// AutoCategoryClassifier の prompt 用、候補 name を " / " 区切りで返す。
     static var promptCandidatesString: String {
