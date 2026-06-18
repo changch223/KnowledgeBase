@@ -24,6 +24,10 @@ final class ChatMessage {
     /// spec 057: clarification message のときの 3 候補 chip (assistant role のみ意味あり)。
     /// 通常 answer の場合は空配列。
     var clarificationSuggestions: [String] = []
+    /// spec 081: ナレッジベースに該当情報が無く一般知識で答えた assistant 回答 (= 『一般知識』バッジ表示)。
+    /// retrieval を試みて空振った RAG ミス経路でのみ true。雑談 (immediate) や KB 接地回答は false。
+    /// CloudKit lightweight migration 安全 (default false)。
+    var answeredFromGeneralKnowledge: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -32,7 +36,8 @@ final class ChatMessage {
         text: String,
         citedArticleIDs: [String] = [],
         timestamp: Date = Date.now,
-        clarificationSuggestions: [String] = []
+        clarificationSuggestions: [String] = [],
+        answeredFromGeneralKnowledge: Bool = false
     ) {
         self.id = id
         self.session = session
@@ -41,6 +46,7 @@ final class ChatMessage {
         self.citedArticleIDs = citedArticleIDs
         self.timestamp = timestamp
         self.clarificationSuggestions = clarificationSuggestions
+        self.answeredFromGeneralKnowledge = answeredFromGeneralKnowledge
     }
 }
 

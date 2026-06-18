@@ -176,6 +176,8 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
                 return lhsLatest > rhsLatest
             }
             for page in sorted.prefix(5) {
+                // spec 082: チャット応答中は次の概念合成を開始せず待機 (ANE をチャットに最優先で譲る)
+                await AIPriorityCoordinator.shared.waitWhileChatActive()
                 await _resynthesize(page)
             }
         }
@@ -613,6 +615,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 return lhsLatest > rhsLatest
             }
             for page in sorted.prefix(5) {
+                // spec 082: チャット応答中は次の概念合成を開始せず待機 (ANE をチャットに最優先で譲る)
+                await AIPriorityCoordinator.shared.waitWhileChatActive()
                 await _resynthesize(page)
             }
         }

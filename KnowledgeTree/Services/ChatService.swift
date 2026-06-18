@@ -62,6 +62,12 @@ final class ChatService: ChatServiceProtocol {
     /// 早期 return 用の最低 similarity 閾値。これ未満は「該当する情報が見つからない」と判定。
     private let minSimilarity: Float = 0.3
 
+    /// spec 081: 回答文脈に使う Wiki/概念ページの retrieval 件数 (引用はしない、文脈のみ)。
+    private let conceptTopK: Int = 2
+
+    /// spec 081: Wiki/概念ページを文脈に採用する最低 cosine 閾値 (nearestConceptIDs と同値)。
+    private let conceptMinSimilarity: Float = 0.5
+
     /// 1 ユーザーあたりの最大セッション数 (FIFO で古いを削除)。
     private let maxSessions: Int = 50
 
@@ -98,6 +104,10 @@ final class ChatService: ChatServiceProtocol {
             throw ChatServiceError.emptyQuestion
         }
 
+        // spec 082: チャット応答中は裏の AI 処理 (概念まとめ生成) を一時停止し ANE をチャットに最優先で譲る
+        AIPriorityCoordinator.shared.beginChat()
+        defer { AIPriorityCoordinator.shared.endChat() }
+
         // 1. user message 永続化
         let userMessage = ChatMessage(
             session: session,
@@ -124,6 +134,28 @@ final class ChatService: ChatServiceProtocol {
             if let agentAction = await tryGenerateAgentAction(question: trimmed, contextMessages: contextMessages, forceFinalAnswer: shouldForceFinal) {
                 switch agentAction {
                 case .immediate(let answer):
+                    // spec 082: 検索優先セーフティネット — 分類器が immediate でも、
+                    // 関連する保存記事があれば引用回答に上書き (挨拶・雑談は retrieval 空で従来通り即答)。
+                    let retrieval = await retrieve(question: trimmed)
+                    let candidates = mergeArticleCandidates(retrieval: retrieval)
+                    if !candidates.isEmpty {
+                        return try await executeFullRAGAnswer(
+                            originalQuestion: trimmed,
+                            aboveThreshold: candidates,
+                            conceptPages: retrieval.conceptPages.map { $0.page },
+                            contextMessages: contextMessages,
+                            in: session
+                        )
+                    }
+                    // spec 084: 「最近保存した記事の要点」等は一般回答でなく直近記事を要約
+                    if let recent = recencyDigestCandidates(for: trimmed) {
+                        return try await executeFullRAGAnswer(
+                            originalQuestion: trimmed,
+                            aboveThreshold: recent,
+                            contextMessages: contextMessages,
+                            in: session
+                        )
+                    }
                     let filtered = HedgePhraseFilter.replace(answer)
                     return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
 
@@ -204,20 +236,24 @@ final class ChatService: ChatServiceProtocol {
         """ : ""
 
         return """
-        あなたは iKnow の AI アシスタント。ユーザーの質問に対して、4 つの行動から 1 つを選ぶ:
+        あなたは iKnow の AI アシスタント。基本動作は「ユーザーが保存した記事 (ナレッジベース) から答える」こと。
+        質問に対して、4 つの行動から 1 つを選ぶ:
 
-        - immediate(answer): 明確で一般知識で答えられる質問なら即答
-        - askClarification(question, suggestions): 質問が曖昧、聞き返しと 3 候補で確認
-        - searchArticles(query): 保存記事を検索する必要あり、検索 query を指定
-        - finalAnswer(text, citedArticleIDs): 検索結果統合後の最終答え
+        - searchArticles(query): 保存記事を検索する。**情報・知識・トピック・人物・出来事・技術・用語などを問う質問は、原則これを選ぶ (既定動作)**。
+        - immediate(answer): 挨拶・雑談・アプリの使い方など、保存記事と無関係な場合のみ即答。
+        - askClarification(question, suggestions): どう検索しても意図が複数に割れて手がかりが薄い時**だけ**聞き返す (本当に必要な時のみ、めったに使わない)。
+        - finalAnswer(text, citedArticleIDs): 検索結果を統合した最終答え。
 
         ## 重要ルール
-        - 「分かりません」「答えられません」「情報がありません」「知りません」は絶対に出力しない
-        - 情報不足なら「私の理解では」「一般的には」「あくまで概要として」等の hedge を使う
-        - askClarification の suggestions は厳密に 3 つ、各 30 字以内
-        - 「保存した記事」「あの記事」「私の」等のキーワードがあれば searchArticles を選ぶ
-        - **「〇〇分野」「〇〇カテゴリ」「テクノロジー」「経済」「健康」「デザイン」「学術」「アート」「ニュース」「スポーツ」「エンタメ」等の Category 名のキーワードがあれば必ず searchArticles を選んで、Category 名を query として渡す**
-        - 「最近」「今週」「今月」のキーワード + Category なら、その Category の最近記事の要点まとめを期待していると判断
+        - **迷ったら searchArticles を選ぶ**。知識・情報を問う質問はまず保存記事を検索する。「保存した記事」等のキーワードが無くても検索してよい。
+        - **曖昧な質問でも、まず最善の解釈で検索する**。略語や短い語 (例「pm」) も、ありそうな意味に展開して検索する (例: query「pm プロダクトマネージャー プロジェクト管理」)。安易に askClarification しない。
+        - searchArticles の query は **会話履歴を踏まえた「独立した検索クエリ」** にする。直前の会話の指示語・追質問・略語をすべて解決し、それ単体で検索できる語にする。
+          例: 直前が「pm って何?」で今回「プロダクトマネージャー」→ query は「PM プロダクトマネージャー」。
+          例: 「最近のAI関連の記事について教えて」→ query は「AI」。
+        - 「テクノロジー」「経済」等の分野名や「最近」「今週」のキーワードがあれば、それも query に含めてよい (必須ではない)。
+        - immediate は本当に保存記事と無関係な雑談だけ。情報を問う質問を一般知識で即答してはいけない。
+        - 「分かりません」「答えられません」「情報がありません」「知りません」は絶対に出力しない。
+        - askClarification の suggestions は厳密に 3 つ、各 30 字以内 (ユーザーはこの 3 つに加え自由入力もできる)。
         \(forceClause)
         \(contextLines.isEmpty ? "" : "## 直前の会話\n\(contextLines)\n")
         ## 質問
@@ -250,30 +286,99 @@ final class ChatService: ChatServiceProtocol {
             }
         }
 
-        // 2. retrieval
+        // 2. retrieval (記事 + spec 081: Wiki/概念ページ)
         let retrieval = await retrieve(question: searchQuestion)
-        let retrievedArticles = retrieval.articles
 
-        // 3. low-similarity 早期 return (R7)
-        let aboveThreshold = retrievedArticles.filter { $0.similarity >= minSimilarity }
-        if aboveThreshold.isEmpty {
-            // spec 057: 「分かりません」廃止、最善努力で一般知識答え
-            if availability.isAvailable {
-                if let fallbackAnswer = await tryGenerateFallbackAnswer(question: originalQuestion) {
-                    let filtered = HedgePhraseFilter.replace(fallbackAnswer)
-                    return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
-                }
+        // 3. spec 081: 概念ページ由来の relatedArticles を引用候補に merge
+        //    (記事単体では弱いが、まとめ経由で関連する記事も拾う)。
+        var aboveThreshold = mergeArticleCandidates(retrieval: retrieval)
+        var conceptPages = retrieval.conceptPages.map { $0.page }
+
+        // spec 083: recall 補強 — standalone 検索クエリと元質問が異なる場合は元質問でも検索しマージ
+        //   (クエリ書き換えが意図を外しても元質問の手がかりを取りこぼさない、embedding のみで LM 不要)。
+        if searchQuestion != originalQuestion {
+            let rawRetrieval = await retrieve(question: originalQuestion)
+            let rawCandidates = mergeArticleCandidates(retrieval: rawRetrieval)
+            var byID: [UUID: (article: Article, similarity: Float)] = [:]
+            for candidate in aboveThreshold + rawCandidates {
+                if let existing = byID[candidate.article.id], existing.similarity >= candidate.similarity { continue }
+                byID[candidate.article.id] = candidate
             }
-            return try persistAssistantUnknown(in: session)
+            aboveThreshold = byID.values
+                .sorted { $0.similarity > $1.similarity }
+                .prefix(topK)
+                .map { (article: $0.article, similarity: $0.similarity) }
+            var seenConcepts = Set(conceptPages.map { $0.id })
+            for page in rawRetrieval.conceptPages.map({ $0.page }) where !seenConcepts.contains(page.id) {
+                conceptPages.append(page)
+                seenConcepts.insert(page.id)
+            }
         }
 
-        // 4. 回答生成 (既存 logic)
+        // 4. low-similarity 早期 return
+        if aboveThreshold.isEmpty {
+            // spec 084: recency/meta 質問 (「最近保存した記事の要点」等) は一般回答でなく直近記事を要約
+            if let recent = recencyDigestCandidates(for: originalQuestion) {
+                return try await executeFullRAGAnswer(
+                    originalQuestion: originalQuestion,
+                    aboveThreshold: recent,
+                    contextMessages: contextMessages,
+                    in: session
+                )
+            }
+            // KB ミス時は明示 disclaimer + 一般回答 (spec 081)
+            return try await persistGeneralKnowledgeAnswer(question: originalQuestion, in: session)
+        }
+
+        // 5. 回答生成 (Wiki 文脈を渡す、引用は記事のみ)
         return try await executeFullRAGAnswer(
             originalQuestion: originalQuestion,
             aboveThreshold: aboveThreshold,
+            conceptPages: conceptPages,
             contextMessages: contextMessages,
             in: session
         )
+    }
+
+    /// spec 081: 記事 cosine 候補 + 概念ページ由来 relatedArticles を merge し、
+    /// threshold 以上を similarity desc で top-k 返す。概念由来記事は概念 similarity をスコアとして付与
+    /// (強く一致した概念がその関連記事を引き上げる)。記事 id で dedupe、各記事は最大スコアを採用。
+    private func mergeArticleCandidates(retrieval: ChatRetrievalResult) -> [(article: Article, similarity: Float)] {
+        var byID: [UUID: (article: Article, similarity: Float)] = [:]
+        for entry in retrieval.articles {
+            byID[entry.article.id] = entry
+        }
+        for concept in retrieval.conceptPages {
+            for article in (concept.page.relatedArticles ?? []) where FeedBuilder.isProcessingComplete(article) {
+                if let existing = byID[article.id] {
+                    if concept.similarity > existing.similarity {
+                        byID[article.id] = (article, concept.similarity)
+                    }
+                } else {
+                    byID[article.id] = (article, concept.similarity)
+                }
+            }
+        }
+        return byID.values
+            .filter { $0.similarity >= minSimilarity }
+            .sorted { $0.similarity > $1.similarity }
+            .prefix(topK)
+            .map { ($0.article, $0.similarity) }
+    }
+
+    /// spec 081: ナレッジベースに該当情報が無い時の一般回答。
+    /// 明示 disclaimer を prepend + answeredFromGeneralKnowledge=true (『一般知識』バッジ)。
+    /// AI 可なら一般知識答え (HedgePhraseFilter で raw「分かりません」を保険置換)、不可なら固定文。
+    private func persistGeneralKnowledgeAnswer(question: String, in session: ChatSession) async throws -> ChatMessage {
+        let disclaimer = String(localized: "chat.general.disclaimer")
+        let body: String
+        if availability.isAvailable, let answer = await tryGenerateFallbackAnswer(question: question) {
+            body = HedgePhraseFilter.replace(answer)
+        } else {
+            body = String(localized: "chat.general.fallbackBody")
+        }
+        let text = disclaimer + "\n\n" + body
+        return try persistAssistant(text: text, citedIDs: [], suggestions: [], generalKnowledge: true, in: session)
     }
 
     /// Apple Intelligence で hedge 付き一般知識答えを生成 (search 結果ゼロ時の最善努力)。
@@ -301,6 +406,36 @@ final class ChatService: ChatServiceProtocol {
         return nil
     }
 
+    /// spec 084: 「最近保存した記事の要点は?」等の recency/meta 質問判定。
+    /// 特定トピックではなく「直近の保存記事の要約」を求める質問。recency 語 + meta 語の両方を含む。
+    /// (トピック検索が成功する「最近のAI記事」は retrieval ヒット側で処理され、この判定には到達しない)
+    static func isRecencyQuery(_ question: String) -> Bool {
+        let recency = ["最近", "最新", "今週", "今月", "このごろ", "近頃", "さいきん", "直近"]
+        let meta = ["記事", "保存", "まとめ", "要点", "サマリ", "読んだ", "クリップ", "ためた", "ため込", "何を"]
+        let hasRecency = recency.contains { question.contains($0) }
+        let hasMeta = meta.contains { question.contains($0) }
+        return hasRecency && hasMeta
+    }
+
+    /// spec 084: 直近保存の (処理完了) 記事を savedAt desc で取得。
+    private func fetchRecentArticles(limit: Int) -> [Article] {
+        var descriptor = FetchDescriptor<Article>(
+            sortBy: [SortDescriptor(\.savedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 30
+        let all = (try? context.fetch(descriptor)) ?? []
+        return Array(all.filter { FeedBuilder.isProcessingComplete($0) }.prefix(limit))
+    }
+
+    /// spec 084: recency/meta 質問なら直近記事を引用候補として返す (それ以外は nil)。
+    /// retrieval が空振った時の「一般回答」直前に呼び、直近記事の要約に切り替える。
+    private func recencyDigestCandidates(for question: String) -> [(article: Article, similarity: Float)]? {
+        guard Self.isRecencyQuery(question) else { return nil }
+        let recent = fetchRecentArticles(limit: 6)
+        guard !recent.isEmpty else { return nil }
+        return recent.map { (article: $0, similarity: Float(1.0)) }
+    }
+
     /// 指定 Category の Tag を持つ Article を最新 savedAt desc で fetch (上限 10 件)。
     private func fetchArticlesInCategory(_ categoryName: String) -> [Article] {
         // 全 Article 取得 → in-memory filter (Article.tags は Optional Array、predicate 複雑回避)
@@ -315,9 +450,11 @@ final class ChatService: ChatServiceProtocol {
     }
 
     /// 元の RAG 答え生成パス (Foundation Models + post-process)。
+    /// spec 081: conceptPages は Wiki まとめ文脈 (引用しない、理解の助けのみ)。
     private func executeFullRAGAnswer(
         originalQuestion: String,
         aboveThreshold: [(article: Article, similarity: Float)],
+        conceptPages: [ConceptPage] = [],
         contextMessages: [ChatMessage],
         in session: ChatSession
     ) async throws -> ChatMessage {
@@ -333,6 +470,7 @@ final class ChatService: ChatServiceProtocol {
                 let prompt = Self.buildPrompt(
                     question: trimmed,
                     articles: aboveThreshold.map { $0.article },
+                    conceptPages: conceptPages,
                     contextMessages: contextMessages,
                     relatedEntities: relatedEntities
                 )
@@ -347,13 +485,22 @@ final class ChatService: ChatServiceProtocol {
             return try persistAssistantFallback(in: session, articles: aboveThreshold.map { $0.article })
         }
 
-        // 5. post-process (R7)
-        let availableIDs = Set(aboveThreshold.map { $0.article.id.uuidString })
-        let filteredCited = answer.citedArticleIDs.filter { availableIDs.contains($0) }
+        // 5. post-process
+        let trimmedAnswer = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // cited 空 → 「分かりません」上書き
+        // spec 083: 回答が空 = LM が「参考記事に答えがない場合は空」ルールに従った
+        //   → 取得済み記事はあるが答えられない → 一般回答 + バッジ。
+        if trimmedAnswer.isEmpty {
+            return try await persistGeneralKnowledgeAnswer(question: trimmed, in: session)
+        }
+
+        // spec 083: 関連記事を取得済みで実質的な回答が生成されている場合は回答を活かす。
+        //   LM が citedArticleIDs を空で返しても (= ID 列挙忘れ)、回答はその取得済み docs から
+        //   生成されているので、上位記事を出典として補完する (grounded、バッジ無し)。
+        let availableIDs = Set(aboveThreshold.map { $0.article.id.uuidString })
+        var filteredCited = answer.citedArticleIDs.filter { availableIDs.contains($0) }
         if filteredCited.isEmpty {
-            return try persistAssistantUnknown(in: session)
+            filteredCited = aboveThreshold.prefix(3).map { $0.article.id.uuidString }
         }
 
         // 答え本文中の UUID 文字列を除去 (LM が prompt に反して本文にも ID を書くケースへの保険)
@@ -463,15 +610,36 @@ final class ChatService: ChatServiceProtocol {
             let topResults = scored
                 .sorted { $0.similarity > $1.similarity }
                 .prefix(topK)
-            return ChatRetrievalResult(articles: Array(topResults), mode: .embedding)
+            // spec 081: 同じ query vector で Wiki/概念ページも検索 (文脈 + 引用候補の補完用)
+            let topConcepts = retrieveConcepts(queryVector: queryVector)
+            return ChatRetrievalResult(articles: Array(topResults), conceptPages: topConcepts, mode: .embedding)
         } else {
-            // Keyword 経路 (embedding 不可)
+            // Keyword 経路 (embedding 不可、Wiki 文脈はスキップ)
             let scored = Self.keywordScore(question: question, articles: allArticles)
             let topResults = scored
                 .sorted { $0.similarity > $1.similarity }
                 .prefix(topK)
-            return ChatRetrievalResult(articles: Array(topResults), mode: .keyword)
+            return ChatRetrievalResult(articles: Array(topResults), conceptPages: [], mode: .keyword)
         }
+    }
+
+    /// spec 081: query vector に対し ConceptPage を cosine top-k で検索。
+    /// `!isHidden`・embedding 非 nil・次元一致のみ、conceptMinSimilarity 以上を similarity desc で返す。
+    private func retrieveConcepts(queryVector: [Float]) -> [(page: ConceptPage, similarity: Float)] {
+        let descriptor = FetchDescriptor<ConceptPage>()
+        let allConcepts = (try? context.fetch(descriptor)) ?? []
+        let scored: [(page: ConceptPage, similarity: Float)] = allConcepts.compactMap { page in
+            guard !page.isHidden, let data = page.embedding else { return nil }
+            let vector = data.asFloatArray
+            guard vector.count == queryVector.count else { return nil }
+            let sim = EmbeddingService.cosineSimilarity(queryVector, vector)
+            return (page: page, similarity: sim)
+        }
+        return scored
+            .filter { $0.similarity >= conceptMinSimilarity }
+            .sorted { $0.similarity > $1.similarity }
+            .prefix(conceptTopK)
+            .map { ($0.page, $0.similarity) }
     }
 
     /// embedding 用テキスト。essence 優先、なければ title。
@@ -504,18 +672,19 @@ final class ChatService: ChatServiceProtocol {
     }
 
     /// Foundation Models prompt 組立て (R5)。
-    /// spec 033: contextMessages で multi-turn 対応 + inline link 形式の指示。
+    /// spec 033: contextMessages で multi-turn 対応。
     /// spec 040: relatedEntities が非空なら「## 関連エンティティ」セクションを記事一覧の後に挿入。
-    static func buildPrompt(question: String, articles: [Article], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = []) -> String {
+    /// spec 081: 番号引用契約 (本文に裸マーカー `(article-id://UUID)`) + Wiki まとめを文脈に注入 (引用不可)。
+    static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = []) -> String {
         var prompt = """
         あなたは iKnow の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
 
         ## ルール
         1. 必ず以下の【参考記事】の内容のみに基づいて回答してください。一般知識から推測してはいけません。
-        2. 回答に使った記事の ID は citedArticleIDs フィールドにのみ含めてください (Article.id の UUID 文字列)。
-        3. **回答本文 (answer フィールド) には UUID 文字列を絶対に書かないでください**。「[1] によれば」のような番号も避けます。
-        4. 参考記事に言及するときは `[記事タイトル](article-id://UUID)` の形式で本文中にリンクを埋め込んでください。例: 「Swift 6 については [Swift 6 リリース記事](article-id://12345...) で詳しく説明されています」。
-        5. 参考記事に答えがない場合は「分かりません。保存された記事の中に該当する情報が見つかりませんでした。」と回答し、citedArticleIDs を空配列にしてください。
+        2. 根拠にした記事は、その根拠となる文の直後に `(article-id://UUID)` というマーカーだけを置いてください。記事タイトルや「[1]」のような番号は本文に書かないでください。例: 「Swift 6 では並行性が強化されました (article-id://12345...)。」
+        3. 回答に使った記事の ID は citedArticleIDs フィールドにも列挙してください (Article.id の UUID 文字列)。
+        4. 【補足文脈】の Wiki まとめは理解の助けに使ってよいですが、引用 (マーカー / citedArticleIDs) には含めないでください。引用できるのは【参考記事】だけです。
+        5. 参考記事に答えがない場合は answer を空文字にし、citedArticleIDs を空配列にしてください。
         6. 簡潔に、3 段落以内で日本語で回答してください。
         7. 直近の会話があれば、文脈を踏まえて回答してください。「詳しく教えて」のような短い質問は直前の話題の深掘りとして扱ってください。
 
@@ -530,6 +699,17 @@ final class ChatService: ChatServiceProtocol {
                 prompt += "\n\(role): \(truncated)"
             }
             prompt += "\n"
+        }
+
+        // spec 081: Wiki まとめ文脈 (引用しない、理解の助けのみ)。token 安全のため要点 prefix(2) のみ。
+        if !conceptPages.isEmpty {
+            prompt += "\n## 補足文脈 (Wiki まとめ・引用しない)\n"
+            for page in conceptPages.prefix(2) {
+                let insights = page.crossSourceInsights.prefix(2).joined(separator: " / ")
+                let hint = insights.isEmpty ? page.summary : insights
+                let trimmedHint = hint.count > 160 ? String(hint.prefix(160)) + "…" : hint
+                prompt += "- \(page.name): \(trimmedHint)\n"
+            }
         }
 
         prompt += "\n## 参考記事"
@@ -637,28 +817,13 @@ final class ChatService: ChatServiceProtocol {
         return assistantMessage
     }
 
-    /// 「分かりません」message を永続化。
-    /// spec 057: text の「分かりません」を hedge phrase に置換 (HedgePhraseFilter)。
-    private func persistAssistantUnknown(in session: ChatSession) throws -> ChatMessage {
-        let rawText = "保存された記事の中に該当する情報が見つかりませんでした。私の理解では、もう少し詳しい質問をいただけると、お手伝いできるかもしれません。"
-        let filtered = HedgePhraseFilter.replace(rawText)
-        let assistantMessage = ChatMessage(
-            session: session,
-            role: ChatMessageRole.assistant.rawValue,
-            text: filtered,
-            citedArticleIDs: []
-        )
-        context.insert(assistantMessage)
-        session.lastMessageAt = .now
-        try context.save()
-        return assistantMessage
-    }
-
     /// spec 057: 汎用 assistant message 永続化 (immediate / clarification / finalAnswer の共通 helper)。
+    /// spec 081: generalKnowledge=true で『一般知識』バッジ用フラグを立てる。
     private func persistAssistant(
         text: String,
         citedIDs: [String],
         suggestions: [String],
+        generalKnowledge: Bool = false,
         in session: ChatSession
     ) throws -> ChatMessage {
         let assistantMessage = ChatMessage(
@@ -666,7 +831,8 @@ final class ChatService: ChatServiceProtocol {
             role: ChatMessageRole.assistant.rawValue,
             text: text,
             citedArticleIDs: citedIDs,
-            clarificationSuggestions: suggestions
+            clarificationSuggestions: suggestions,
+            answeredFromGeneralKnowledge: generalKnowledge
         )
         context.insert(assistantMessage)
         session.lastMessageAt = .now
@@ -709,6 +875,8 @@ enum ChatServiceError: Error {
 
 struct ChatRetrievalResult {
     let articles: [(article: Article, similarity: Float)]
+    /// spec 081: 質問に関連する Wiki/概念ページ (文脈 + 引用候補補完用、Wiki 自体は引用しない)。
+    var conceptPages: [(page: ConceptPage, similarity: Float)] = []
     let mode: RetrievalMode
 
     enum RetrievalMode {
