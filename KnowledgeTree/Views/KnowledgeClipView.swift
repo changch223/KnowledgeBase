@@ -77,6 +77,9 @@ struct KnowledgeClipView: View {
         FeedBuilder.newArticleShelf(articles: feedArticles, now: Date())
     }
 
+    /// spec 087: 「おすすめのまとめ」横列の表示フラグ (一旦非表示)。true で復活。
+    private static let showRecommendCarousel = false
+
     /// spec 075: 「おすすめのまとめ」横棚 (一番上)。トップレベル概念を活動量+recency で上位 N。
     /// 既存 RecommendCarousel / WikiShelfCard を流用するため FeedItem.wikiUpdate に map。
     private var recommendItems: [FeedItem] {
@@ -93,7 +96,8 @@ struct KnowledgeClipView: View {
                     }
 
                     // spec 075: 「おすすめのまとめ」横棚 — トップレベル概念。候補不足なら非表示。
-                    if recommendItems.count >= FeedBuilder.carouselMinItems {
+                    // spec 087: 一旦非表示 (コードは残置、復活は showRecommendCarousel = true)。
+                    if Self.showRecommendCarousel, recommendItems.count >= FeedBuilder.carouselMinItems {
                         RecommendCarousel(items: recommendItems)
                     }
 

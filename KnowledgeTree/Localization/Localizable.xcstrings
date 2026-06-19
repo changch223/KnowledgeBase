@@ -381,7 +381,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share Sheet で「iKnow」を選択"
+            "value" : "Share Sheet で「Knowledge Base」を選択"
           }
         }
       }
@@ -1107,7 +1107,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iKnow について教えて"
+            "value" : "Knowledge Base について教えて"
           }
         }
       }
@@ -1305,7 +1305,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share Sheet で「iKnow」を選択して記事を保存しましょう"
+            "value" : "Share Sheet で「Knowledge Base」を選択して記事を保存しましょう"
           }
         }
       }
@@ -1426,7 +1426,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iKnow"
+            "value" : "Knowledge Base"
           }
         }
       }
@@ -1470,7 +1470,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iKnow"
+            "value" : "Knowledge"
           }
         }
       }
@@ -2387,7 +2387,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新着"
+            "value" : "新着記事"
           }
         }
       }
@@ -2492,7 +2492,7 @@
     "iCloud 同期を停止しますか?" : {
 
     },
-    "iKnow に保存" : {
+    "Knowledge Base に保存" : {
 
     },
     "interestingNext.empty.body" : {
@@ -2963,7 +2963,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しい iKnow へようこそ"
+            "value" : "新しい Knowledge Base へようこそ"
           }
         }
       }
@@ -3194,7 +3194,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari で記事を開いて「共有」→ iKnow で保存できます"
+            "value" : "Safari で記事を開いて「共有」→ Knowledge Base で保存できます"
           }
         }
       }
@@ -3291,7 +3291,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iKnow はあなたが読んだ記事を AI が自動で整理し、必要なときに思い出せる「あなた専用の第二の脳」です。"
+            "value" : "Knowledge Base はあなたが読んだ記事を AI が自動で整理し、必要なときに思い出せる「あなた専用の第二の脳」です。"
           }
         }
       }
@@ -3302,7 +3302,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ようこそ iKnow へ"
+            "value" : "ようこそ Knowledge Base へ"
           }
         }
       }
@@ -3313,7 +3313,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari / Chrome / X / 他のアプリの共有メニューから「iKnow」を選ぶだけ。記事の本文 + 知識を端末内で自動抽出します。"
+            "value" : "Safari / Chrome / X / 他のアプリの共有メニューから「Knowledge Base」を選ぶだけ。記事の本文 + 知識を端末内で自動抽出します。"
           }
         }
       }
@@ -3866,7 +3866,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「アクション追加」→ 検索で「iKnow」→「iKnowに保存」を選択。URL を「Chrome の現在の URL」に設定します。"
+            "value" : "「アクション追加」→ 検索で「Knowledge Base」→「Knowledge Baseに保存」を選択。URL を「Chrome の現在の URL」に設定します。"
           }
         }
       }
@@ -4020,7 +4020,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari で開いた全ページを自動でiKnowに保存します。下の遅延設定で「ページを開いてから何秒後に保存するか」を選択。すでに保存済みのページは重複保存されません。"
+            "value" : "Safari で開いた全ページを自動でKnowledge Baseに保存します。下の遅延設定で「ページを開いてから何秒後に保存するか」を選択。すでに保存済みのページは重複保存されません。"
           }
         }
       }
@@ -4064,7 +4064,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari で開いたすべてのページがiKnowに自動保存されます。プライバシー保護のため、Cookie 同意画面 / 検索結果 / ログイン画面などは除外されます。後でいつでも OFF にできます。"
+            "value" : "Safari で開いたすべてのページがKnowledge Baseに自動保存されます。プライバシー保護のため、Cookie 同意画面 / 検索結果 / ログイン画面などは除外されます。後でいつでも OFF にできます。"
           }
         }
       }
@@ -4141,7 +4141,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari でページを開いた時に自動でiKnowに保存できます"
+            "value" : "Safari でページを開いた時に自動でKnowledge Baseに保存できます"
           }
         }
       }
@@ -4196,7 +4196,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「iKnow」拡張機能を ON にし、すべての Web サイトに対して許可してください"
+            "value" : "「Knowledge Base」拡張機能を ON にし、すべての Web サイトに対して許可してください"
           }
         }
       }
@@ -4207,7 +4207,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iKnow拡張機能を ON にする"
+            "value" : "Knowledge Base拡張機能を ON にする"
           }
         }
       }
@@ -4218,7 +4218,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下のトグルで自動保存を ON にすると、Safari で開いたページが自動で保存されます。OFF の場合はツールバーのiKnowアイコンタップで保存します。"
+            "value" : "下のトグルで自動保存を ON にすると、Safari で開いたページが自動で保存されます。OFF の場合はツールバーのKnowledge Baseアイコンタップで保存します。"
           }
         }
       }
@@ -4306,7 +4306,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "英語記事を保存した時に、iKnowは iOS の翻訳機能を使って日本語に翻訳してから知識を抽出します。初回利用時は英語と日本語の翻訳モデルを iOS Settings からダウンロードする必要があります。"
+            "value" : "英語記事を保存した時に、Knowledge Baseは iOS の翻訳機能を使って日本語に翻訳してから知識を抽出します。初回利用時は英語と日本語の翻訳モデルを iOS Settings からダウンロードする必要があります。"
           }
         }
       }
@@ -4922,7 +4922,7 @@
     "URL" : {
 
     },
-    "URL を iKnow に保存します" : {
+    "URL を Knowledge Base に保存します" : {
 
     },
     "wiki.body.editPlaceholder" : {

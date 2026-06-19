@@ -41,25 +41,29 @@ struct ConceptSummaryCard: View {
 
     var body: some View {
         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
-            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                header
-                // spec 080: 答え先出し。要点があれば 1-2 点を箇条書き、無ければ従来のサマリ。
-                if !displayPoints.isEmpty {
-                    keyPointsView
-                } else {
-                    Text(previewText)
-                        .font(.subheadline)
-                        .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            HStack(alignment: .top, spacing: DS.Spacing.md) {
+                // spec 087: 左サムネイル (関連記事の OGP を概念ごとに固定で表示、無ければ種別アイコン)
+                thumbnail
+                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                    header
+                    // spec 080: 答え先出し。要点があれば 1-2 点を箇条書き、無ければ従来のサマリ。
+                    if !displayPoints.isEmpty {
+                        keyPointsView
+                    } else {
+                        Text(previewText)
+                            .font(.subheadline)
+                            .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-                if !entry.children.isEmpty {
-                    childChips
-                }
+                    if !entry.children.isEmpty {
+                        childChips
+                    }
 
-                footer
+                    footer
+                }
             }
             .padding(DS.Spacing.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -72,12 +76,50 @@ struct ConceptSummaryCard: View {
         .onAppear { onSeen() }  // spec 080拡張: 表示で既読マーク
     }
 
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
+    /// spec 087: 概念ごとに固定の OGP サムネイル URL (再描画でちらつかない / 概念間でばらつく)。
+    /// 関連記事のうち https の ogImageURL を持つものから、uuid 由来の決定的 index で 1 つ選ぶ。
+    private var thumbnailURL: URL? {
+        let urls = (page.relatedArticles ?? []).compactMap { article -> URL? in
+            guard let raw = article.enrichment?.ogImageURL,
+                  let url = URL(string: raw), url.scheme == "https" else { return nil }
+            return url
+        }
+        guard !urls.isEmpty else { return nil }
+        let seed = page.id.uuidString.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return urls[seed % urls.count]
+    }
+
+    private var thumbnail: some View {
+        Group {
+            if let url = thumbnailURL {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        kindIconTile
+                    }
+                }
+            } else {
+                kindIconTile
+            }
+        }
+        .frame(width: 60, height: 60)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .accessibilityHidden(true)
+    }
+
+    private var kindIconTile: some View {
+        ZStack {
+            DS.Color.tagFill
             Image(systemName: page.kind.symbolName)
                 .font(.title3)
                 .foregroundStyle(DS.Color.actionBlue)
-                .accessibilityHidden(true)
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
             Text(page.name)
                 .font(.title3)
                 .fontWeight(.semibold)

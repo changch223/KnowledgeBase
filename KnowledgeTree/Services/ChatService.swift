@@ -236,7 +236,7 @@ final class ChatService: ChatServiceProtocol {
         """ : ""
 
         return """
-        あなたは iKnow の AI アシスタント。基本動作は「ユーザーが保存した記事 (ナレッジベース) から答える」こと。
+        あなたは Knowledge Base の AI アシスタント。基本動作は「ユーザーが保存した記事 (ナレッジベース) から答える」こと。
         質問に対して、4 つの行動から 1 つを選ぶ:
 
         - searchArticles(query): 保存記事を検索する。**情報・知識・トピック・人物・出来事・技術・用語などを問う質問は、原則これを選ぶ (既定動作)**。
@@ -677,7 +677,7 @@ final class ChatService: ChatServiceProtocol {
     /// spec 081: 番号引用契約 (本文に裸マーカー `(article-id://UUID)`) + Wiki まとめを文脈に注入 (引用不可)。
     static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = []) -> String {
         var prompt = """
-        あなたは iKnow の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
+        あなたは Knowledge Base の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
 
         ## ルール
         1. 必ず以下の【参考記事】の内容のみに基づいて回答してください。一般知識から推測してはいけません。
