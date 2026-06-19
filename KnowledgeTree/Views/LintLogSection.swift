@@ -2,25 +2,27 @@
 //  LintLogSection.swift
 //  KnowledgeTree
 //
-//  spec 058 — Settings 内の「整理ログ (直近 30 件)」section。
-//  Lint loop の各操作 (merge / delete / link / reclassify / refresh) を日時 desc で表示。
+//  spec 058 — 整理ログ。Lint loop の各操作 (merge / delete / link / reclassify / refresh) を日時 desc で表示。
+//  spec 087: Settings 直下の Section から、タップで開く詳細画面 (LintLogDetailView) に移動。
+//           分野再分類は「xxx → xxx」で変更前後の分野を併記。
 //
 
 import SwiftUI
 import SwiftData
 
-struct LintLogSection: View {
+/// spec 087: 設定の「整理ログ」NavigationLink から push される一覧画面。
+struct LintLogDetailView: View {
     @Query(
         sort: [SortDescriptor(\LintLog.timestamp, order: .reverse)]
     )
     private var allLogs: [LintLog]
 
     private var topLogs: [LintLog] {
-        Array(allLogs.prefix(30))
+        Array(allLogs.prefix(50))
     }
 
     var body: some View {
-        Section {
+        List {
             if topLogs.isEmpty {
                 ContentUnavailableView(
                     "settings.lintLog.empty.title",
@@ -32,10 +34,10 @@ struct LintLogSection: View {
                     LintLogRow(log: log)
                 }
             }
-        } header: {
-            Text("settings.lintLog.section.title")
         }
-        .accessibilityIdentifier("settings.lintLogSection")
+        .navigationTitle("settings.lintLog.section.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("settings.lintLogDetail")
     }
 }
 
@@ -68,6 +70,18 @@ private struct LintLogRow: View {
         }
     }
 
+    /// spec 087: 分野再分類のとき「(変更前) → (変更後)」。空/未分類は「未分類」表記。
+    private var reclassifyTransition: String? {
+        guard log.action == .reclassifyTag else { return nil }
+        let rawBefore = (log.beforeState ?? "").trimmingCharacters(in: .whitespaces)
+        let to = (log.afterState ?? "").trimmingCharacters(in: .whitespaces)
+        guard !to.isEmpty else { return nil }
+        let from = (rawBefore.isEmpty || rawBefore == "(none)")
+            ? String(localized: "lintLog.uncategorized")
+            : rawBefore
+        return "\(from) → \(to)"
+    }
+
     private var relativeTimestamp: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
@@ -85,6 +99,13 @@ private struct LintLogRow: View {
                 Text(actionLocalizedTitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                // spec 087: 分野再分類の横に「xxx → xxx」を同じフォントサイズで併記。
+                if let transition = reclassifyTransition {
+                    Text(transition)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 Spacer(minLength: 0)
                 Text(relativeTimestamp)
                     .font(.caption2)

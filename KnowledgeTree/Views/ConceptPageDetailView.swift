@@ -136,14 +136,8 @@ struct ConceptPageDetailView: View {
                 .accessibilityIdentifier("conceptPageDetail_pinToggle")
                 .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
             }
-            // spec 044: ConceptPage 詳細から DeepDiveChat へ最短導線
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: UnderstandingCard.fromConceptPage(conceptPage)) {
-                    Image(systemName: "book.fill")
-                }
-                .accessibilityIdentifier("button.learn")
-                .accessibilityLabel(Text("この概念を学習する"))
-            }
+            // spec 044: DeepDiveChat (学習/深掘り) 導線。
+            // spec 088: ユーザー要望で一旦非表示 (pin の隣の book ボタンを撤去)。
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {

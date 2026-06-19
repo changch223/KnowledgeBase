@@ -40,10 +40,8 @@ struct LintNowButton: View {
                 } else {
                     Image(systemName: "wand.and.stars")
                 }
-                // spec 076: 実行中は残り件数を表示 (バッチ進捗の可視化)
-                Text(isRunning && remainingTags > 0
-                     ? "整理中… (残り \(remainingTags))"
-                     : NSLocalizedString("settings.lintNow.button", comment: ""))
+                // spec 076/088: 実行中は残り件数、待機中は「記事を今すぐ分類/整理（対象 N 件）」。
+                Text(buttonTitle)
                     .font(.body)
             }
         }
@@ -54,6 +52,27 @@ struct LintNowButton: View {
         } message: { result in
             Text("settings.lintNow.result.summary \(result.totalOperations)")
         }
+        .task { recomputeTargetCount() }
+        .onChange(of: refreshTrigger.version) { _, _ in recomputeTargetCount() }
+    }
+
+    /// spec 088: HealthScoreCard と LintNowButton を 1 行に統合。整理対象 N 件をボタン名に内包。
+    @State private var targetCount: Int = 0
+
+    private var buttonTitle: String {
+        if isRunning {
+            return remainingTags > 0
+                ? "整理中… (残り \(remainingTags))"
+                : NSLocalizedString("settings.lintNow.button", comment: "")
+        }
+        if targetCount > 0 {
+            return String(format: NSLocalizedString("settings.lintNow.button.withCount", comment: ""), targetCount)
+        }
+        return NSLocalizedString("settings.lintNow.button", comment: "")
+    }
+
+    private func recomputeTargetCount() {
+        targetCount = services.healthScoreService?.compute().total ?? 0
     }
 
     private func run() async {

@@ -104,6 +104,14 @@ struct KnowledgeClipView: View {
                     if displayedConceptEntries.isEmpty {
                         feedEmptyState
                     } else {
+                        // spec 087: 概念カード群の見出し (「新着記事」棚と同じスタイル)。
+                        Text("clip.section.concepts")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, DS.Spacing.xxl)
+
                         // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
                         // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
                         ForEach(displayedConceptEntries) { entry in

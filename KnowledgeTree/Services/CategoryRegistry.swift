@@ -27,6 +27,8 @@ final class CategoryRegistry {
     /// 起動時に CategorySeed の 10 個を CategoryDefinition として idempotent に seed。
     /// 既に同名 (大文字小文字無視) があれば skip。新規インストール / 既存ユーザー両対応。
     func seedIfNeeded() {
+        // spec 088: CloudKit 同期競合等で生じた同名重複を先に除去 (分野が複数表示される不具合)。
+        deduplicate()
         let existing = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
         let existingNames = Set(existing.map { $0.name.lowercased() })
 
@@ -47,6 +49,49 @@ final class CategoryRegistry {
             try? context.save()
             logger.notice("category registry seeded \(inserted, privacy: .public) categories")
         }
+    }
+
+    /// spec 088: 同名 (大文字小文字無視) の重複 CategoryDefinition を 1 件に統合。
+    /// CloudKit 同期競合や複数回 seed で生じた重複を除去する。残す 1 件は isSeed 優先→order 昇順。
+    /// いずれかが非表示なら統合先も非表示を維持 (ユーザーの hide 意図を尊重)。
+    /// categoryRaw は name 文字列参照ゆえ、重複行削除は Tag/ConceptPage の参照を壊さない (CloudKit 安全)。
+    func deduplicate() {
+        let all = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+        guard all.count > 1 else { return }
+
+        var keeperByName: [String: CategoryDefinition] = [:]
+        var anyHiddenByName: [String: Bool] = [:]
+        var toDelete: [CategoryDefinition] = []
+
+        for def in all {
+            let key = def.name.lowercased()
+            anyHiddenByName[key] = (anyHiddenByName[key] ?? false) || def.isHidden
+            guard let current = keeperByName[key] else {
+                keeperByName[key] = def
+                continue
+            }
+            // より良い keeper を選ぶ: isSeed 優先 → order 昇順
+            let preferNew: Bool
+            if def.isSeed != current.isSeed {
+                preferNew = def.isSeed
+            } else {
+                preferNew = def.order < current.order
+            }
+            if preferNew {
+                toDelete.append(current)
+                keeperByName[key] = def
+            } else {
+                toDelete.append(def)
+            }
+        }
+
+        guard !toDelete.isEmpty else { return }
+        for (key, keeper) in keeperByName where anyHiddenByName[key] == true {
+            keeper.isHidden = true
+        }
+        for dup in toDelete { context.delete(dup) }
+        try? context.save()
+        logger.notice("category registry deduplicated, removed \(toDelete.count, privacy: .public) duplicate(s)")
     }
 
     /// 非表示でない全カテゴリ (order 昇順)。空ならレジストリ未 seed とみなし nil。

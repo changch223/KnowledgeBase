@@ -738,6 +738,17 @@
         }
       }
     },
+    "chat.clarification.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他（自由に入力）"
+          }
+        }
+      }
+    },
     "chat.empty.placeholder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -767,17 +778,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "まだチャット履歴がありません"
-          }
-        }
-      }
-    },
-    "chat.clarification.other" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "その他（自由に入力）"
           }
         }
       }
@@ -1460,6 +1460,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近のあなた"
+          }
+        }
+      }
+    },
+    "clip.section.concepts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超・まとめ"
           }
         }
       }
@@ -2492,9 +2503,6 @@
     "iCloud 同期を停止しますか?" : {
 
     },
-    "Knowledge Base に保存" : {
-
-    },
     "interestingNext.empty.body" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2527,6 +2535,9 @@
           }
         }
       }
+    },
+    "Knowledge Base に保存" : {
+
     },
     "knowledge.aiGeneratedLabel" : {
       "extractionState" : "manual",
@@ -3173,6 +3184,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "操作"
+          }
+        }
+      }
+    },
+    "lintLog.uncategorized" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未分類"
           }
         }
       }
@@ -3932,7 +3954,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "整理"
+            "value" : "記事の分類/整理"
           }
         }
       }
@@ -3987,7 +4009,18 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今すぐ整理する"
+            "value" : "記事を今すぐ分類/整理"
+          }
+        }
+      }
+    },
+    "settings.lintNow.button.withCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を今すぐ分類/整理（対象 %lld 件）"
           }
         }
       }
@@ -4263,6 +4296,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "外部連携"
+          }
+        }
+      }
+    },
+    "settings.section.organize" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理・管理"
           }
         }
       }
@@ -5023,9 +5067,6 @@
 
     },
     "このノードは削除されたか、まだ抽出されていません。" : {
-
-    },
-    "この概念を学習する" : {
 
     },
     "この答えは保存後に関連記事が追加されています。再生成で最新の AI 答えを得られます。" : {

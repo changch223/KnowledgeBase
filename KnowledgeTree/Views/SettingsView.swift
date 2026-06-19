@@ -45,20 +45,6 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            // spec 058: 健全性スコア + 「今すぐ整理」 button (最上部に控えめに配置)
-            Section {
-                HealthScoreCard()
-                LintNowButton()
-                #if DEBUG
-                DebugReprocessButton()
-                #endif
-            } header: {
-                Text("settings.health.section.title")
-            }
-
-            // spec 058: 整理ログ (直近 30 件)
-            LintLogSection()
-
             // spec 051 Phase A 完成: iCloud sync toggle (opt-in、再起動必要)
             Section {
                 if showRestartBanner {
@@ -164,7 +150,9 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.translationSetup.entry")
             }
 
-            // spec 024: タグ管理
+            // spec 088: タグ・分野管理 + 記事の分類/整理 を「整理・管理」グループに統合。
+            // タグ・分野の管理 → 記事を今すぐ分類/整理（対象 N 件）→ 整理ログ (タップで一覧)。
+            // 「全 AI 再処理 (テスト)」(DebugReprocessButton) は非表示 (spec 087)。
             Section {
                 NavigationLink(value: TagManagementDestination()) {
                     HStack(spacing: DS.Spacing.lg) {
@@ -175,20 +163,19 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.tag.entry")
+
+                LintNowButton()
+
+                NavigationLink {
+                    LintLogDetailView()
+                } label: {
+                    Label("settings.lintLog.section.title", systemImage: "list.bullet.rectangle")
+                }
+            } header: {
+                Text("settings.section.organize")
             }
 
-            // spec 043: 保存された答えの履歴
-            Section {
-                NavigationLink(value: SavedAnswerHistoryDestination()) {
-                    HStack(spacing: DS.Spacing.lg) {
-                        Image(systemName: "quote.bubble")
-                            .foregroundStyle(DS.Color.actionBlue)
-                            .frame(width: 24)
-                        Text("SavedAnswer.history.title")
-                    }
-                }
-                .accessibilityIdentifier("settings.savedAnswerHistory.entry")
-            }
+            // spec 043/087: 保存された答えの履歴は非表示 (未使用)。
 
             // spec 049: onboarding 再表示
             Section {

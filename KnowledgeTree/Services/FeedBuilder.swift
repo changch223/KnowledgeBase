@@ -201,9 +201,12 @@ final class FeedBuilder: FeedBuilding {
                     || !entry.children.isEmpty
                     || entry.articleCount > 0
             }
-            // spec 080拡張: 「未読/更新あり」を先に、各グループ内は「重要(記事数)×最新」。
-            // fresh = updatedAt > lastSeenAt (未読 or 最終閲覧後に更新)。既読で未更新は下げる。
+            // spec 088: pin (isFollowing) を最優先で一番上に固定。
+            // spec 080拡張: 次に「未読/更新あり」、各グループ内は「重要(記事数)×最新」。
             .sorted { a, b in
+                if a.page.isFollowing != b.page.isFollowing {
+                    return a.page.isFollowing                      // pin を最上位に
+                }
                 let aFresh = isFresh(a.page), bFresh = isFresh(b.page)
                 if aFresh != bFresh { return aFresh }            // 未読/更新を上に
                 if a.articleCount != b.articleCount {

@@ -41,29 +41,26 @@ struct ConceptSummaryCard: View {
 
     var body: some View {
         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
-            HStack(alignment: .top, spacing: DS.Spacing.md) {
-                // spec 087: 左サムネイル (関連記事の OGP を概念ごとに固定で表示、無ければ種別アイコン)
-                thumbnail
-                VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-                    header
-                    // spec 080: 答え先出し。要点があれば 1-2 点を箇条書き、無ければ従来のサマリ。
-                    if !displayPoints.isEmpty {
-                        keyPointsView
-                    } else {
-                        Text(previewText)
-                            .font(.subheadline)
-                            .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if !entry.children.isEmpty {
-                        childChips
-                    }
-
-                    footer
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                // spec 087: 1 行目 = サムネイル/アイコン + タイトル。その下に要点テキスト。
+                header
+                // spec 080: 答え先出し。要点があれば 1-2 点を箇条書き、無ければ従来のサマリ。
+                if !displayPoints.isEmpty {
+                    keyPointsView
+                } else {
+                    Text(previewText)
+                        .font(.subheadline)
+                        .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                if !entry.children.isEmpty {
+                    childChips
+                }
+
+                footer
             }
             .padding(DS.Spacing.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -104,8 +101,8 @@ struct ConceptSummaryCard: View {
                 kindIconTile
             }
         }
-        .frame(width: 60, height: 60)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(width: 34, height: 34)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .accessibilityHidden(true)
     }
 
@@ -113,13 +110,15 @@ struct ConceptSummaryCard: View {
         ZStack {
             DS.Color.tagFill
             Image(systemName: page.kind.symbolName)
-                .font(.title3)
+                .font(.subheadline)
                 .foregroundStyle(DS.Color.actionBlue)
         }
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
+        HStack(alignment: .center, spacing: DS.Spacing.sm) {
+            // spec 087: サムネイル/アイコン + タイトルを 1 行に。
+            thumbnail
             Text(page.name)
                 .font(.title3)
                 .fontWeight(.semibold)
