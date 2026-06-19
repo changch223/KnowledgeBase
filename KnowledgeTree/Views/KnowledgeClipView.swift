@@ -122,7 +122,7 @@ struct KnowledgeClipView: View {
                 .padding(.vertical, DS.Spacing.xxl)
             }
             .scrollIndicators(.hidden)
-            .navigationTitle("clip.tab.title")
+            .navigationTitle("clip.nav.title")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
