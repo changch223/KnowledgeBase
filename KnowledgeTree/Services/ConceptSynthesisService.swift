@@ -146,13 +146,20 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
         if essences.isEmpty {
             conceptPage.summary = "「\(conceptPage.name)」に関する保存記事は \(articles.count) 件ありますが、本文要点がまだ整っていません。"
             conceptPage.crossSourceInsights = []
+            conceptPage.insightSourceArticleIDs = []
         } else {
             let joined = essences.prefix(3).joined(separator: "\n\n")
             conceptPage.summary = String(joined.prefix(400))
-            conceptPage.crossSourceInsights = essences.prefix(3).compactMap { essence in
-                let firstSentence = essence.split(whereSeparator: { $0 == "。" || $0 == "!" || $0 == "?" }).first
-                return firstSentence.map(String.init)
+            // spec 089: fallback の要点は各記事の essence 先頭文 → 元記事を直接対応付け (index 整合)。
+            let withEssence = articles.filter { !($0.extractedKnowledge?.essence ?? "").isEmpty }
+            let pairs: [(insight: String, sourceID: String)] = Array(withEssence.prefix(3)).compactMap { article in
+                guard let essence = article.extractedKnowledge?.essence,
+                      let firstSentence = essence.split(whereSeparator: { $0 == "。" || $0 == "!" || $0 == "?" }).first
+                else { return nil }
+                return (String(firstSentence), article.id.uuidString)
             }
+            conceptPage.crossSourceInsights = pairs.map { $0.insight }
+            conceptPage.insightSourceArticleIDs = pairs.map { $0.sourceID }
         }
 
         conceptPage.isStale = false
@@ -394,6 +401,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             if !preserveExisting {
                 conceptPage.summary = trimmedSummary
                 conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(5))
+                // spec 089: 各要点を最も関連する元記事に照合し出典 ID を保存。
+                conceptPage.insightSourceArticleIDs = ConceptSynthesisCommon.matchInsightSources(
+                    insights: conceptPage.crossSourceInsights,
+                    articles: conceptPage.relatedArticles ?? [],
+                    embeddingService: embeddingService
+                )
             }
 
             // embedding 再生成 (summary が更新されたので)
@@ -902,6 +915,61 @@ enum ConceptSynthesisCommon {
 
     /// entity 名は 2 文字未満 (例: "AI" は 2 文字なので含まれる、1 文字は除外) で ambiguous なので skip。
     static let minEntityNameLength = 2
+
+    // MARK: - spec 089: 要点 → 元記事 の出典照合
+
+    /// 各 insight を最も関連する relatedArticle に照合し、id 文字列 (該当なしは "") を同 index で返す。
+    /// embedding 可なら insight × article.essenceEmbedding の cosine、不可なら keyword overlap。
+    /// AI/LM 呼び出しゼロ (embedding のみ、合成時に 1 回計算して保存)。
+    static func matchInsightSources(
+        insights: [String],
+        articles: [Article],
+        embeddingService: EmbeddingService?
+    ) -> [String] {
+        guard !insights.isEmpty, !articles.isEmpty else { return [] }
+        return insights.map { insight in
+            bestSourceArticleID(for: insight, articles: articles, embeddingService: embeddingService) ?? ""
+        }
+    }
+
+    private static func bestSourceArticleID(
+        for insight: String,
+        articles: [Article],
+        embeddingService: EmbeddingService?
+    ) -> String? {
+        // embedding 経路 (日本語も意味照合できる主経路)
+        if let es = embeddingService, es.isAvailable, let query = es.embed(insight) {
+            var best: (id: String, sim: Float)?
+            for article in articles {
+                guard let data = article.essenceEmbedding else { continue }
+                let vector = data.asFloatArray
+                guard vector.count == query.count else { continue }
+                let sim = EmbeddingService.cosineSimilarity(query, vector)
+                if best == nil || sim > best!.sim { best = (article.id.uuidString, sim) }
+            }
+            if let best, best.sim >= 0.3 { return best.id }
+        }
+        // keyword fallback (embedding 不可 / essenceEmbedding 無し時)
+        return bestSourceByKeyword(insight: insight, articles: articles)
+    }
+
+    private static func bestSourceByKeyword(insight: String, articles: [Article]) -> String? {
+        let tokens = Set(
+            insight.lowercased()
+                .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+                .map(String.init)
+                .filter { $0.count >= 2 }
+        )
+        guard !tokens.isEmpty else { return nil }
+        var best: (id: String, score: Int)?
+        for article in articles {
+            let facts = (article.extractedKnowledge?.keyFacts ?? []).map { $0.statement }.joined(separator: " ")
+            let hay = (article.title + " " + (article.extractedKnowledge?.essence ?? "") + " " + facts).lowercased()
+            let score = tokens.reduce(0) { $0 + (hay.contains($1) ? 1 : 0) }
+            if score > 0, best == nil || score > best!.score { best = (article.id.uuidString, score) }
+        }
+        return best?.id
+    }
 
     static func processNewArticle(
         article: Article,

@@ -276,21 +276,48 @@ struct ConceptPageDetailView: View {
         .accessibilityIdentifier("conceptPageDetail_summarySection")
     }
 
+    /// spec 089: index 番目の要点の出典記事 (insightSourceArticleIDs と relatedArticles から解決)。
+    private func insightSourceArticle(at index: Int) -> Article? {
+        guard index < conceptPage.insightSourceArticleIDs.count else { return nil }
+        let id = conceptPage.insightSourceArticleIDs[index]
+        guard !id.isEmpty else { return nil }
+        return (conceptPage.relatedArticles ?? []).first { $0.id.uuidString == id }
+    }
+
     @ViewBuilder
     private var crossSourceInsightsSection: some View {
         if !conceptPage.crossSourceInsights.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 Text("ConceptPage.detail.crossSourceInsights.title")
                     .font(.title3.bold())
-                ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { _, insight in
-                    HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                        Text("•")
-                            .font(.body)
-                            .foregroundStyle(DS.Color.actionBlue)
-                        Text(insight)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { index, insight in
+                    VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                        HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                            Text("•")
+                                .font(.body)
+                                .foregroundStyle(DS.Color.actionBlue)
+                            Text(insight)
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        // spec 089: 各要点の出典 (最も関連する元記事) をタップで開ける。
+                        if let article = insightSourceArticle(at: index) {
+                            NavigationLink(value: article) {
+                                HStack(spacing: DS.Spacing.xxs) {
+                                    Image(systemName: "doc.text")
+                                        .font(.caption2)
+                                    Text("ConceptPage.insight.source \(article.title)")
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2)
+                                }
+                                .foregroundStyle(DS.Color.actionBlue)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.leading, DS.Spacing.lg)
+                        }
                     }
                 }
             }

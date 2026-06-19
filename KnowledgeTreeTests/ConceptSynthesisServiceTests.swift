@@ -470,4 +470,29 @@ struct ConceptSynthesisServiceTests {
         #expect(page.isStale == false)
         #expect(session.conceptSynthesisCompactCallCount == 1)  // compact が 1 回呼ばれた
     }
+
+    // spec 089: 要点 → 元記事 出典照合 (keyword 経路、embeddingService nil)。
+    @Test func testMatchInsightSourcesKeyword() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let swiftArticle = makeArticle(url: "a1", title: "Swift 6 リリース", categoryRaw: "テクノロジー", entityNames: [], essence: "Swift 6 の並行性が強化された", in: context)
+        let pythonArticle = makeArticle(url: "a2", title: "Python 入門", categoryRaw: "テクノロジー", entityNames: [], essence: "Python はデータ分析に強い", in: context)
+        try context.save()
+
+        let insights = ["Swift の並行性について", "Python のデータ分析"]
+        let ids = ConceptSynthesisCommon.matchInsightSources(
+            insights: insights,
+            articles: [swiftArticle, pythonArticle],
+            embeddingService: nil
+        )
+
+        #expect(ids.count == 2)
+        #expect(ids[0] == swiftArticle.id.uuidString)   // Swift 要点 → Swift 記事
+        #expect(ids[1] == pythonArticle.id.uuidString)  // Python 要点 → Python 記事
+    }
+
+    // spec 089: 記事ゼロ / insight ゼロは空配列。
+    @Test func testMatchInsightSourcesEmpty() {
+        #expect(ConceptSynthesisCommon.matchInsightSources(insights: [], articles: [], embeddingService: nil).isEmpty)
+    }
 }

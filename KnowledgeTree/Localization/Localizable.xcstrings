@@ -1673,6 +1673,17 @@
         }
       }
     },
+    "ConceptPage.insight.source %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出典: %@"
+          }
+        }
+      }
+    },
     "ConceptPage.detail.derivedSectionTitle" : {
       "extractionState" : "manual",
       "localizations" : {

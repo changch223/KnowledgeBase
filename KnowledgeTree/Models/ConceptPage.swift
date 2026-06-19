@@ -38,6 +38,10 @@ final class ConceptPage {
     /// 各 50-150 字想定。
     var crossSourceInsights: [String] = []
 
+    /// spec 089: crossSourceInsights と同 index で並ぶ「最も関連する元記事の id (UUID 文字列)」。
+    /// 合成時に embedding/キーワードで照合し保存。空文字 = 該当なし。CloudKit lightweight 安全 (default [])。
+    var insightSourceArticleIDs: [String] = []
+
     /// 原典 Article への参照 (片方向、deleteRule: .nullify で Article 側に影響ゼロ)。
     /// Article 削除時は relationship が自動 nullify、ConceptPage 側 relatedArticles からは除外される。
     @Relationship(deleteRule: .nullify)
@@ -107,6 +111,7 @@ final class ConceptPage {
         categoryRaw: String,
         summary: String = "",
         crossSourceInsights: [String] = [],
+        insightSourceArticleIDs: [String] = [],
         relatedArticles: [Article] = [],
         relatedConceptIDs: [UUID] = [],
         userUnderstanding: Int = 0,
@@ -129,6 +134,7 @@ final class ConceptPage {
         self.categoryRaw = categoryRaw
         self.summary = summary
         self.crossSourceInsights = crossSourceInsights
+        self.insightSourceArticleIDs = insightSourceArticleIDs
         self.relatedArticles = relatedArticles
         self.relatedConceptIDs = relatedConceptIDs
         self.userUnderstanding = max(0, min(5, userUnderstanding))
