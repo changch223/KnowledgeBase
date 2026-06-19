@@ -136,14 +136,8 @@ struct ConceptPageDetailView: View {
                 .accessibilityIdentifier("conceptPageDetail_pinToggle")
                 .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
             }
-            // spec 044: ConceptPage 詳細から DeepDiveChat へ最短導線
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: UnderstandingCard.fromConceptPage(conceptPage)) {
-                    Image(systemName: "book.fill")
-                }
-                .accessibilityIdentifier("button.learn")
-                .accessibilityLabel(Text("この概念を学習する"))
-            }
+            // spec 044: DeepDiveChat (学習/深掘り) 導線。
+            // spec 088: ユーザー要望で一旦非表示 (pin の隣の book ボタンを撤去)。
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
@@ -282,21 +276,48 @@ struct ConceptPageDetailView: View {
         .accessibilityIdentifier("conceptPageDetail_summarySection")
     }
 
+    /// spec 089: index 番目の要点の出典記事 (insightSourceArticleIDs と relatedArticles から解決)。
+    private func insightSourceArticle(at index: Int) -> Article? {
+        guard index < conceptPage.insightSourceArticleIDs.count else { return nil }
+        let id = conceptPage.insightSourceArticleIDs[index]
+        guard !id.isEmpty else { return nil }
+        return (conceptPage.relatedArticles ?? []).first { $0.id.uuidString == id }
+    }
+
     @ViewBuilder
     private var crossSourceInsightsSection: some View {
         if !conceptPage.crossSourceInsights.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 Text("ConceptPage.detail.crossSourceInsights.title")
                     .font(.title3.bold())
-                ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { _, insight in
-                    HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                        Text("•")
-                            .font(.body)
-                            .foregroundStyle(DS.Color.actionBlue)
-                        Text(insight)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { index, insight in
+                    VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                        HStack(alignment: .top, spacing: DS.Spacing.sm) {
+                            Text("•")
+                                .font(.body)
+                                .foregroundStyle(DS.Color.actionBlue)
+                            Text(insight)
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        // spec 089: 各要点の出典 (最も関連する元記事) をタップで開ける。
+                        if let article = insightSourceArticle(at: index) {
+                            NavigationLink(value: article) {
+                                HStack(spacing: DS.Spacing.xxs) {
+                                    Image(systemName: "doc.text")
+                                        .font(.caption2)
+                                    Text("ConceptPage.insight.source \(article.title)")
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2)
+                                }
+                                .foregroundStyle(DS.Color.actionBlue)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.leading, DS.Spacing.lg)
+                        }
                     }
                 }
             }

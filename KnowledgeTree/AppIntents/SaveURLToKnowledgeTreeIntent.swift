@@ -17,10 +17,10 @@ import AppIntents
 import Foundation
 
 struct SaveURLToKnowledgeTreeIntent: AppIntent {
-    static var title: LocalizedStringResource = "iKnow に保存"
+    static var title: LocalizedStringResource = "Knowledge Base に保存"
 
     static var description: IntentDescription = IntentDescription(
-        "URL を iKnow に保存します",
+        "URL を Knowledge Base に保存します",
         categoryName: "コンテンツ"
     )
 

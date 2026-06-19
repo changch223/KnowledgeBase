@@ -202,7 +202,7 @@ final class RecentDigestService: RecentDigestServiceProtocol {
 
     static func buildPrompt(articles: [Article]) -> String {
         var prompt = """
-        あなたは iKnow の AI アシスタントです。ユーザーが最近保存した記事から、何を学んだかを「1 文の見出し + 主要テーマ 3 個」で伝えてください。
+        あなたは Knowledge Base の AI アシスタントです。ユーザーが最近保存した記事から、何を学んだかを「1 文の見出し + 主要テーマ 3 個」で伝えてください。
 
         ## ルール
         1. ヘッドラインは 60〜100 字、自然な日本語、テーマを統合した断定調。

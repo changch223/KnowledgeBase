@@ -77,6 +77,9 @@ struct KnowledgeClipView: View {
         FeedBuilder.newArticleShelf(articles: feedArticles, now: Date())
     }
 
+    /// spec 087: 「おすすめのまとめ」横列の表示フラグ (一旦非表示)。true で復活。
+    private static let showRecommendCarousel = false
+
     /// spec 075: 「おすすめのまとめ」横棚 (一番上)。トップレベル概念を活動量+recency で上位 N。
     /// 既存 RecommendCarousel / WikiShelfCard を流用するため FeedItem.wikiUpdate に map。
     private var recommendItems: [FeedItem] {
@@ -93,13 +96,22 @@ struct KnowledgeClipView: View {
                     }
 
                     // spec 075: 「おすすめのまとめ」横棚 — トップレベル概念。候補不足なら非表示。
-                    if recommendItems.count >= FeedBuilder.carouselMinItems {
+                    // spec 087: 一旦非表示 (コードは残置、復活は showRecommendCarousel = true)。
+                    if Self.showRecommendCarousel, recommendItems.count >= FeedBuilder.carouselMinItems {
                         RecommendCarousel(items: recommendItems)
                     }
 
                     if displayedConceptEntries.isEmpty {
                         feedEmptyState
                     } else {
+                        // spec 087: 概念カード群の見出し (「新着記事」棚と同じスタイル)。
+                        Text("clip.section.concepts")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, DS.Spacing.xxl)
+
                         // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
                         // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
                         ForEach(displayedConceptEntries) { entry in

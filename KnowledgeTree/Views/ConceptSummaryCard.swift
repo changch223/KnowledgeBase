@@ -42,6 +42,7 @@ struct ConceptSummaryCard: View {
     var body: some View {
         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
             VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                // spec 087: 1 行目 = サムネイル/アイコン + タイトル。その下に要点テキスト。
                 header
                 // spec 080: 答え先出し。要点があれば 1-2 点を箇条書き、無ければ従来のサマリ。
                 if !displayPoints.isEmpty {
@@ -72,12 +73,52 @@ struct ConceptSummaryCard: View {
         .onAppear { onSeen() }  // spec 080拡張: 表示で既読マーク
     }
 
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
+    /// spec 087: 概念ごとに固定の OGP サムネイル URL (再描画でちらつかない / 概念間でばらつく)。
+    /// 関連記事のうち https の ogImageURL を持つものから、uuid 由来の決定的 index で 1 つ選ぶ。
+    private var thumbnailURL: URL? {
+        let urls = (page.relatedArticles ?? []).compactMap { article -> URL? in
+            guard let raw = article.enrichment?.ogImageURL,
+                  let url = URL(string: raw), url.scheme == "https" else { return nil }
+            return url
+        }
+        guard !urls.isEmpty else { return nil }
+        let seed = page.id.uuidString.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return urls[seed % urls.count]
+    }
+
+    private var thumbnail: some View {
+        Group {
+            if let url = thumbnailURL {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        kindIconTile
+                    }
+                }
+            } else {
+                kindIconTile
+            }
+        }
+        .frame(width: 34, height: 34)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .accessibilityHidden(true)
+    }
+
+    private var kindIconTile: some View {
+        ZStack {
+            DS.Color.tagFill
             Image(systemName: page.kind.symbolName)
-                .font(.title3)
+                .font(.subheadline)
                 .foregroundStyle(DS.Color.actionBlue)
-                .accessibilityHidden(true)
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: DS.Spacing.sm) {
+            // spec 087: サムネイル/アイコン + タイトルを 1 行に。
+            thumbnail
             Text(page.name)
                 .font(.title3)
                 .fontWeight(.semibold)
