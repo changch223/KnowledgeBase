@@ -22,16 +22,11 @@ struct CategoryKnowledgeDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var presentedArticle: Article?
     @State private var refreshTick: Int = 0
-    /// spec 041: ナレッジグラフ表示 toggle (Settings から制御、default OFF)
-    @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DS.Spacing.xxl) {
-                if graphVisible {
-                    CategoryGraphView(categoryRaw: category.name)
-                    Divider()
-                }
+                // spec 090: ナレッジグラフは UI から非表示。
                 aggregatedSummarySection
                 Divider()
                 topKeyFactsSection

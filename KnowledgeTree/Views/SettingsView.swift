@@ -15,8 +15,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
-    /// spec 041: ナレッジグラフ表示 toggle (default OFF、Phase B でユーザー判断)
-    @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
     /// spec 051 Phase A 完成: iCloud sync 有効化 toggle (default OFF、opt-in)。
     /// 切替後はアプリ再起動が必要 (ModelContainer は launch 時に 1 度だけ構築)。
     @AppStorage(SharedSchema.iCloudSyncFlagKey) private var iCloudSyncEnabled: Bool = false
@@ -98,21 +96,7 @@ struct SettingsView: View {
             }
 
             // spec 041: ナレッジグラフ表示 toggle
-            Section {
-                Toggle(isOn: $graphVisible) {
-                    HStack(spacing: DS.Spacing.lg) {
-                        Image(systemName: "circle.hexagongrid")
-                            .foregroundStyle(DS.Color.actionBlue)
-                            .frame(width: 24)
-                        Text("settings.graph.entry")
-                    }
-                }
-                .accessibilityIdentifier("settings.graph.toggle")
-            } header: {
-                Text("settings.section.display")
-            } footer: {
-                Text("settings.graph.footer")
-            }
+            // spec 090: ユーザー要望でグラフ機能を一旦 UI から外すため非表示 (トグル + 分野詳細グラフ)。
 
             Section("settings.section.externalIntegration") {
                 // Safari (spec 020)
@@ -150,9 +134,7 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.translationSetup.entry")
             }
 
-            // spec 088: タグ・分野管理 + 記事の分類/整理 を「整理・管理」グループに統合。
-            // タグ・分野の管理 → 記事を今すぐ分類/整理（対象 N 件）→ 整理ログ (タップで一覧)。
-            // 「全 AI 再処理 (テスト)」(DebugReprocessButton) は非表示 (spec 087)。
+            // spec 090: 「管理」(手動) と「整理」(自動) を 2 グループに分割。
             Section {
                 NavigationLink(value: TagManagementDestination()) {
                     HStack(spacing: DS.Spacing.lg) {
@@ -163,7 +145,13 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.tag.entry")
+            } header: {
+                Text("settings.section.manage")
+            }
 
+            // 記事の分類/整理 (自動) — 今すぐ分類・整理 + 整理ログ。
+            // 「全 AI 再処理 (テスト)」(DebugReprocessButton) は非表示 (spec 087)。
+            Section {
                 LintNowButton()
 
                 NavigationLink {

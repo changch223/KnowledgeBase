@@ -28,7 +28,6 @@ struct CategoryFilteredListView: View {
     @State private var presentedArticle: Article?
     @State private var refreshTick: Int = 0
     /// spec 041: ナレッジグラフ表示 toggle (Settings から制御、default OFF)
-    @AppStorage("settings.graphVisible") private var graphVisible: Bool = false
 
     /// Category 内の Tag を articles.count desc で sort。
     var categoryTags: [Tag] {
@@ -53,9 +52,7 @@ struct CategoryFilteredListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DS.Spacing.xxl) {
-                if graphVisible {
-                    CategoryGraphView(categoryRaw: category.name)
-                }
+                // spec 090: ナレッジグラフは UI から非表示。
                 tagFilterRow
                 articleList
             }

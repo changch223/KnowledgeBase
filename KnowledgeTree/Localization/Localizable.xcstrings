@@ -1421,7 +1421,7 @@
       }
     },
     "clip.nav.title" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1481,7 +1481,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knowledge"
+            "value" : "ナレッジ"
           }
         }
       }
@@ -4311,13 +4311,24 @@
         }
       }
     },
+    "settings.section.manage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理"
+          }
+        }
+      }
+    },
     "settings.section.organize" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "整理・管理"
+            "value" : "整理"
           }
         }
       }
