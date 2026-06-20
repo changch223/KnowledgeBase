@@ -35,6 +35,8 @@ struct KnowledgeTreeApp: App {
     /// spec 056: 起動 default は知識 Clip (Today タブ)、毎回起動で強制 `.knowledgeClip`
     /// (LastOpenedStore.lastTab は無視、新習慣定着のため)。
     @State private var selectedTab: AppTab = .knowledgeClip
+    /// spec 096: 見直し完了バナーから開く確認シートの対象記事。
+    @State private var reviewConfirmArticle: Article?
     /// spec 049: 初回起動時の onboarding 表示。
     @State private var showOnboarding: Bool = !OnboardingFlagStore.shared.hasCompleted
     /// spec 061 (P1-6): 永続 store 構築失敗 → in-memory fallback で起動した印。
@@ -132,10 +134,24 @@ struct KnowledgeTreeApp: App {
             .environment(refreshTrigger)
             .environment(serviceContainer)
             // spec 061 (P1-6): in-memory fallback 起動時に上部へ軽い警告 banner。
+            // spec 096: 見直し完了の通知バナー (どのタブ/画面に居ても出る)。
             .safeAreaInset(edge: .top) {
-                if storeLoadFailed {
-                    storeLoadFailedBanner
+                VStack(spacing: 0) {
+                    if storeLoadFailed {
+                        storeLoadFailedBanner
+                    }
+                    if let coordinator = serviceContainer.correctionCoordinator,
+                       let article = coordinator.anyAwaitingReview,
+                       let pending = coordinator.pendingConfirmation(for: article) {
+                        ReviewCompleteTopBanner(count: pending.diff.total) {
+                            reviewConfirmArticle = article
+                        }
+                    }
                 }
+            }
+            // spec 096: 見直し完了バナーから確認画面 (レポート + 編集 + 確定) を開く。
+            .sheet(item: $reviewConfirmArticle) { article in
+                TranscriptReviewConfirmSheet(article: article)
             }
             // V3.0 polish (2026-05-28): AI 出力含む全 Text を長押しで選択 + Copy 可能に。
             // TabView root に適用すると全 descendant の Text に伝播 (Apple HIG 準拠)。

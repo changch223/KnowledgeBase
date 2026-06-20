@@ -44,22 +44,23 @@ struct KnowledgeExtractor {
 
     func extract(
         extractedText: String,
-        maxBodyChars: Int = KnowledgeExtractor.defaultMaxBodyChars
+        maxBodyChars: Int = KnowledgeExtractor.defaultMaxBodyChars,
+        guidance: String? = nil
     ) async throws -> ExtractedKnowledgeOutput {
         let stripped = Self.stripCodeBlocks(from: extractedText)
         let truncated = Self.truncate(text: stripped, maxChars: maxBodyChars)
         let prepared = await prepareForExtraction(truncated)
-        let prompt = Self.buildPrompt(text: prepared)
+        let prompt = Self.buildPrompt(text: prepared, guidance: guidance)
         return try await session.generateKnowledge(prompt: prompt)
     }
 
     /// spec 006: 1 chunk を Foundation Models に渡して結果を ChunkResult として返す。
     /// throw しない (失敗は ChunkResult.error に格納)。
-    func extractFromChunk(_ chunk: Chunk) async -> ChunkResult {
+    func extractFromChunk(_ chunk: Chunk, guidance: String? = nil) async -> ChunkResult {
         let stripped = Self.stripCodeBlocks(from: chunk.text)
         let prepared = await prepareForExtraction(stripped)
         // 案A: chunk は小型スキーマ (ChunkKnowledgeOutput) で抽出 → 出力予約が減り chunk を大きくできる。
-        let prompt = Self.buildChunkPrompt(text: prepared)
+        let prompt = Self.buildChunkPrompt(text: prepared, guidance: guidance)
         do {
             let slim = try await session.generateChunkKnowledge(prompt: prompt)
             // aggregator は ExtractedKnowledgeOutput を期待するので変換 (summary は per-chunk 不使用 → 空)。
@@ -115,10 +116,10 @@ struct KnowledgeExtractor {
 
     /// spec 006: 全 chunk の essence を統合して 1 つの essence + summary を生成。
     /// 入力空 / 失敗時は nil を返す (Aggregator で fallback 処理)。
-    func extractMetaSummary(chunkEssences: [String]) async -> ExtractedKnowledgeOutput? {
+    func extractMetaSummary(chunkEssences: [String], guidance: String? = nil) async -> ExtractedKnowledgeOutput? {
         let nonEmpty = chunkEssences.filter { !$0.isEmpty }
         guard !nonEmpty.isEmpty else { return nil }
-        let prompt = Self.buildMetaSummaryPrompt(chunkEssences: nonEmpty)
+        let prompt = Self.buildMetaSummaryPrompt(chunkEssences: nonEmpty, guidance: guidance)
         do {
             return try await session.generateKnowledge(prompt: prompt)
         } catch {
@@ -141,10 +142,10 @@ struct KnowledgeExtractor {
 
     /// research.md / R3 のハルシネーション抑止 strict instructions を含む日本語 prompt。
     /// FR-020 (元記事に明示されている内容のみ + 推測禁止 + 整合性) を必ず含める。
-    static func buildPrompt(text: String) -> String {
+    static func buildPrompt(text: String, guidance: String? = nil) -> String {
         """
         以下の記事本文から構造化された知識を抽出してください。
-
+        \(guidanceClause(guidance))
         # 抽出ルール (厳守)
         - 元記事に明示されている内容のみを抽出してください
         - 推測・補完・常識による補強は行わないでください
@@ -160,12 +161,26 @@ struct KnowledgeExtractor {
         """
     }
 
+    /// spec 096: ユーザー指定の抽出方向を prompt に注入する句。
+    /// 本文にある範囲で観点を寄せるだけ (新情報の捏造はしない)。空なら空文字。
+    static func guidanceClause(_ guidance: String?) -> String {
+        let g = (guidance ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !g.isEmpty else { return "" }
+        let capped = String(g.prefix(200))
+        return """
+
+        # 抽出の方向性 (ユーザー指定 — 本文にある範囲でこの観点を重視)
+        \(capped)
+
+        """
+    }
+
     /// 案A: chunked 抽出用の簡潔な prompt (小型スキーマ ChunkKnowledgeOutput とペア)。
     /// 定型部を短くして chunk 本文に枠を回す + 出力 ≤4 件を明示。
-    static func buildChunkPrompt(text: String) -> String {
+    static func buildChunkPrompt(text: String, guidance: String? = nil) -> String {
         """
         以下は記事の一部です。この部分から構造化された知識を抽出してください。
-
+        \(guidanceClause(guidance))
         # ルール (厳守)
         - 元記事に明示されている内容のみ。推測・補完は禁止
         - keyFacts は重要な事実を最大 4 件 (自然言語の事実のみ、コード片は除く)
@@ -228,13 +243,13 @@ struct KnowledgeExtractor {
     }
 
     /// spec 006: meta-summary 専用 prompt。本文ではなく chunk 別 essence を入力に取る。
-    static func buildMetaSummaryPrompt(chunkEssences: [String]) -> String {
+    static func buildMetaSummaryPrompt(chunkEssences: [String], guidance: String? = nil) -> String {
         let numbered = chunkEssences.enumerated()
             .map { "\($0.offset + 1). \($0.element)" }
             .joined(separator: "\n")
         return """
         以下は記事の各部分から抽出した要点です。これらを統合して、記事全体の essence と summary を作ってください。
-
+        \(guidanceClause(guidance))
         # 統合ルール (厳守)
         - 各部分の要点に明示されている内容のみを使ってください
         - 推測・補完・常識による情報の追加は行わないでください

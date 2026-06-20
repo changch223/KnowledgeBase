@@ -40,6 +40,7 @@ enum HierarchicalChunkedSummarizer {
     static func runIntermediateMetaSummaries(
         groups: [[ChunkResult]],
         extractor: KnowledgeExtractor,
+        guidance: String? = nil,
         progressCallback: ((Int) async -> Void)? = nil
     ) async -> [IntermediateMetaResult] {
         var results: [IntermediateMetaResult] = []
@@ -49,7 +50,7 @@ enum HierarchicalChunkedSummarizer {
             let firstIndex = group.first?.chunkIndex ?? 0
             let lastIndex = group.last?.chunkIndex ?? firstIndex
             let essences = group.compactMap { $0.output?.essence }.filter { !$0.isEmpty }
-            let output = await extractor.extractMetaSummary(chunkEssences: essences)
+            let output = await extractor.extractMetaSummary(chunkEssences: essences, guidance: guidance)
             results.append(IntermediateMetaResult(
                 groupIndex: i,
                 chunkIndices: firstIndex...lastIndex,
@@ -66,11 +67,12 @@ enum HierarchicalChunkedSummarizer {
     @MainActor
     static func runFinalMetaSummary(
         intermediateResults: [IntermediateMetaResult],
-        extractor: KnowledgeExtractor
+        extractor: KnowledgeExtractor,
+        guidance: String? = nil
     ) async -> ExtractedKnowledgeOutput? {
         let essences = intermediateResults.compactMap { $0.output?.essence }.filter { !$0.isEmpty }
         guard !essences.isEmpty else { return nil }
-        return await extractor.extractMetaSummary(chunkEssences: essences)
+        return await extractor.extractMetaSummary(chunkEssences: essences, guidance: guidance)
     }
 
     private enum IntermediateError: Error {

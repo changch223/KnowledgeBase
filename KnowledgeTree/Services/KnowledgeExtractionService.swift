@@ -16,6 +16,11 @@ protocol KnowledgeExtractionServiceProtocol: Sendable {
     func extract(article: Article) async
     func backfillAll() async
     func cancelAll()
+    /// spec 096: 指定記事の抽出が in-flight なら停止して完了 (unwind) まで待つ。
+    /// 見直し依頼時は旧本文への抽出は無駄なので停止し、ANE を見直しに譲る。
+    /// cancel + await で保留中の save を残さないため、直後に ExtractedKnowledge を
+    /// delete しても "This store went missing" crash が起きない。
+    func cancelInFlight(article: Article) async
 }
 
 @MainActor
@@ -232,9 +237,27 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         activeTasks.removeValue(forKey: id)
     }
 
+    /// spec 096: 指定記事の抽出が in-flight なら停止して unwind まで待つ。
+    /// チャンクループは各チャンク前に Task.isCancelled を見るので数秒で止まる。
+    /// await task.value で保留 save を残さないため直後の delete が安全。
+    func cancelInFlight(article: Article) async {
+        if let task = activeTasks[article.id] {
+            logger.notice("cancelInFlight: cancelling extraction for \(article.url, privacy: .public)")
+            task.cancel()
+            await task.value
+        }
+    }
+
+    /// spec 096: ユーザー指定の抽出方向 (空なら nil)。
+    private func extractionGuidance(of article: Article) -> String? {
+        let g = article.extractionGuidance?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (g?.isEmpty == false) ? g : nil
+    }
+
     private func performExtraction(article: Article, text: String) async {
         let articleID = article.id
         let articleTitle = article.title
+        let guidance = extractionGuidance(of: article)
 
         try? store.upsertStatus(article: article, status: .extracting)
 
@@ -247,7 +270,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
             let startTime = Date()
             let result: Result<ExtractedKnowledgeOutput, Error>
             do {
-                let output = try await extractor.extract(extractedText: text)
+                let output = try await extractor.extract(extractedText: text, guidance: guidance)
                 result = .success(output)
             } catch {
                 result = .failure(error)
@@ -320,6 +343,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         )
         let chunks = split.chunks
         let skippedTail = split.skippedTailChars
+        let guidance = extractionGuidance(of: article)
 
         // spec 010: chunks > 10 で階層化
         let useHierarchical = chunks.count > 10
@@ -357,7 +381,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         // 残り chunks のみ処理
         for chunk in chunks where !completedIndices.contains(chunk.index) {
             if Task.isCancelled { return }
-            let result = await extractor.extractFromChunk(chunk)
+            let result = await extractor.extractFromChunk(chunk, guidance: guidance)
             results.append(result)
             // incremental save
             if let output = result.output {
@@ -386,7 +410,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
 
             let intermediates = await HierarchicalChunkedSummarizer.runIntermediateMetaSummaries(
                 groups: groups,
-                extractor: extractor
+                extractor: extractor,
+                guidance: guidance
             ) { [weak self] groupIndex in
                 await MainActor.run {
                     self?.processingMonitor?.updateProgress(
@@ -400,7 +425,8 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
 
             let lvl3 = await HierarchicalChunkedSummarizer.runFinalMetaSummary(
                 intermediateResults: intermediates,
-                extractor: extractor
+                extractor: extractor,
+                guidance: guidance
             )
             processingMonitor?.updateProgress(articleID: articleID, index: totalSteps)
 
@@ -413,7 +439,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         } else {
             // spec 006 既存パス (単一 meta-summary)
             let chunkEssences = results.compactMap { $0.output?.essence }
-            let metaSummary = await extractor.extractMetaSummary(chunkEssences: chunkEssences)
+            let metaSummary = await extractor.extractMetaSummary(chunkEssences: chunkEssences, guidance: guidance)
             processingMonitor?.updateProgress(articleID: articleID, index: totalSteps)
             aggregated = ChunkedKnowledgeAggregator.merge(results: results, metaSummary: metaSummary)
             metaCallCount = aggregated.metaSummarySucceeded ? 1 : 0
