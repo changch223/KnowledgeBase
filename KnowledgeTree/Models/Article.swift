@@ -50,6 +50,11 @@ final class Article {
     /// ライブラリ表示は維持 (ユーザーは見られる)。
     var isObsolete: Bool = false
 
+    /// spec 096: ユーザー指定の「抽出の方向性」。同じ本文でも、要約・重要な事実の選び方を
+    /// この観点に寄せて抽出する (例:「技術的な詳細を重視」「登場人物の関係を中心に」)。
+    /// nil / 空 = 既定の抽出。再抽出時にプロンプトへ注入される。CloudKit lightweight 安全 (default nil)。
+    var extractionGuidance: String?
+
     // MARK: - spec 051 Phase A: missing inverse 追加 (CloudKit 互換)
     // 元々「片方向 @Relationship」だった 6 件に Article 側の inverse プロパティ追加。
     // CloudKit は全 @Relationship に inverse を要求する。

@@ -61,6 +61,9 @@ struct TranscriptCorrectionTests {
         )
         #expect(prompt.contains("cloudecod ではなく Claude Code です"))
         #expect(prompt.contains("cloudecod を使った。"))
+        // 指示完全一致だけでなく、音・つづりが近い表記ゆれも漏れなく直すよう指示している。
+        #expect(prompt.contains("表記ゆれ"))
+        #expect(prompt.contains("一箇所も残さず"))
     }
 
     // (6) spec 095: 指示が空なら原文をそのまま返す (LLM を呼ばない)

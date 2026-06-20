@@ -2264,7 +2264,11 @@
     },
     "detail.correct.title" : {
       "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正" } } }
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文の表現を見直す" } } }
+    },
+    "detail.menu.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "編集メニュー" } } }
     },
     "detail.correct.placeholder" : {
       "extractionState" : "manual",
@@ -2293,6 +2297,206 @@
     "detail.correct.banner" : {
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正を反映中…（完了すると更新されます）" } } }
+    },
+    "detail.review.action" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI で見直す" } } }
+    },
+    "detail.correct.action" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "自然言語で指示して直す" } } }
+    },
+    "detail.edit.action" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を直接編集する" } } }
+    },
+    "detail.edit.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を編集" } } }
+    },
+    "detail.edit.save" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "保存して作り直す" } } }
+    },
+    "detail.edit.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を直接書き換えます。保存すると本文を更新し、AI の概念・タグ・要点を作り直します。" } } }
+    },
+    "detail.correct.result.changed" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "%lld 箇所を修正しました" } } }
+    },
+    "detail.correct.result.changedNoDetail" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を修正しました" } } }
+    },
+    "detail.correct.result.none" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "変更はありませんでした" } } }
+    },
+    "detail.correct.result.counts" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld字 → %2$lld字" } } }
+    },
+    "detail.correct.result.details" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "変更内容を見る" } } }
+    },
+    "detail.correct.progress.review" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI が本文を見直しています…" } } }
+    },
+    "detail.correct.progress.instruction" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正を本文に反映しています…" } } }
+    },
+    "detail.correct.progress.manual" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を保存しています…" } } }
+    },
+    "detail.correct.progress.reextract" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "知識（概念・タグ・要点）を作り直しています…" } } }
+    },
+    "detail.correct.progress.counts" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld / %2$lld" } } }
+    },
+    "detail.correct.progress.hint" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "完了まで少し時間がかかることがあります。この画面を離れても続きます。" } } }
+    },
+    "detail.correct.result.noDetail" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "詳細は表示できません" } } }
+    },
+    "detail.review.compose.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を見直す" } } }
+    },
+    "detail.review.compose.instructionHeader" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "修正の指示（任意）" } } }
+    },
+    "detail.review.compose.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "指示は空でもOK。AI が用語集（あなたの概念ページ・タグ）を手がかりに本文の誤りを見直します。完了したらお知らせします（この画面は閉じてOK）。" } } }
+    },
+    "detail.review.compose.start" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI で見直す" } } }
+    },
+    "detail.review.ref.header" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "参考：AI が抽出した内容" } } }
+    },
+    "detail.review.ref.summary" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "要約" } } }
+    },
+    "detail.review.ref.tags" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグ" } } }
+    },
+    "detail.review.ref.entities" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "用語・固有名詞" } } }
+    },
+    "detail.review.ref.facts" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "重要な事実" } } }
+    },
+    "detail.review.ref.body" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文" } } }
+    },
+    "detail.customize.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "生成内容をカスタマイズする" } } }
+    },
+    "detail.customize.header" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "生成の方向性" } } }
+    },
+    "detail.customize.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "例: 技術的な詳細を重視 / 登場人物の関係を中心に / 結論を短く" } } }
+    },
+    "detail.customize.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文は変えずに、AI が生成する要約・重要な事実の観点をこの方向に寄せて作り直します（本文にある範囲で）。空にして実行すると既定の生成に戻ります。" } } }
+    },
+    "detail.customize.currentHeader" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "参考：今の生成結果" } } }
+    },
+    "detail.customize.run" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この方向で作り直す" } } }
+    },
+    "detail.customize.presets" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "よく使う方向（タップで入力）" } } }
+    },
+    "detail.customize.preset.brief" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "短く要点だけ" } } }
+    },
+    "detail.customize.preset.technical" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "技術的な詳細を重視" } } }
+    },
+    "detail.customize.preset.people" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "人物・関係を中心に" } } }
+    },
+    "detail.customize.preset.beginner" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "やさしく初心者向け" } } }
+    },
+    "detail.customize.preset.data" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "数値・データ重視" } } }
+    },
+    "detail.review.complete.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI の見直しが完了しました" } } }
+    },
+    "detail.review.complete.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "%lld 箇所の修正候補があります。内容を確認してください。" } } }
+    },
+    "detail.review.complete.action" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "内容を確認する" } } }
+    },
+    "detail.review.confirm.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "見直し結果の確認" } } }
+    },
+    "detail.review.confirm.changesHeader" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "修正候補（%lld 箇所）" } } }
+    },
+    "detail.review.confirm.editHeader" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文（必要なら直接編集）" } } }
+    },
+    "detail.review.confirm.editFooter" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "ここで本文を最終チェックできます。「確定」で本文を反映し、AI の概念・タグ・要点を作り直します。" } } }
+    },
+    "detail.review.confirm.commit" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "確定する" } } }
+    },
+    "detail.review.confirm.discard" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "やめる" } } }
+    },
+    "detail.review.confirm.missing" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "確認できる見直し結果がありません。" } } }
     },
     "common.close" : {
       "extractionState" : "manual",

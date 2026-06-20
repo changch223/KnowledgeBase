@@ -33,7 +33,11 @@ struct ArticleDetailView: View {
     @State private var refreshTick: Int = 0
     /// spec 008: 関連記事タップで sheet を切り替えるための state
     @State private var presentedRelatedArticle: Article?
-    @State private var showCorrectionSheet: Bool = false
+    /// spec 096: 見直しフロー — 入口 (指示入力) と確認画面のシート。
+    @State private var showComposeSheet: Bool = false
+    @State private var showConfirmSheet: Bool = false
+    /// spec 096: カスタマイズ抽出 (抽出の方向性を指定) のシート。
+    @State private var showCustomizeSheet: Bool = false
     /// spec 016: 本文 DisclosureGroup の展開状態。初期 collapsed、毎回 sheet 起動時にリセット。
     @State private var isBodyExpanded: Bool = false
 
@@ -94,14 +98,29 @@ struct ArticleDetailView: View {
             .navigationTitle("reader.navigationTitle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // spec 095: 自然言語で本文を訂正 (本文がある記事のみ)。
+                // spec 096: 本文がある記事のメニュー。① 本文の見直し・訂正 ② 抽出をカスタマイズ。
                 if bodySucceeded {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showCorrectionSheet = true
+                        Menu {
+                            Button {
+                                if services.correctionCoordinator?.pendingConfirmation(for: article) != nil {
+                                    showConfirmSheet = true
+                                } else {
+                                    showComposeSheet = true
+                                }
+                            } label: {
+                                Label("detail.correct.title", systemImage: "pencil.and.scribble")
+                            }
+                            Button {
+                                showCustomizeSheet = true
+                            } label: {
+                                Label("detail.customize.title", systemImage: "wand.and.stars")
+                            }
                         } label: {
-                            Label("detail.correct.title", systemImage: "pencil.and.scribble")
+                            Image(systemName: "ellipsis.circle")
+                                .accessibilityLabel(Text("detail.menu.title"))
                         }
+                        .disabled(services.correctionCoordinator?.isBusy(article) == true)
                         .accessibilityIdentifier("articleDetail.correctButton")
                     }
                 }
@@ -112,8 +131,14 @@ struct ArticleDetailView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showCorrectionSheet) {
-                ArticleCorrectionSheet(article: article)
+            .sheet(isPresented: $showComposeSheet) {
+                TranscriptReviewComposeSheet(article: article)
+            }
+            .sheet(isPresented: $showConfirmSheet) {
+                TranscriptReviewConfirmSheet(article: article)
+            }
+            .sheet(isPresented: $showCustomizeSheet) {
+                ExtractionCustomizeSheet(article: article)
             }
             .sheet(item: $presentedSafariURL) { wrapper in
                 SafariView(url: wrapper.url)
@@ -126,31 +151,43 @@ struct ArticleDetailView: View {
             // (重複すると「declared earlier on the stack」警告 + 動作不安定)。
             .modifier(ConceptPageDestinationIfNeeded(enable: embedNavigationStack))
             .onChange(of: refresh.version) { _, _ in
-                refreshTick &+= 1
+                bumpRefresh()
             }
             .onReceive(
                 NotificationCenter.default.publisher(for: ModelContext.didSave)
             ) { _ in
-                refreshTick &+= 1
+                bumpRefresh()
             }
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: NSNotification.Name("NSManagedObjectContextObjectsDidChange")
                 )
             ) { _ in
-                refreshTick &+= 1
+                bumpRefresh()
             }
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: NSNotification.Name("NSPersistentStoreRemoteChange")
                 )
             ) { _ in
-                refreshTick &+= 1
+                bumpRefresh()
             }
             .onReceive(pollTimer) { _ in
                 guard !isFullyComplete else { return }
-                refreshTick &+= 1
+                bumpRefresh()
             }
+    }
+
+    /// 訂正シート (本文見直し / 確認) を開いている間は再描画を止める。
+    /// 裏の抽出 didSave / 1秒 pollTimer による親の再描画がシートの TextField を毎秒作り直し、
+    /// 日本語/中国語 IME の変換途中の入力が消えるのを防ぐ (spec 096 bug 修正)。
+    private var isCorrectionSheetOpen: Bool {
+        showComposeSheet || showConfirmSheet || showCustomizeSheet
+    }
+
+    private func bumpRefresh() {
+        guard !isCorrectionSheetOpen else { return }
+        refreshTick &+= 1
     }
 
     /// ScrollView + LazyVStack 部分のみ。NavigationStack wrap の有無で共通化。
@@ -160,18 +197,23 @@ struct ArticleDetailView: View {
     private var scrollContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DS.Spacing.xxxl) {
-                // spec 095: 訂正処理中バナー (シートを閉じても進捗が見える)。
-                if services.correctionCoordinator?.isCorrecting(article) == true {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("detail.correct.banner")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                // spec 096: 見直しフローの段階バナー (シートを閉じても継続表示)。
+                if let coordinator = services.correctionCoordinator,
+                   let stage = coordinator.stage(for: article) {
+                    switch stage {
+                    case .reviewing(let current, let total):
+                        CorrectionProgressBanner(progress: CorrectionProgress(
+                            kind: .review, phase: .correcting, current: current, total: total))
+                    case .committing:
+                        CorrectionProgressBanner(progress: CorrectionProgress(
+                            kind: .review, phase: .reExtracting, current: 0, total: 0))
+                    case .awaitingConfirmation:
+                        // 確認待ちはアプリ全体の上部バナー (ReviewCompleteTopBanner) で通知するため、
+                        // 詳細画面では二重表示しない。
+                        EmptyView()
+                    case .done(let result):
+                        CorrectionResultBanner(result: result) { coordinator.clearStage(article) }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(DS.Spacing.lg)
-                    .background(DS.Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12))
-                    .accessibilityIdentifier("articleDetail.correctionBanner")
                 }
 
                 // headerSection (サムネ AsyncImage) は refreshTick rebuild から外す。
@@ -547,6 +589,7 @@ struct ArticleDetailView: View {
             }
         }
     }
+
 }
 
 private struct ArticleDetailSafariWrapper: Identifiable {
