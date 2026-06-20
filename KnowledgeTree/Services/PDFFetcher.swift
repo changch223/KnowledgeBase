@@ -24,6 +24,9 @@ struct PDFFetcher {
         /// `<title>` `<meta name="description">` `<article>` `<p>` を含む。
         let pseudoHTML: String
         let pageCount: Int
+        /// spec 091: 全ページ連結のプレーンテキスト。
+        /// RawArticleIntake で `ArticleBody.extractedText` に直接投入する用途。
+        var fullText: String = ""
     }
 
     /// PDF data → 擬似 HTML + metadata。decode 失敗時は nil。
@@ -101,7 +104,8 @@ struct PDFFetcher {
             summary: summary,
             author: author,
             pseudoHTML: pseudoHTML,
-            pageCount: document.pageCount
+            pageCount: document.pageCount,
+            fullText: fullText
         )
     }
 

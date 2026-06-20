@@ -241,6 +241,74 @@
         }
       }
     },
+    "addArticle.mode.label" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "追加するもの" } } }
+    },
+    "addArticle.mode.url" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "URL" } } }
+    },
+    "addArticle.mode.note" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "メモ" } } }
+    },
+    "addArticle.mode.file" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "ファイル" } } }
+    },
+    "addArticle.file.choose" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "ファイルを選択（PDF・テキスト）" } } }
+    },
+    "addArticle.file.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "PDF やテキストファイルを取り込みます（iCloud Drive・Google Drive 等から選択可）。AI が要点・概念・タグを自動生成します。" } } }
+    },
+    "addArticle.file.error.unreadable" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "このファイルからは文章を取り込めませんでした" } } }
+    },
+    "addArticle.mode.image" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真" } } }
+    },
+    "addArticle.image.choose" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真を選択（文字を読み取り）" } } }
+    },
+    "addArticle.image.recognizing" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "文字を読み取っています…" } } }
+    },
+    "addArticle.image.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真の中の文字を読み取って保存します。読み取り結果は保存前に編集できます。AI が要点・概念・タグを自動生成します。" } } }
+    },
+    "addArticle.image.error.unreadable" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この写真を読み込めませんでした" } } }
+    },
+    "addArticle.image.error.noText" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真から文字が見つかりませんでした" } } }
+    },
+    "addArticle.note.titlePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "タイトル（任意）" } } }
+    },
+    "addArticle.note.bodyPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "メモ・文章を貼り付け／入力" } } }
+    },
+    "addArticle.note.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "URL でなく文章を直接保存します。AI が要点・概念・タグを自動生成します（短すぎる文章は対象外）。" } } }
+    },
+    "rawIntake.untitled" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "無題のメモ" } } }
+    },
     "addArticle.duplicate.title" : {
       "extractionState" : "manual",
       "localizations" : {
