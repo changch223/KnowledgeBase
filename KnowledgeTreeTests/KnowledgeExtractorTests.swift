@@ -191,6 +191,31 @@ struct KnowledgeExtractorTests {
         #expect(session.lastPrompt?.contains("announced a new framework") == false)
     }
 
+    /// spec 093: 中国語入力 (日本語以外) → 翻訳 call が呼ばれ、訳出テキストで抽出される
+    @Test func extractInvokesTranslationForChinese() async throws {
+        let session = MockLanguageModelSession()
+        session.nextResult = .success(.fixture())
+        session.nextTranslationResult = .success(
+            "Apple は WWDC で新しい Foundation Models フレームワークを発表しました。" +
+            "端末内の言語モデルを公開し、開発者が外部サーバーなしで structured output を" +
+            "利用できるようになります。"
+        )
+        let extractor = KnowledgeExtractor(session: session)
+
+        let chineseText = """
+        苹果在全球开发者大会上发布了一个名为基础模型的全新框架。这个设备端的语言模型
+        通过宏公开了结构化输出，使开发者无需依赖外部服务器即可为应用程序添加检索增强生成功能。
+        """
+        _ = try await extractor.extract(extractedText: chineseText)
+
+        // 日本語以外なので翻訳が呼ばれる
+        #expect(session.translationCallCount == 1)
+        // 抽出 prompt は翻訳後の日本語テキストを含む
+        #expect(session.lastPrompt?.contains("Foundation Models フレームワーク") == true)
+        // 元の中国語は抽出 prompt に流れない
+        #expect(session.lastPrompt?.contains("苹果在全球开发者大会") == false)
+    }
+
     /// 翻訳 throws → 英語のまま抽出 (silent fallback)
     @Test func extractFallsBackToRawTextWhenTranslationFails() async throws {
         let session = MockLanguageModelSession()

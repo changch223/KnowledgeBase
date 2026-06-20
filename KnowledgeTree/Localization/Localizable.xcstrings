@@ -293,6 +293,34 @@
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真から文字が見つかりませんでした" } } }
     },
+    "addArticle.mode.audio" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "音声" } } }
+    },
+    "addArticle.audio.choose" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "音声ファイルを選択（文字起こし）" } } }
+    },
+    "addArticle.audio.transcribing" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "文字に書き起こしています…（初回は言語モデルのダウンロードに時間がかかります）" } } }
+    },
+    "addArticle.audio.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "音声ファイルを端末内で文字に書き起こします。結果は保存前に編集できます。AI が要点・概念・タグを自動生成します。" } } }
+    },
+    "addArticle.audio.error.noText" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "音声から文字を聞き取れませんでした" } } }
+    },
+    "addArticle.audio.error.unauthorized" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "音声認識が許可されていません。設定アプリから許可してください。" } } }
+    },
+    "addArticle.audio.error.failed" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "文字起こしに失敗しました" } } }
+    },
     "addArticle.note.titlePlaceholder" : {
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "タイトル（任意）" } } }
@@ -2233,6 +2261,42 @@
           }
         }
       }
+    },
+    "detail.correct.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正" } } }
+    },
+    "detail.correct.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "例: cloudecod ではなく Claude Code です" } } }
+    },
+    "detail.correct.footer" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "自然言語で訂正を指示します。本文を直し、AI の概念・タグ・要点を作り直します。" } } }
+    },
+    "detail.correct.running" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正して作り直しています…" } } }
+    },
+    "detail.correct.run" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正する" } } }
+    },
+    "detail.correct.error.noBody" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正できる本文がありません" } } }
+    },
+    "detail.correct.keepsRunning" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この画面を閉じても処理は続きます。完了すると本文と概念・タグが更新されます。" } } }
+    },
+    "detail.correct.banner" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正を反映中…（完了すると更新されます）" } } }
+    },
+    "common.close" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } } }
     },
     "detail.tags.heading" : {
       "extractionState" : "manual",
@@ -4694,6 +4758,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存しました"
+          }
+        }
+      }
+    },
+    "share.audioSavedPending" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声を保存しました。アプリを開くと文字起こしされます。"
           }
         }
       }

@@ -79,6 +79,8 @@ final class ServiceContainer {
     var lintEngine: LintEngineProtocol?
     /// spec 058: 健全性スコア計算 service (Settings 表示用)
     var healthScoreService: HealthScoreServiceProtocol?
+    /// spec 095: ユーザー訂正のバックグラウンド継続 + 進捗 (画面を閉じても続く)
+    var correctionCoordinator: ArticleCorrectionCoordinator?
 }
 
 /// spec 045: 「再生成」trigger payload。

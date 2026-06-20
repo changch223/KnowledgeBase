@@ -43,7 +43,7 @@ final class ShareViewController: UIViewController {
     private func processShare() async {
         let item = await extractReceivedItem()
         let result = await save(item: item)
-        showResult(result)
+        showResult(result, isAudioPending: item.audioData != nil)
         try? await Task.sleep(for: .seconds(1))
         extensionContext?.completeRequest(returningItems: nil)
     }
@@ -92,7 +92,28 @@ final class ShareViewController: UIViewController {
             }
         }
 
-        // (3) spec 091: ファイル URL 共有 (md / txt / その他テキスト、PDF が fileURL で来る場合も)。
+        // (3) spec 092: 音声共有 (Voice Memos / m4a 等)。
+        // 文字起こしは重く拡張内では落ちるため、音声を保存し起動時に遅延処理する。
+        if let audioAttachment = extensionItem.attachments?.first(where: {
+            $0.hasItemConformingToTypeIdentifier(UTType.audio.identifier)
+        }) {
+            let audioURL: URL? = await withCheckedContinuation { continuation in
+                audioAttachment.loadItem(forTypeIdentifier: UTType.audio.identifier) { value, _ in
+                    continuation.resume(returning: value as? URL)
+                }
+            }
+            if let audioURL, let data = try? Data(contentsOf: audioURL) {
+                let name = suppliedTitle ?? audioURL.deletingPathExtension().lastPathComponent
+                return ShareReceivedItem(
+                    url: nil,
+                    suppliedTitle: name,
+                    audioData: data,
+                    audioExtension: audioURL.pathExtension
+                )
+            }
+        }
+
+        // (4) spec 091: ファイル URL 共有 (md / txt / その他テキスト、PDF が fileURL で来る場合も)。
         if let fileAttachment = extensionItem.attachments?.first(where: {
             $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
         }) {
@@ -106,7 +127,7 @@ final class ShareViewController: UIViewController {
             }
         }
 
-        // (4) spec 091: テキスト共有 (メモ / メール本文 / 選択テキスト)。
+        // (5) spec 091: テキスト共有 (メモ / メール本文 / 選択テキスト)。
         if let textAttachment = extensionItem.attachments?.first(where: {
             $0.hasItemConformingToTypeIdentifier(UTType.plainText.identifier)
                 || $0.hasItemConformingToTypeIdentifier(UTType.text.identifier)
@@ -128,7 +149,7 @@ final class ShareViewController: UIViewController {
             return ShareReceivedItem(url: nil, suppliedTitle: suppliedTitle, text: body)
         }
 
-        // (5) attachment 無し: 共有シートが本文を attributedContentText に乗せる場合。
+        // (6) attachment 無し: 共有シートが本文を attributedContentText に乗せる場合。
         if let contentText, !contentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return ShareReceivedItem(url: nil, suppliedTitle: suppliedTitle, text: contentText)
         }
@@ -155,6 +176,16 @@ final class ShareViewController: UIViewController {
         } catch {
             return .persistenceFailure(String(describing: error))
         }
+        // spec 092: 音声共有は pending 記事として保存 (文字起こしはアプリ起動時)。
+        if item.url == nil, let audioData = item.audioData {
+            return RawArticleIntake.savePendingAudio(
+                into: container.mainContext,
+                audioData: audioData,
+                fileExtension: item.audioExtension ?? "m4a",
+                title: item.suppliedTitle
+            )
+        }
+
         // spec 091: URL が無い共有はテキスト/ファイルとして取り込む (合成 URL + 本文事前投入)。
         if item.url == nil, let text = item.text {
             return RawArticleIntake.save(
@@ -171,10 +202,10 @@ final class ShareViewController: UIViewController {
     }
 
     @MainActor
-    private func showResult(_ result: SaveResult) {
+    private func showResult(_ result: SaveResult, isAudioPending: Bool = false) {
         let key: String
         switch result {
-        case .saved: key = "share.savedConfirmation"
+        case .saved: key = isAudioPending ? "share.audioSavedPending" : "share.savedConfirmation"
         case .duplicate: key = "share.duplicateMessage"
         case .missingURL: key = "share.errorNoURL"
         case .unsupportedScheme: key = "share.errorUnsupportedScheme"

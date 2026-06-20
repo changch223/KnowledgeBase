@@ -15,4 +15,7 @@ struct ShareReceivedItem: Equatable, Sendable {
     var text: String? = nil
     /// text 取り込み時の source 種別 (合成 URL の名前空間)。
     var intakeSource: RawArticleIntake.Source = .sharedText
+    /// spec 092: 共有された音声バイト (文字起こしはアプリ起動時に遅延処理)。
+    var audioData: Data? = nil
+    var audioExtension: String? = nil
 }

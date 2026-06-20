@@ -285,6 +285,10 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// 翻訳エラー / 未インストール言語ペアは throws (caller で raw fallback)。
     func translate(text: String) async throws -> String
 
+    /// spec 093: 任意の source 言語 (BCP-47) から日本語へ翻訳 (多言語対応)。
+    /// 既存 conformer は default 実装 (source 無視 → translate(text:)) で後方互換。
+    func translate(text: String, source: String) async throws -> String
+
     /// spec 044: 学習タブ用「家庭教師」自由形 chat 応答。
     /// Generable 制約なし、plain string 返却。prompt 内に instructions + concept context + 会話履歴 + user 入力を全て展開する。
     /// retrieval なし (ChatService の RAG 経路を経由しない、low-similarity 早期 return を避けるため)。
@@ -298,6 +302,24 @@ protocol LanguageModelSessionProtocol: Sendable {
     /// LLM が agent loop の毎 turn で「immediate / askClarification / searchArticles / finalAnswer」のいずれかを返す。
     /// Swift 側で switch 分岐して状態遷移する (Tool Use 不在の代替パターン)。
     func generateAgentAction(prompt: String) async throws -> AgentAction
+
+    /// spec 094: 音声文字起こしの用語補正 (plain string、Generable 不使用)。
+    /// 既知の正しい用語集をヒントに、誤認識された固有名詞・専門用語だけを直す。
+    func generateTranscriptCorrection(prompt: String) async throws -> String
+}
+
+extension LanguageModelSessionProtocol {
+    /// spec 093: `translate(text:source:)` の既定実装。
+    /// 既存 conformer (Mock 等) が未実装でも source を無視して `translate(text:)` に委譲し後方互換。
+    func translate(text: String, source: String) async throws -> String {
+        try await translate(text: text)
+    }
+
+    /// spec 094: `generateTranscriptCorrection` の既定実装。
+    /// 既存 conformer は plain 生成の `generateWikiBody` に委譲し後方互換。
+    func generateTranscriptCorrection(prompt: String) async throws -> String {
+        try await generateWikiBody(prompt: prompt)
+    }
 }
 
 // MARK: - Foundation Models 直列化ゲート
@@ -472,9 +494,15 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     /// Foundation Models は非日本語入力を unsupportedLanguageOrLocale で拒否するため、
     /// 翻訳経路だけは別エンジンを使う。
     func translate(text: String) async throws -> String {
-        let source = Locale.Language(identifier: "en")
+        try await translate(text: text, source: "en")
+    }
+
+    /// spec 093: 任意の source 言語 → 日本語。Apple Translation framework (offline)。
+    /// `installedSource:` の言語ペアが未インストールなら throws → caller が raw fallback。
+    func translate(text: String, source: String) async throws -> String {
+        let sourceLang = Locale.Language(identifier: source)
         let target = Locale.Language(identifier: "ja")
-        let session = TranslationSession(installedSource: source, target: target)
+        let session = TranslationSession(installedSource: sourceLang, target: target)
         let response = try await session.translate(text)
         return response.targetText
     }
@@ -488,6 +516,11 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     /// spec 063 (LLM Wiki): Wiki 本文 plain string 生成 (Generable schema を渡さず token 節約)。
     func generateWikiBody(prompt: String) async throws -> String {
         try await generatePlain("generateWikiBody (Wiki本文)", prompt: prompt)
+    }
+
+    /// spec 094: 音声文字起こしの用語補正 (plain string)。専用ラベルでログ追跡。
+    func generateTranscriptCorrection(prompt: String) async throws -> String {
+        try await generatePlain("generateTranscriptCorrection (文字起こし校正)", prompt: prompt)
     }
 
     /// spec 057: Agentic Chat 用 AgentActionOutput Generable struct 生成 → AgentAction enum に変換。

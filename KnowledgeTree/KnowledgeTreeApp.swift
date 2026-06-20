@@ -463,11 +463,24 @@ struct KnowledgeTreeApp: App {
         // 上記で BGTaskScheduler 用に作成済の lintEngine を ServiceContainer にも入れる
         serviceContainer.lintEngine = lintEngine
         serviceContainer.healthScoreService = DefaultHealthScoreService(context: context)
+        // spec 095: ユーザー訂正の継続実行コーディネータ (画面を閉じても処理継続)。
+        serviceContainer.correctionCoordinator = ArticleCorrectionCoordinator()
 
         // 既存記事の backfill: enrichment → body → knowledge は依存 chain のため直列維持。
         await enrichmentService.backfillAll()
         await bodyService.backfillAll()
         await knowledgeService.backfillAll()
+
+        // spec 092 Part 2: 共有された音声 (pending) を文字起こし → 本文確定したら知識抽出を再走。
+        // spec 094: 既知の用語集で文字起こしの誤認識を補正してから保存。
+        let audioRunner = AudioTranscriptionBackfillRunner(
+            context: context,
+            transcriber: AudioTranscriptionService(),
+            corrector: LLMTranscriptCorrectionService(session: FoundationModelLanguageModelSession())
+        )
+        if await audioRunner.run() {
+            await knowledgeService.backfillAll()
+        }
 
         // spec 061 (P1-7): knowledge 完了後の独立 backfill 群を並列化して cold start を短縮。
         // 全て @MainActor のため真の並列計算ではないが、各 service の await suspend

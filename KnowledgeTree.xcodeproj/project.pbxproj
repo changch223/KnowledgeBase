@@ -419,6 +419,8 @@
 				F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */,
 				B1C2D3E4F506A7B8C9D0E1F2 /* KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements */,
 				4F9A7B23E61C8DA9F5A9C390 /* KnowledgeTree/Services/RawArticleIntake.swift */,
+				4F9A7B23E61C8DA9F5A9C391 /* KnowledgeTree/Services/PDFFetcher.swift */,
+				4F9A7B23E61C8DA9F5A9C392 /* KnowledgeTree/Services/RawArticleFileImport.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
