@@ -25,6 +25,7 @@ final class ArticleCorrectionCoordinator {
         case awaitingConfirmation(PendingCorrection)     // 見直し完了、ユーザー確認待ち
         case committing                                  // 確定後、知識を作り直し中
         case done(CorrectionResult)                      // 完了、結果レポート表示
+        case customizeDone                               // 生成カスタマイズ完了 (本文不変)
     }
 
     private(set) var stages: [UUID: Stage] = [:]
@@ -59,10 +60,10 @@ final class ArticleCorrectionCoordinator {
 
     // MARK: - 操作
 
-    /// 結果レポート / 確認待ちを閉じる (処理中は閉じない)。
+    /// 結果レポート / 確認待ち / カスタマイズ完了を閉じる (処理中は閉じない)。
     func clearStage(_ article: Article) {
         switch stages[article.id] {
-        case .done, .awaitingConfirmation:
+        case .done, .awaitingConfirmation, .customizeDone:
             stages[article.id] = nil
             awaitingReview[article.id] = nil
         default:
@@ -225,7 +226,8 @@ final class ArticleCorrectionCoordinator {
             await knowledgeService?.extract(article: article)
             Self.logger.info("customize: re-extraction finished article=\(id, privacy: .public)")
 
-            self.stages[id] = nil
+            // 完了を画面で知らせる (ユーザーが閉じるまで表示)。
+            self.stages[id] = .customizeDone
         }
     }
 

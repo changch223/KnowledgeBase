@@ -2274,53 +2274,9 @@
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "例: cloudecod ではなく Claude Code です" } } }
     },
-    "detail.correct.footer" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "自然言語で訂正を指示します。本文を直し、AI の概念・タグ・要点を作り直します。" } } }
-    },
-    "detail.correct.running" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正して作り直しています…" } } }
-    },
-    "detail.correct.run" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正する" } } }
-    },
-    "detail.correct.error.noBody" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正できる本文がありません" } } }
-    },
-    "detail.correct.keepsRunning" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この画面を閉じても処理は続きます。完了すると本文と概念・タグが更新されます。" } } }
-    },
     "detail.correct.banner" : {
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "訂正を反映中…（完了すると更新されます）" } } }
-    },
-    "detail.review.action" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI で見直す" } } }
-    },
-    "detail.correct.action" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "自然言語で指示して直す" } } }
-    },
-    "detail.edit.action" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を直接編集する" } } }
-    },
-    "detail.edit.title" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を編集" } } }
-    },
-    "detail.edit.save" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "保存して作り直す" } } }
-    },
-    "detail.edit.footer" : {
-      "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "本文を直接書き換えます。保存すると本文を更新し、AI の概念・タグ・要点を作り直します。" } } }
     },
     "detail.correct.result.changed" : {
       "extractionState" : "manual",
@@ -2434,9 +2390,25 @@
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "この方向で作り直す" } } }
     },
+    "detail.customize.done" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "生成内容を作り直しました" } } }
+    },
     "detail.customize.presets" : {
       "extractionState" : "manual",
-      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "よく使う方向（タップで入力）" } } }
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "よく使う方向（タップで追加・複数可）" } } }
+    },
+    "detail.customize.preset.summaryShort" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "要約を短く" } } }
+    },
+    "detail.customize.preset.moreFacts" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "事実を多く拾う" } } }
+    },
+    "detail.customize.preset.peopleDetail" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "人物・モノを詳しく" } } }
     },
     "detail.customize.preset.brief" : {
       "extractionState" : "manual",

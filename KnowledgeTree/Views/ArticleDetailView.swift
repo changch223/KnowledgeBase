@@ -213,6 +213,8 @@ struct ArticleDetailView: View {
                         EmptyView()
                     case .done(let result):
                         CorrectionResultBanner(result: result) { coordinator.clearStage(article) }
+                    case .customizeDone:
+                        CustomizeDoneBanner { coordinator.clearStage(article) }
                     }
                 }
 

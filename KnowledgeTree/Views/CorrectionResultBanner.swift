@@ -96,6 +96,48 @@ struct CorrectionProgressBanner: View {
     }
 }
 
+/// アプリルートの safeAreaInset に置く「見直し完了」通知のホスト View。
+/// 独立した View なので body が coordinator.awaitingReview を確実に observe し、
+/// 完了時に再描画される (App.body=Scene に直書きすると @Observable 変化で再評価されない bug の回避)。
+struct ReviewCompletionBannerHost: View {
+    let services: ServiceContainer
+    let onConfirm: (Article) -> Void
+
+    var body: some View {
+        if let coordinator = services.correctionCoordinator,
+           let article = coordinator.anyAwaitingReview,
+           let pending = coordinator.pendingConfirmation(for: article) {
+            ReviewCompleteTopBanner(count: pending.diff.total) { onConfirm(article) }
+        }
+    }
+}
+
+/// 生成カスタマイズ完了の通知バナー (本文は不変、知識を作り直した)。
+struct CustomizeDoneBanner: View {
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.green)
+            Text("detail.customize.done")
+                .font(.subheadline.weight(.semibold))
+            Spacer(minLength: 8)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("common.close")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Spacing.lg)
+        .background(DS.Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityIdentifier("articleDetail.customizeDone")
+    }
+}
+
 /// アプリ全体の上部に出す「見直し完了」通知バナー (どの画面に居ても気づける)。
 struct ReviewCompleteTopBanner: View {
     let count: Int

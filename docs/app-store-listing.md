@@ -1,122 +1,244 @@
-# App Store Connect 申請用テキスト
+# App Store 掲載用テキスト（コピペ用） — Knowledge Base
 
-App Store Connect の各フィールドにそのままコピペできる形で揃えています。
+App Store Connect の各フィールドにそのまま貼り付けられるようまとめたもの。
+括弧内は文字数上限の目安。**実際の文字数は貼り付け前に App Store Connect 側のカウンタで確認**。
 
----
+- アプリ名: **Knowledge Base**
+- Bundle ID: `app.KnowledgeTree`
+- 最小 OS: **iOS 26.4 以降**（Apple Intelligence 対応端末が必要）
+- 主言語: 日本語（English も併記）
 
-## 📣 プロモーション用テキスト (170 字以内)
-
-> 読んだ知識を AI が自動で体系化。前回開いてからの差分を 3 段落で要約、興味分野も自動発見。「あの店、結局どうなった?」も AI が更新候補を提案。必要な時だけ開けば最新の自分が見える、優しい第二の脳。
-
-(文字数: 約 130 字 / 上限 170)
-
----
-
-## 📝 概要 (4,000 字以内)
-
-> 「読んだ気になって終わり」、「保存だけして見返さない」、「タブを開いたまま忘れる」 ── そんな知識のカオスを AI が体系化する、優しい第二の脳。
->
-> ## 知積 (知が積みあがる) って何?
->
-> Safari や Chrome から記事を保存するだけで、AI が自動で読み解き、要点・キーファクト・関連トピックを抽出します。あなたが書きためた知識は時間とともに体系化され、過去の記事は最新情報で上書きされ、必要な時に AI に質問するだけで答えが返ってきます。
->
-> 自分でフォルダ分けする必要も、タグを設計する必要もありません。AI が提案 → あなたが確認するだけ。
->
-> ## 4 つの本質機能
->
-> 📜 **最近のあなた**
-> 知識 Clip タブを開くと、前回開いた時から今までに保存した記事を AI が 3 段落に統合要約。「最近自分が学んだこと」が一目でわかります。
->
-> 🔍 **動的トピック発見**
-> 「AI と Product Management」「SwiftUI 状態管理」── あなた固有の興味分野を AI が自動で発見、ユーザー確認後にトピックとして整理します。固定カテゴリでは表現できない、あなただけの分野が見つかります。
->
-> ⚠️ **時系列事実の更新**
-> 「去年『◯◯店オープン』、今日『◯◯店閉店』」── AI が同じ対象に対する事実の矛盾を検出し、「事実更新の提案」として表示。あなたが採用すれば、過去の情報が自動で「旧情報」になります。
->
-> 💬 **AI チャット (RAG)**
-> 「先月読んだ記事で重要だったポイントは?」 ── 自分が保存した記事の内容に対して、AI に質問できます。回答には必ず元記事を引用するため、ハルシネーション (作り話) を抑制。
->
-> ## 4 つのタブ
->
-> 1. **ライブラリ** ── 全記事の一覧と検索
-> 2. **知識 Clip** ⭐ メイン ── 「最近のあなた」+ 動的トピック + 事実更新提案 + 分野別まとめ
-> 3. **AI ブレイン** ── 統計と分野別分布
-> 4. **AI チャット** ── 自分の知識への質問
->
-> ## 6 つの設計原則
->
-> ✅ **AI 自動 + ユーザー確認** ── 魔法だが透明、勝手に決めない
-> ✅ **週 1〜2 回でも価値が出る** ── 毎日習慣化を強要しない
-> ✅ **calm UX** ── 通知ゼロ、バッジゼロ、罪悪感ゼロ
-> ✅ **ローカルファースト** ── Apple Intelligence on-device、外部送信なし
-> ✅ **ソース追跡** ── AI 出力には必ず元記事の引用
-> ✅ **やさしい日本語** ── 専門用語を排除、誰でも使える
->
-> ## こんな人におすすめ
->
-> ・「あの記事どこだっけ?」と探す時間が積みあがっている人
-> ・読んだ内容がバラバラで全体像が見えない人
-> ・タブを開いたまま読まずに溜め込んでしまう人
-> ・自分の興味の変化を客観的に振り返りたい人
-> ・プライバシーを守りたい人 (全データ on-device)
->
-> ## 取り込み方法
->
-> ・Safari の共有ボタンから「知積に保存」
-> ・Safari Web Extension (ツールバーアイコン or 自動保存)
-> ・Chrome の共有メニュー
-> ・PDF ファイルもメタデータと本文を自動抽出
->
-> ## プライバシー
->
-> 知積は完全ローカルファーストです。記事の内容も、AI への質問も、外部サーバーには送信されません。AI 処理はすべて Apple Intelligence (オンデバイス) で実行されます。Apple Intelligence 非対応端末では機能限定でフォールバック動作します。
->
-> ## 必要な環境
->
-> ・iOS 26 以降 / iPadOS 26 以降
-> ・Apple Intelligence 対応端末を推奨 (非対応端末でも基本機能は動作)
-> ・日本語に最適化
-
-(文字数: 約 1,400 字 / 上限 4,000)
+> 注: 旧版の文面（「知積」ブランド / 4 タブ / AI ブレインタブ等）は現行アプリと一致しないため全面更新済み。
 
 ---
 
-## 🔑 キーワード (100 字以内、カンマ区切り)
+## 1. App 情報
 
-> 知識,メモ,AI,要約,記事,保存,Pocket,RSS,Read it later,リーディング,学習,体系化,知識管理,AppleIntelligence,日記
+### App 名 / App Name（30字）
+```
+Knowledge Base
+```
 
-(文字数: 96 字 / 上限 100)
+### サブタイトル / Subtitle（30字）
+- 日本語:
+```
+AIが整理する第二の脳
+```
+- English:
+```
+Your AI-organized second brain
+```
 
-代替候補 (用途別):
-- 学習特化: `知識,メモ,AI,要約,学習,記事,保存,体系化,知識管理,RAG,SwiftUI,iOS,Apple,Intelligence`
-- 情報収集特化: `Pocket,リーディング,後で読む,RSS,ブックマーク,記事,要約,AI,知識,体系化,RAG,メモ,iOS`
-
----
-
-## 🌐 サポート URL
-
-> https://github.com/changch223/KnowledgeTree/blob/main/docs/support.md
-
-→ FAQ + 既知の問題 + 連絡方法 (GitHub Issues)
-
----
-
-## 🌐 マーケティング URL
-
-> https://github.com/changch223/KnowledgeTree/blob/main/docs/marketing.md
-
-→ プロダクト紹介、ビジョン、機能の詳細、画面イメージ
+### カテゴリ / Category
+```
+Primary: Productivity（仕事効率化）
+Secondary: Reference（辞書/参考書）
+```
 
 ---
 
-## 📝 補足: 各文言の使い分け
+## 2. プロモーションテキスト / Promotional Text（170字・審査なしで随時更新可）
+
+- 日本語:
+```
+読んだ記事・PDF・写真・音声を保存するだけ。端末内のAIが要点・事実・概念を自動でまとめ、AIチャットがあなたの知識から答えます。データは端末とあなたのiCloudだけ。
+```
+- English:
+```
+Just save articles, PDFs, photos, or audio. On-device AI auto-organizes the key points, facts, and concepts—then answers from your own knowledge. Your data stays on your device and iCloud.
+```
+
+---
+
+## 3. 概要 / Description（4000字）
+
+### 日本語
+```
+Knowledge Base は、読んだものを「保存するだけ」で、端末内のAIが自動的に整理してくれる、あなた専用の第二の脳です。
+
+あとで読もうと保存した記事、撮ったスクリーンショット、共有された PDF や音声メモ——ためる一方で、二度と見返さない。そんな経験はありませんか。Knowledge Base は、保存した瞬間からAIが要点・重要な事実・登場する人物やモノを抽出し、テーマごとの「概念ページ（あなただけの Wiki）」に自動でまとめ続けます。必要なときに開けば、いつでも最新の「わかっていること」が見えます。
+
+■ あらゆるものを、ワンタップで取り込み
+・Webページ（共有シートから）
+・テキスト / メモ / メールの本文
+・ファイル（PDF・txt・Markdown）
+・写真（文字を自動で読み取り＝OCR）
+・音声ファイル（自動で文字起こし）
+・Gmail などの PDF 添付の共有
+
+■ AIが、自動で知識に変える
+・要約と「重要な事実」を抽出
+・タグと分野を自動で付与
+・複数の記事を横断した「概念ページ（Wiki）」を生成・更新
+・英語・中国語などの外国語は日本語に翻訳してから整理
+
+■ あなたの知識から答える AIチャット
+保存した記事だけを根拠に、AIが質問に答えます。答えには番号付きの出典が付き、元記事へすぐ移動できます。
+
+■ 自分好みに調整できる
+・本文の表現を見直す（誤認識の固有名詞などをAIが提案、確認してから反映）
+・生成内容をカスタマイズ（「技術的な詳細を重視」「要約を短く」など、まとめ方を指定）
+
+■ プライバシー最優先・完全オンデバイスAI
+AIの解析（要約・抽出・チャット・翻訳）はすべて Apple Intelligence により端末内で行われます。あなたのデータが開発者や第三者に送信されることはありません。保存先は端末内と、あなた自身の iCloud（プライベート）だけ。iCloud 同期をオンにすれば、複数の端末で同じ知識を引き継げます。
+
+■ こんな方に
+・記事や情報を「あとで読む」で溜め込みがちな方
+・調べたことを自分の言葉で体系化したい方
+・プライバシーを守りながらAIを活用したい方
+
+※ 本アプリの自動整理・AIチャットには Apple Intelligence（iOS 26.4 以降の対応端末）が必要です。非対応端末でも、保存・閲覧・検索は引き続きご利用いただけます。
+※ お問い合わせ・ご要望は GitHub Issues までお願いします。
+```
+
+### English
+```
+Knowledge Base is your personal second brain. Just save what you read, and on-device AI organizes it for you—automatically.
+
+We all save articles "to read later," take screenshots, and forward PDFs—then never look at them again. Knowledge Base changes that. The moment you save something, AI extracts the key points, important facts, and the people and things involved, then continuously builds and updates topic-based "concept pages"—your own personal wiki. Open it whenever you need, and you'll always see the latest of what you know.
+
+Capture anything, in one tap
+- Web pages (from the share sheet)
+- Text, notes, email bodies
+- Files (PDF, txt, Markdown)
+- Photos (text is read automatically via OCR)
+- Audio files (transcribed automatically)
+- Shared PDF attachments (e.g., from Gmail)
+
+AI turns it into knowledge, automatically
+- Summaries and "key facts"
+- Automatic tags and categories
+- Concept pages (a wiki) synthesized across multiple articles
+- Foreign-language content (English, Chinese, and more) translated to Japanese first
+
+An AI chat grounded in your knowledge
+Ask questions and get answers based only on what you've saved—complete with numbered citations that link back to the original article.
+
+Tune it your way
+- Refine the wording of saved text (AI proposes fixes for misrecognized names; you confirm before applying)
+- Customize what's generated ("emphasize technical detail," "keep summaries short," and more)
+
+Privacy first — fully on-device AI
+All AI processing (summarizing, extraction, chat, translation) runs on your device via Apple Intelligence. Your data is never sent to the developer or any third party. Everything stays on your device and in your own private iCloud. Turn on iCloud sync to carry your knowledge across devices.
+
+Note: Automatic organization and AI chat require Apple Intelligence (a supported device on iOS 26.4 or later). On unsupported devices, saving, viewing, and search still work.
+Questions or feedback? Please open a GitHub Issue.
+```
+
+---
+
+## 4. キーワード / Keywords（100字・カンマ区切り・スペースは入れない）
+
+- 日本語:
+```
+知識,メモ,第二の脳,AI,要約,あとで読む,ブックマーク,PDF,文字起こし,OCR,オフライン,プライバシー,iCloud,ナレッジ,整理
+```
+- English:
+```
+second brain,notes,AI,summary,read later,bookmark,PDF,OCR,transcribe,knowledge,offline,privacy,research,wiki
+```
+
+---
+
+## 5. サポート / プライバシー URL
+
+```
+サポート URL (Support URL):
+https://github.com/changch223/KnowledgeTree/blob/main/docs/support.md
+
+プライバシーポリシー URL (Privacy Policy URL):
+https://github.com/changch223/KnowledgeTree/blob/main/docs/privacy-policy.md
+
+マーケティング URL (任意 / Marketing URL — optional):
+https://github.com/changch223/KnowledgeTree
+```
+※ GitHub Pages を有効化する場合は、より見栄えの良い `https://changch223.github.io/...` 形式に差し替え推奨。
+
+---
+
+## 6. バージョン情報 / What's New（リリースノート・4000字）
+
+### 初回リリース（v1.0）日本語
+```
+Knowledge Base へようこそ。
+・記事 / テキスト / PDF / 写真 / 音声を保存するだけで、端末内AIが自動で要点・事実・概念に整理します。
+・保存した知識から答えるAIチャット（出典付き）。
+・本文の見直しと生成内容のカスタマイズ。
+・完全オンデバイスAI + iCloud 同期でプライバシーを守ります。
+ご意見・不具合は GitHub Issues までお寄せください。
+```
+
+### Initial release (v1.0) English
+```
+Welcome to Knowledge Base.
+- Just save articles, text, PDFs, photos, or audio—on-device AI organizes them into key points, facts, and concepts.
+- An AI chat that answers from your saved knowledge, with citations.
+- Refine wording and customize what gets generated.
+- Fully on-device AI plus iCloud sync, with privacy first.
+Questions or bugs? Please open a GitHub Issue.
+```
+
+---
+
+## 7. プライバシー（App プライバシー / Nutrition Label）
+
+App Store Connect の「App のプライバシー」では次のように回答（`PrivacyInfo.xcprivacy` と整合）:
+
+```
+データを収集していますか？ → いいえ（Data Not Collected）
+
+理由:
+- 全データは端末内 (SwiftData) と、ユーザー自身の iCloud プライベートデータベースにのみ保存。
+- 開発者や第三者にデータを送信・収集しない。
+- トラッキングなし（NSPrivacyTracking = false、トラッキングドメインなし）。
+- ネットワーク通信は「ユーザーが保存した URL の記事取得」と「Apple の iCloud 同期」のみ。
+- Required Reason API: UserDefaults (CA92.1) のみ使用。
+```
+
+---
+
+## 8. 審査時の補足（App Review メモ・任意）
+
+```
+- 本アプリの中核機能（自動要約・知識抽出・AIチャット・翻訳）は Apple Intelligence / Foundation Models を使用し、すべて端末内で動作します。Apple Intelligence 非対応端末では、これらAI機能は無効化され、保存・閲覧・検索は引き続き利用できます。
+- アカウント登録・ログインは不要です。
+- データは端末内とユーザーの iCloud にのみ保存され、当社サーバーはありません。
+- 音声の文字起こしは Speech フレームワーク（オンデバイス）を使用します。
+```
+
+---
+
+## 9. 年齢評価 / Age Rating（要確認）
+
+```
+推奨: 4+（不適切なコンテンツは含まない）
+
+注意: 本アプリはユーザーが指定した任意の Web ページを取得・表示します。
+App Store Connect の年齢評価アンケートで「無制限の Web アクセス」に該当すると判断される場合、
+評価が 17+ に上がる可能性があります。実際のアンケート回答に従って設定してください。
+```
+
+---
+
+## 10. スクリーンショット案（撮影メモ・任意）
+
+```
+1. iKnow / Knowledge フィード（概念中心のまとめ一覧）
+2. 概念ページ（要点 + 本文 + 出典）
+3. AIチャット（番号付き出典で回答）
+4. 取り込み（＋ボタンの URL/メモ/ファイル/写真/音声 と共有シート）
+5. 本文の見直し / 生成内容のカスタマイズ
+キャプション例: 「保存するだけ。AIが整理する。」「あなたの知識から、AIが答える。」
+```
+
+---
+
+## 11. 各フィールドの使い分け（メモ）
 
 | フィールド | 役割 | トーン |
 |---|---|---|
-| プロモーション | アプリページ最上部の目立つ位置、訴求 | キャッチー、行動喚起 |
-| 概要 | 機能 + 価値の詳細説明 | やや長め、わかりやすい |
-| キーワード | App Store 検索ヒット用 | 競合キーワード優先 |
-| サポート URL | ユーザーが困った時の問い合わせ先 | 静的 FAQ + 連絡フォーム |
-| マーケティング URL | プロダクト全体紹介 (Web 風) | プロダクト Web サイト相当 |
-
-App Store Connect 提出時は、各フィールドにこれらをコピペしてください。
+| プロモーション | ページ上部の訴求（審査なしで更新可） | キャッチー |
+| 概要 | 機能 + 価値の詳細 | やさしく具体的 |
+| キーワード | 検索ヒット用 | 競合語優先・スペースなし |
+| サポート URL | 困った時の連絡先 | 静的 FAQ + GitHub Issues |
+| What's New | バージョンごとの変更点 | 簡潔 |
