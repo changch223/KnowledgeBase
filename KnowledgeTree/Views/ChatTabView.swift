@@ -110,13 +110,7 @@ struct ChatTabView: View {
                     .accessibilityLabel(Text("chat.sidebar.title"))
                 }
                 // spec 056: 📊 Knowledge Graph 全体画面アイコン
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(value: KnowledgeGraphFullScreenDestination()) {
-                        Image(systemName: "chart.dots.scatter")
-                    }
-                    .accessibilityIdentifier("toolbar.knowledgeGraph")
-                    .accessibilityLabel(Text("knowledgeGraph.fullScreen.title"))
-                }
+                // spec 090: ユーザー要望で非表示 (グラフ機能を一旦 UI から外す)。
             }
             .navigationDestination(for: Article.self) { article in
                 // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない (入れ子防止)
