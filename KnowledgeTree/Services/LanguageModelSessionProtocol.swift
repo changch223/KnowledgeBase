@@ -406,14 +406,19 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     private func generateStructured<T: Generable>(
         _ label: String,
         _ type: T.Type,
-        prompt: String
+        prompt: String,
+        maxResponseTokens: Int? = nil
     ) async throws -> T {
         #if DEBUG
         await Self.probe(label, prompt: prompt, schema: T.generationSchema)
         #endif
+        // spec 096 (perf): 出力トークンの上限。@Guide で短く指定していても LM が暴走出力すると
+        // prompt + 生成中トークンが窓 4096 を超えて overflow する。ハード上限で生成を止める。
+        // nil = 既定 (上限なし)。
+        let options = GenerationOptions(maximumResponseTokens: maxResponseTokens)
         return try await FoundationModelGate.run {
             let session = LanguageModelSession()
-            let response = try await session.respond(generating: type) { prompt }
+            let response = try await session.respond(generating: type, options: options) { prompt }
             return response.content
         }
     }
@@ -469,18 +474,22 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     }
 
     /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
+    /// spec 096: 出力上限で overflow を抑える (summary≤280 + 要点5×60 ≈ 500tok 程度 → 余裕込み 800)。
     func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
-        try await generateStructured("generateConceptSynthesis (概念合成)", ConceptSynthesisOutput.self, prompt: prompt)
+        try await generateStructured("generateConceptSynthesis (概念合成)", ConceptSynthesisOutput.self,
+                                     prompt: prompt, maxResponseTokens: 800)
     }
 
     /// spec 080拡張: overflow 時の小型再試行 (出力予約を絞る)。
     func generateConceptSynthesisCompact(prompt: String) async throws -> ConceptSynthesisCompactOutput {
-        try await generateStructured("generateConceptSynthesisCompact (概念合成/小型)", ConceptSynthesisCompactOutput.self, prompt: prompt)
+        try await generateStructured("generateConceptSynthesisCompact (概念合成/小型)", ConceptSynthesisCompactOutput.self,
+                                     prompt: prompt, maxResponseTokens: 400)
     }
 
     /// spec 042: hierarchical chunked パス用、中間 chunk 要約 (5+ 関連記事時)
     func generateConceptSummaryChunk(prompt: String) async throws -> ConceptSummaryChunk {
-        try await generateStructured("generateConceptSummaryChunk (概念chunk)", ConceptSummaryChunk.self, prompt: prompt)
+        try await generateStructured("generateConceptSummaryChunk (概念chunk)", ConceptSummaryChunk.self,
+                                     prompt: prompt, maxResponseTokens: 300)
     }
 
     /// spec 074: 記事の概念階層 (広い概念 + 具体概念) を抽出 (小出力 = token 安全)。

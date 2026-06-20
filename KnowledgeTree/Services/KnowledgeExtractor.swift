@@ -20,12 +20,17 @@ struct KnowledgeExtractor {
     /// nil なら failure tracking ゼロ (テスト経路)。
     let translationAvailability: TranslationAvailabilityProtocol?
 
+    /// spec 096 (perf): 翻訳結果のセッションキャッシュ (nil なら毎回翻訳)。
+    let translationCache: TranslationCache?
+
     init(
         session: LanguageModelSessionProtocol,
-        translationAvailability: TranslationAvailabilityProtocol? = nil
+        translationAvailability: TranslationAvailabilityProtocol? = nil,
+        translationCache: TranslationCache? = nil
     ) {
         self.session = session
         self.translationAvailability = translationAvailability
+        self.translationCache = translationCache
     }
 
     /// spec 042: 翻訳前処理の挙動を実機 (Console.app) で diagnose するための logger。
@@ -93,18 +98,24 @@ struct KnowledgeExtractor {
         case .other(let raw):
             source = raw
         }
+        // spec 096 (perf): 同じ本文を再翻訳しない (再抽出/カスタマイズ/backfill で頻発)。
+        if let hit = translationCache?.cached(source: source, text: text) {
+            Self.logger.notice("translate cache hit: source=\(source, privacy: .public) chars=\(text.count)")
+            return hit
+        }
         let start = Date()
         do {
             let translated = try await session.translate(text: text, source: source)
             let trimmed = translated.trimmingCharacters(in: .whitespacesAndNewlines)
             let elapsedMs = Int(Date().timeIntervalSince(start) * 1000)
             let minRequired = max(20, text.count / 4)
-            // 翻訳結果が極端に短い (元の 1/4 未満) → 失敗扱いで raw を返す
+            // 翻訳結果が極端に短い (元の 1/4 未満) → 失敗扱いで raw を返す (キャッシュしない)
             guard trimmed.count >= minRequired else {
                 Self.logger.notice("translate fallback: too short translated=\(trimmed.count) required=\(minRequired) elapsedMs=\(elapsedMs)")
                 return text
             }
             Self.logger.notice("translate ok: input=\(text.count) translated=\(trimmed.count) elapsedMs=\(elapsedMs)")
+            translationCache?.put(source: source, text: text, translated: trimmed)
             return trimmed
         } catch {
             Self.logger.error("translate failed: \(String(describing: error), privacy: .public)")

@@ -31,8 +31,22 @@ struct ExtractionCustomizeSheet: View {
         Preset(title: "detail.customize.preset.technical", text: "技術的な仕組み・実装の詳細を重視する"),
         Preset(title: "detail.customize.preset.people", text: "登場する人物・組織とその関係を中心にする"),
         Preset(title: "detail.customize.preset.beginner", text: "専門用語をかみ砕き、初心者にも分かるようにやさしく"),
-        Preset(title: "detail.customize.preset.data", text: "数値・日付・統計などの具体的なデータを重視する")
+        Preset(title: "detail.customize.preset.data", text: "数値・日付・統計などの具体的なデータを重視する"),
+        // 個別フィールド狙い (要約 / 事実 / 人物・モノ を別々に方向づけ、合成できる)
+        Preset(title: "detail.customize.preset.summaryShort", text: "要約は2〜3行で簡潔にする"),
+        Preset(title: "detail.customize.preset.moreFacts", text: "重要な事実をできるだけ多く拾う"),
+        Preset(title: "detail.customize.preset.peopleDetail", text: "人物・組織・モノを漏れなく拾う")
     ]
+
+    /// プリセットを guidance に追加 (重複は足さない)。複数タップで方向を合成できる。
+    private func appendPreset(_ text: String) {
+        let g = guidance.trimmingCharacters(in: .whitespacesAndNewlines)
+        if g.isEmpty {
+            guidance = text
+        } else if !g.contains(text) {
+            guidance = g + "\n" + text
+        }
+    }
 
     private var hasCurrent: Bool { !summary.isEmpty || !facts.isEmpty }
 
@@ -52,7 +66,7 @@ struct ExtractionCustomizeSheet: View {
                         HStack(spacing: 8) {
                             ForEach(Self.presets, id: \.text) { preset in
                                 Button {
-                                    guidance = preset.text
+                                    appendPreset(preset.text)
                                 } label: {
                                     Text(preset.title)
                                         .font(.caption)
