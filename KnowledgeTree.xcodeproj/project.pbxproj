@@ -74,6 +74,9 @@
 		ABF8B2C3D4E5F6A7B8C9D0F3 /* KnowledgeTree/Models/SavedAnswer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */; };
 		ABF8B2C3D4E5F6A7B8C9D0F4 /* KnowledgeTree/Models/UnderstandingInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C38A /* KnowledgeTree/Models/UnderstandingInteraction.swift */; };
 		ABF8B2C3D4E5F6A7B8C9D0F5 /* KnowledgeTree/Models/CategoryDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C38B /* KnowledgeTree/Models/CategoryDefinition.swift */; };
+		ABF8B2C3D4E5F6A7B8C9D0F6 /* KnowledgeTree/Services/RawArticleIntake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C390 /* KnowledgeTree/Services/RawArticleIntake.swift */; };
+		ABF8B2C3D4E5F6A7B8C9D0F7 /* KnowledgeTree/Services/PDFFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C391 /* KnowledgeTree/Services/PDFFetcher.swift */; };
+		ABF8B2C3D4E5F6A7B8C9D0F8 /* KnowledgeTree/Services/RawArticleFileImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9A7B23E61C8DA9F5A9C392 /* KnowledgeTree/Services/RawArticleFileImport.swift */; };
 		B691D7E1B0C6CEADA639BD7E /* KnowledgeExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED10A656104BD0A5554A675B /* KnowledgeExtractionService.swift */; };
 		B9ABDD2A94692428CB24885A /* KnowledgeTree/Models/Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A26FCD5422FEEBFDD449914 /* KnowledgeTree/Models/Tag.swift */; };
 		BDA5AB60F9DB8361D24CEE5F /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEDF24678D79BD3813C37A1D /* Article.swift */; };
@@ -188,6 +191,9 @@
 		4F9A7B23E61C8DA9F5A9C389 /* KnowledgeTree/Models/SavedAnswer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/SavedAnswer.swift; sourceTree = SOURCE_ROOT; };
 		4F9A7B23E61C8DA9F5A9C38A /* KnowledgeTree/Models/UnderstandingInteraction.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/UnderstandingInteraction.swift; sourceTree = SOURCE_ROOT; };
 		4F9A7B23E61C8DA9F5A9C38B /* KnowledgeTree/Models/CategoryDefinition.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Models/CategoryDefinition.swift; sourceTree = SOURCE_ROOT; };
+		4F9A7B23E61C8DA9F5A9C390 /* KnowledgeTree/Services/RawArticleIntake.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Services/RawArticleIntake.swift; sourceTree = SOURCE_ROOT; };
+		4F9A7B23E61C8DA9F5A9C391 /* KnowledgeTree/Services/PDFFetcher.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Services/PDFFetcher.swift; sourceTree = SOURCE_ROOT; };
+		4F9A7B23E61C8DA9F5A9C392 /* KnowledgeTree/Services/RawArticleFileImport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KnowledgeTree/Services/RawArticleFileImport.swift; sourceTree = SOURCE_ROOT; };
 		577ED5A52FA8118400EB3FE6 /* KnowledgeTree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KnowledgeTree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5B42FA8118500EB3FE6 /* KnowledgeTreeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		577ED5BE2FA8118500EB3FE6 /* KnowledgeTreeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnowledgeTreeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -412,6 +418,7 @@
 				5B1D2E3F4A5C6D7E8F901A02 /* KnowledgeTree/Models/LintLog.swift */,
 				F1A8B2C3D4E5F6A7B8C9D0E1 /* KnowledgeTree/AppIntents/ArticleSavingActor.swift */,
 				B1C2D3E4F506A7B8C9D0E1F2 /* KnowledgeTreeSafariExtension/KnowledgeTreeSafariExtension.entitlements */,
+				4F9A7B23E61C8DA9F5A9C390 /* KnowledgeTree/Services/RawArticleIntake.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -920,6 +927,9 @@
 				D81C5EB872CA418D5BA6F29A /* KnowledgeTree/Models/UnderstandingInteraction.swift in Sources */,
 				D81C5EB872CA418D5BA6F29B /* KnowledgeTree/Models/CategoryDefinition.swift in Sources */,
 				5B1D2E3F4A5C6D7E8F901A04 /* KnowledgeTree/Models/LintLog.swift in Sources */,
+				ABF8B2C3D4E5F6A7B8C9D0F6 /* KnowledgeTree/Services/RawArticleIntake.swift in Sources */,
+				ABF8B2C3D4E5F6A7B8C9D0F7 /* KnowledgeTree/Services/PDFFetcher.swift in Sources */,
+				ABF8B2C3D4E5F6A7B8C9D0F8 /* KnowledgeTree/Services/RawArticleFileImport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
