@@ -28,4 +28,15 @@ enum AppGroup {
             withIntermediateDirectories: true
         )
     }
+
+    /// spec 092 Part 2: 共有された音声ファイルを一時保管する App Group 内ディレクトリ。
+    /// Share 拡張が書き込み、アプリ起動時の文字起こし runner が読み出して削除する。
+    static func pendingAudioDirectory() -> URL? {
+        guard let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: identifier
+        ) else { return nil }
+        let dir = containerURL.appendingPathComponent("PendingAudio", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
 }

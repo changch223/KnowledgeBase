@@ -33,6 +33,7 @@ struct ArticleDetailView: View {
     @State private var refreshTick: Int = 0
     /// spec 008: 関連記事タップで sheet を切り替えるための state
     @State private var presentedRelatedArticle: Article?
+    @State private var showCorrectionSheet: Bool = false
     /// spec 016: 本文 DisclosureGroup の展開状態。初期 collapsed、毎回 sheet 起動時にリセット。
     @State private var isBodyExpanded: Bool = false
 
@@ -93,12 +94,26 @@ struct ArticleDetailView: View {
             .navigationTitle("reader.navigationTitle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // spec 095: 自然言語で本文を訂正 (本文がある記事のみ)。
+                if bodySucceeded {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showCorrectionSheet = true
+                        } label: {
+                            Label("detail.correct.title", systemImage: "pencil.and.scribble")
+                        }
+                        .accessibilityIdentifier("articleDetail.correctButton")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     // sheet 経由なら Done ボタン、navigation push 経由なら戻る gesture で自然に消える
                     if embedNavigationStack {
                         Button("reader.doneButton") { dismiss() }
                     }
                 }
+            }
+            .sheet(isPresented: $showCorrectionSheet) {
+                ArticleCorrectionSheet(article: article)
             }
             .sheet(item: $presentedSafariURL) { wrapper in
                 SafariView(url: wrapper.url)
@@ -145,6 +160,20 @@ struct ArticleDetailView: View {
     private var scrollContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DS.Spacing.xxxl) {
+                // spec 095: 訂正処理中バナー (シートを閉じても進捗が見える)。
+                if services.correctionCoordinator?.isCorrecting(article) == true {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("detail.correct.banner")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DS.Spacing.lg)
+                    .background(DS.Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("articleDetail.correctionBanner")
+                }
+
                 // headerSection (サムネ AsyncImage) は refreshTick rebuild から外す。
                 // Timer による毎秒 rebuild で AsyncImage が再 download → loading に戻り
                 // 「写真が表示/消える」を繰り返す問題を回避。

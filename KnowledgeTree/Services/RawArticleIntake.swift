@@ -22,6 +22,7 @@ enum RawArticleIntake {
         case sharedText  // 他アプリからの共有テキスト
         case file        // PDF / テキストファイル
         case image       // 画像 OCR
+        case audio       // 音声ファイル文字起こし
     }
 
     /// 本文テキストから raw article を作成 (重複なら .duplicate)。
@@ -63,6 +64,59 @@ enum RawArticleIntake {
         }
     }
 
+    /// spec 092 Part 2: 共有された音声を「文字起こし待ち (pending)」の記事として保存。
+    /// 音声バイトは App Group に書き、ArticleBody は .pending (本文なし) にする。
+    /// アプリ起動時の `AudioTranscriptionBackfillRunner` が文字起こしして .succeeded に遷移させる。
+    @discardableResult
+    static func savePendingAudio(
+        into context: ModelContext,
+        audioData: Data,
+        fileExtension: String,
+        title rawTitle: String?
+    ) -> SaveResult {
+        guard !audioData.isEmpty else { return .missingURL }
+
+        let hash = stableHash(audioData)
+        let syntheticURL = "knowledgebase://\(Source.audio.rawValue)/\(hash)"
+        let descriptor = FetchDescriptor<Article>(predicate: #Predicate { $0.url == syntheticURL })
+        if let existing = try? context.fetch(descriptor), !existing.isEmpty {
+            return .duplicate
+        }
+
+        // 音声バイトを App Group に保存 (起動時 runner が読み出す)。
+        guard let dir = AppGroup.pendingAudioDirectory() else {
+            return .persistenceFailure("app group unavailable")
+        }
+        let ext = fileExtension.isEmpty ? "m4a" : fileExtension
+        let fileURL = dir.appendingPathComponent("\(hash).\(ext)")
+        do {
+            try audioData.write(to: fileURL, options: .atomic)
+        } catch {
+            return .persistenceFailure("audio write failed: \(error)")
+        }
+
+        let title = derivedTitle(rawTitle: rawTitle, body: rawTitle ?? "")
+        let article = Article(url: syntheticURL, title: title)
+        context.insert(article)
+
+        // 本文は未確定 (.pending)。enrichment は terminal で fetch を抑止。
+        let bodyModel = ArticleBody(article: article, status: .pending, extractedText: nil)
+        context.insert(bodyModel)
+        article.body = bodyModel
+
+        let enrichment = ArticleEnrichment(article: article, status: .permanentlyFailed)
+        context.insert(enrichment)
+        article.enrichment = enrichment
+
+        do {
+            try context.save()
+            return .saved(article)
+        } catch {
+            try? FileManager.default.removeItem(at: fileURL)
+            return .persistenceFailure(String(describing: error))
+        }
+    }
+
     /// タイトル: 明示 > 本文先頭行 (40 字) > 既定。
     static func derivedTitle(rawTitle: String?, body: String) -> String {
         if let t = rawTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty {
@@ -79,6 +133,16 @@ enum RawArticleIntake {
     static func stableHash(_ s: String) -> String {
         var hash: UInt64 = 14695981039346656037
         for byte in s.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1099511628211
+        }
+        return String(hash, radix: 16)
+    }
+
+    /// バイト列の決定的ハッシュ (FNV-1a 64bit)。音声ファイル等の重複検知に使う。
+    static func stableHash(_ data: Data) -> String {
+        var hash: UInt64 = 14695981039346656037
+        for byte in data {
             hash ^= UInt64(byte)
             hash = hash &* 1099511628211
         }

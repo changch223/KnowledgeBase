@@ -19,7 +19,7 @@ struct AddArticleSheet: View {
     @Environment(ServiceContainer.self) private var services
 
     private enum Mode: String, CaseIterable, Identifiable {
-        case url, note, file, image
+        case url, note, file, image, audio
         var id: String { rawValue }
         var titleKey: LocalizedStringKey {
             switch self {
@@ -27,6 +27,7 @@ struct AddArticleSheet: View {
             case .note: return "addArticle.mode.note"
             case .file: return "addArticle.mode.file"
             case .image: return "addArticle.mode.image"
+            case .audio: return "addArticle.mode.audio"
             }
         }
     }
@@ -41,6 +42,9 @@ struct AddArticleSheet: View {
     }()
 
     private let ocrService: OCRServicing = VisionOCRService()
+    private let audioService: AudioTranscribing = AudioTranscriptionService()
+    private let transcriptCorrector: TranscriptCorrecting =
+        LLMTranscriptCorrectionService(session: FoundationModelLanguageModelSession())
 
     @State private var mode: Mode = .url
     @State private var urlText: String = ""
@@ -52,6 +56,10 @@ struct AddArticleSheet: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var ocrText: String = ""
     @State private var isOCRRunning: Bool = false
+    @State private var showAudioImporter: Bool = false
+    @State private var pickedAudioName: String?
+    @State private var audioText: String = ""
+    @State private var isTranscribing: Bool = false
     @State private var errorMessage: String?
     @State private var isProcessing: Bool = false
     @State private var showDuplicateAlert: Bool = false
@@ -121,6 +129,32 @@ struct AddArticleSheet: View {
                     } footer: {
                         Text("addArticle.image.footer")
                     }
+                case .audio:
+                    Section {
+                        Button {
+                            showAudioImporter = true
+                        } label: {
+                            Label(
+                                pickedAudioName ?? String(localized: "addArticle.audio.choose"),
+                                systemImage: "waveform"
+                            )
+                        }
+                        .accessibilityIdentifier("addArticle.audioChooseButton")
+
+                        if isTranscribing {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                Text("addArticle.audio.transcribing")
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else if !audioText.isEmpty {
+                            TextField("addArticle.note.bodyPlaceholder", text: $audioText, axis: .vertical)
+                                .lineLimit(6...20)
+                                .accessibilityIdentifier("addArticle.audioTextField")
+                        }
+                    } footer: {
+                        Text("addArticle.audio.footer")
+                    }
                 }
 
                 if let errorMessage {
@@ -168,6 +202,22 @@ struct AddArticleSheet: View {
                 guard let newItem else { return }
                 Task { await runOCR(on: newItem) }
             }
+            .fileImporter(
+                isPresented: $showAudioImporter,
+                allowedContentTypes: [.audio],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    if let url = urls.first {
+                        pickedAudioName = url.lastPathComponent
+                        errorMessage = nil
+                        Task { await runTranscription(on: url) }
+                    }
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
         }
         .accessibilityIdentifier("sheet.addArticle")
     }
@@ -178,6 +228,7 @@ struct AddArticleSheet: View {
         case .note: return !noteBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .file: return pickedFileURL != nil
         case .image: return !ocrText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .audio: return !audioText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
 
@@ -195,7 +246,44 @@ struct AddArticleSheet: View {
             saveFile()
         case .image:
             saveImage()
+        case .audio:
+            saveAudio()
         }
+    }
+
+    private func runTranscription(on url: URL) async {
+        isTranscribing = true
+        audioText = ""
+        errorMessage = nil
+        defer { isTranscribing = false }
+
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        do {
+            let raw = try await audioService.transcribe(fileURL: url)
+            if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                errorMessage = String(localized: "addArticle.audio.error.noText")
+            } else {
+                // spec 094: 既知の用語集で誤認識を補正してからプレビュー表示。
+                let glossary = TranscriptGlossaryBuilder.build(context: context)
+                audioText = await transcriptCorrector.correct(raw, glossary: glossary)
+            }
+        } catch AudioTranscriptionError.unauthorized {
+            errorMessage = String(localized: "addArticle.audio.error.unauthorized")
+        } catch {
+            errorMessage = String(localized: "addArticle.audio.error.failed")
+        }
+    }
+
+    private func saveAudio() {
+        let result = RawArticleIntake.save(
+            into: context,
+            title: pickedAudioName,
+            bodyText: audioText,
+            source: .audio
+        )
+        handle(result)
     }
 
     private func runOCR(on item: PhotosPickerItem) async {

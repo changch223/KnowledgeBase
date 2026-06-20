@@ -81,10 +81,20 @@ struct KnowledgeExtractor {
     func prepareForExtraction(_ text: String) async -> String {
         let detected = LanguageDetector.detect(text)
         Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count)")
-        guard detected == .english else { return text }
+        // spec 093: 日本語以外 (英語 / 中国語 / 韓国語 等) は全て日本語へ翻訳。
+        // .japanese / .unknown (短文・判定不能) はそのまま返す (誤翻訳を避ける)。
+        let source: String
+        switch detected {
+        case .japanese, .unknown:
+            return text
+        case .english:
+            source = "en"
+        case .other(let raw):
+            source = raw
+        }
         let start = Date()
         do {
-            let translated = try await session.translate(text: text)
+            let translated = try await session.translate(text: text, source: source)
             let trimmed = translated.trimmingCharacters(in: .whitespacesAndNewlines)
             let elapsedMs = Int(Date().timeIntervalSince(start) * 1000)
             let minRequired = max(20, text.count / 4)
