@@ -5081,13 +5081,21 @@
         }
       }
     },
+    "tag.management.changeCategory" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "分野を変更" } } }
+    },
+    "tag.management.needsReview" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "要確認" } } }
+    },
     "tag.management.hint" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "タグをタップして、名前変更・統合・削除ができます"
+            "value" : "タグを長押しで分野を変更（修正はAIの学習に使われます）。タップで名前変更・統合・削除。"
           }
         }
       }

@@ -23,6 +23,11 @@ struct TagManagementView: View {
     @State private var selectedCategory: CategoryDefinition?
     @State private var searchQuery: String = ""
 
+    // spec 097 Phase 2b: 分野の手修正 = 学習ストアへの記録トリガ。
+    @Environment(\.modelContext) private var modelContext
+    @Environment(ServiceContainer.self) private var services
+    @Environment(RefreshTrigger.self) private var refresh
+
     private var filteredTags: [Tag] {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let candidates = allTags
@@ -84,6 +89,13 @@ struct TagManagementView: View {
                         Button { selectedTag = tag } label: { TagRow(tag: tag) }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("tag.management.row")
+                            .contextMenu {
+                                Menu("tag.management.changeCategory") {
+                                    ForEach(allCategories.filter { !$0.isHidden }) { cat in
+                                        Button(cat.name) { changeCategory(tag, to: cat.name) }
+                                    }
+                                }
+                            }
                     }
                 } header: {
                     Text("tag.management.hint")
@@ -93,6 +105,26 @@ struct TagManagementView: View {
                 }
             }
         }
+    }
+
+    /// spec 097 Phase 2b: タグの分野をユーザーが手修正 → 学習ストアに正解例として記録し、
+    /// 概念のカテゴリも再ヒール。次回以降の分類で few-shot として効く (精度向上ループ)。
+    private func changeCategory(_ tag: Tag, to newCategory: String) {
+        let old = tag.categoryRaw
+        guard newCategory != (old ?? "") else { return }
+        let contextSnippet = (tag.articles ?? []).first.map {
+            [$0.title, $0.extractedKnowledge?.essence ?? ""].joined(separator: " ")
+        } ?? ""
+        services.correctionStore?.record(
+            tagName: tag.name,
+            contextSnippet: contextSnippet,
+            wrongCategory: old,
+            correctCategory: newCategory
+        )
+        tag.categoryRaw = newCategory
+        tag.categoryConfidence = ClassificationConfidence.high.rawValue  // ユーザー確認済み
+        try? modelContext.save()
+        ConceptSynthesisCommon.healConcepts(forTag: tag, context: modelContext, refreshTrigger: refresh)
     }
 
     @ViewBuilder
@@ -121,6 +153,14 @@ struct TagManagementView: View {
 private struct TagRow: View {
     let tag: Tag
 
+    /// spec 097 Phase 2b: 確信度が低い (Low/Medium) or その他 = 要確認。
+    private var isUncertain: Bool {
+        let conf = tag.categoryConfidence
+        return conf == ClassificationConfidence.low.rawValue
+            || conf == ClassificationConfidence.medium.rawValue
+            || (tag.categoryRaw ?? "") == CategorySeed.otherCategory.name
+    }
+
     var body: some View {
         HStack(spacing: DS.Spacing.md) {
             VStack(alignment: .leading, spacing: 2) {
@@ -128,9 +168,17 @@ private struct TagRow: View {
                     .font(.body)
                     .foregroundStyle(.primary)
                 if let category = tag.categoryRaw, !category.isEmpty {
-                    Text(category)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(category)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        // spec 097 Phase 2b: 確信度が低い (Low/Medium) タグは「要確認」表示。
+                        if isUncertain {
+                            Text("tag.management.needsReview")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
             }
             Spacer()
