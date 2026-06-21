@@ -61,9 +61,10 @@ struct KnowledgeExtractor {
 
     /// spec 006: 1 chunk を Foundation Models に渡して結果を ChunkResult として返す。
     /// throw しない (失敗は ChunkResult.error に格納)。
-    func extractFromChunk(_ chunk: Chunk, guidance: String? = nil) async -> ChunkResult {
+    /// spec 101: sourceLanguage を渡すと chunk ごとの言語再判定をスキップ (記事単位で 1 回判定する経路用)。
+    func extractFromChunk(_ chunk: Chunk, guidance: String? = nil, sourceLanguage: DetectedLanguage? = nil) async -> ChunkResult {
         let stripped = Self.stripCodeBlocks(from: chunk.text)
-        let prepared = await prepareForExtraction(stripped)
+        let prepared = await prepareForExtraction(stripped, override: sourceLanguage)
         // 案A: chunk は小型スキーマ (ChunkKnowledgeOutput) で抽出 → 出力予約が減り chunk を大きくできる。
         let prompt = Self.buildChunkPrompt(text: prepared, guidance: guidance)
         do {
@@ -84,9 +85,12 @@ struct KnowledgeExtractor {
     /// spec 042: 言語判定 + 英語なら翻訳して日本語化、それ以外はそのまま返す。
     /// 翻訳失敗 / 空 / 極端に短い結果は raw text を返して silent fallback (constitution V)。
     /// Console.app (subsystem: app.KnowledgeTree, category: extractor) で挙動を追跡可能。
-    func prepareForExtraction(_ text: String) async -> String {
-        let detected = LanguageDetector.detect(text)
-        Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count)")
+    /// spec 101: override に記事単位で判定した言語を渡すと、chunk ごとの再判定をスキップする
+    /// (長文記事を chunk 分割すると参照・数式・著者名などの断片が id/fr/nl 等に誤検知され、
+    ///  無駄で遅い翻訳 + translationd クラッシュを招くため、記事単位 1 回判定に寄せる)。
+    func prepareForExtraction(_ text: String, override: DetectedLanguage? = nil) async -> String {
+        let detected = override ?? LanguageDetector.detect(text)
+        Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count) override=\(override != nil)")
         // spec 093: 日本語以外 (英語 / 中国語 / 韓国語 等) は全て日本語へ翻訳。
         // .japanese / .unknown (短文・判定不能) はそのまま返す (誤翻訳を避ける)。
         let source: String
@@ -97,6 +101,11 @@ struct KnowledgeExtractor {
             source = "en"
         case .other(let raw):
             source = raw
+        }
+        // spec 101: この言語が notInstalled で失敗済みなら以後スキップ (raw を使う、再試行しない)。
+        if translationCache?.isUnavailable(source: source) == true {
+            Self.logger.notice("translate skip: source=\(source, privacy: .public) unavailable (notInstalled) → raw")
+            return text
         }
         // spec 096 (perf): 同じ本文を再翻訳しない (再抽出/カスタマイズ/backfill で頻発)。
         if let hit = translationCache?.cached(source: source, text: text) {
@@ -118,7 +127,15 @@ struct KnowledgeExtractor {
             translationCache?.put(source: source, text: text, translated: trimmed)
             return trimmed
         } catch {
-            Self.logger.error("translate failed: \(String(describing: error), privacy: .public)")
+            let desc = String(describing: error)
+            // spec 101: 翻訳モデル未インストール (notInstalled) はこの言語を以後スキップ
+            // (同記事の他 chunk で同じ失敗を繰り返し translationd をクラッシュさせるのを防ぐ)。
+            if desc.contains("notInstalled") {
+                translationCache?.markUnavailable(source: source)
+                Self.logger.error("translate notInstalled for source=\(source, privacy: .public) → mark unavailable, raw を使用")
+            } else {
+                Self.logger.error("translate failed: \(desc, privacy: .public)")
+            }
             // spec 042: 翻訳失敗 → SettingsView の誘導 flag を立てる (calm UX、UI 喚起なし)
             translationAvailability?.markNeedsSetup()
             return text

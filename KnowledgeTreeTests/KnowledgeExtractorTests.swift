@@ -236,6 +236,35 @@ struct KnowledgeExtractorTests {
         #expect(session.callCount == 1)
         #expect(session.lastPrompt?.contains("announced a new framework") == true)
     }
+
+    /// spec 101: 翻訳が notInstalled で失敗した言語は、以後の抽出で翻訳をスキップする
+    /// (同じ言語の chunk を何度も翻訳して translationd をクラッシュさせるのを防ぐ)。
+    @MainActor
+    @Test func skipsTranslationForLanguageAfterNotInstalled() async throws {
+        let session = MockLanguageModelSession()
+        session.nextResult = .success(.fixture())
+        session.nextTranslationResult = .failure(FakeNotInstalledTranslateError())
+        let cache = TranslationCache()
+        let extractor = KnowledgeExtractor(session: session, translationCache: cache)
+
+        let english = """
+        Apple announced a new framework called Foundation Models at WWDC. The on-device
+        language model exposes structured output, enabling RAG features for SwiftUI apps.
+        """
+        // 1 回目: 翻訳が notInstalled で失敗 → en を unavailable 記録 + 英語のまま抽出
+        _ = try await extractor.extract(extractedText: english)
+        #expect(session.translationCallCount == 1)
+        #expect(cache.isUnavailable(source: "en"))
+
+        // 2 回目: en は unavailable → 翻訳をスキップ (call 数は増えない)
+        _ = try await extractor.extract(extractedText: english + " Additional English sentence to extract.")
+        #expect(session.translationCallCount == 1)
+    }
+}
+
+/// spec 101: String(describing:) に "notInstalled" を含む擬似翻訳エラー。
+private struct FakeNotInstalledTranslateError: Error, CustomStringConvertible {
+    var description: String { "TranslationError(cause: Translation.TranslationError.Cause.notInstalled)" }
 }
 
 // MARK: - Mock
