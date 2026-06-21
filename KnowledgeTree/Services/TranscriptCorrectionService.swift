@@ -164,12 +164,23 @@ struct LLMTranscriptCorrectionService: TranscriptCorrecting {
 // MARK: - 用語集ビルダー
 
 enum TranscriptGlossaryBuilder {
-    /// 内蔵テック用語 (新規記事で未登録でも頻出する固有名詞)。
+    /// 内蔵の固有名詞シード (新規記事で未登録でも頻出。分野横断で音声/OCR が誤りやすいもの)。
+    /// spec 097 #3: テック偏重だったのを主要ブランド・スポーツ/医療・公的機関に拡張。
+    /// ※ build() ではユーザーの概念/タグ名が先、シードは後 → 既存ユーザーの語を押し出さない。
     static let seedTerms: [String] = [
+        // テクノロジー
         "Claude", "Claude Code", "Anthropic", "ChatGPT", "OpenAI", "Gemini",
         "GitHub", "Xcode", "Swift", "SwiftUI", "SwiftData", "Foundation Models",
         "Apple Intelligence", "iPhone", "iPad", "macOS", "iOS", "Cursor",
-        "Visual Studio Code", "Python", "JavaScript", "TypeScript"
+        "Visual Studio Code", "Python", "JavaScript", "TypeScript",
+        // 主要ブランド・企業 (分野横断、音声で誤りやすい固有名詞)
+        "Apple", "Google", "Amazon", "Microsoft", "Meta", "Netflix",
+        "YouTube", "TikTok", "Instagram", "Nvidia", "Tesla", "Sony",
+        "Nintendo", "Toyota", "Samsung",
+        // スポーツ・大会・組織
+        "オリンピック", "ワールドカップ", "NBA", "MLB", "FIFA", "Jリーグ",
+        // 医療・公的機関
+        "ワクチン", "mRNA", "PCR", "WHO", "NASA"
     ]
 
     /// 既存の概念ページ名 + タグ名 + 内蔵用語から用語集を作る。
