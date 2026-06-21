@@ -5085,6 +5085,46 @@
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "分野を変更" } } }
     },
+    "settings.categoryReview.entry" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "分類の確認" } } }
+    },
+    "category.review.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "分類の確認" } } }
+    },
+    "category.review.hint" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI の自信が低い分類です。右のボタンで正しい分野に直すと、AI がそれを学習します。" } } }
+    },
+    "category.review.fix" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "分野を選ぶ" } } }
+    },
+    "category.review.empty" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "確認が必要な分類はありません" } } }
+    },
+    "category.review.empty.desc" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI の分類はすべて自信ありです。" } } }
+    },
+    "category.review.stats.title" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "精度の状況" } } }
+    },
+    "category.review.stats.learned" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "学習した修正" } } }
+    },
+    "category.review.stats.confidence" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "確信度の内訳" } } }
+    },
+    "category.review.stats.split" : {
+      "extractionState" : "manual",
+      "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "意見が割れている概念" } } }
+    },
     "tag.management.needsReview" : {
       "extractionState" : "manual",
       "localizations" : { "ja" : { "stringUnit" : { "state" : "translated", "value" : "要確認" } } }

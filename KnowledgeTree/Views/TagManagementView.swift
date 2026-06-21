@@ -110,21 +110,10 @@ struct TagManagementView: View {
     /// spec 097 Phase 2b: タグの分野をユーザーが手修正 → 学習ストアに正解例として記録し、
     /// 概念のカテゴリも再ヒール。次回以降の分類で few-shot として効く (精度向上ループ)。
     private func changeCategory(_ tag: Tag, to newCategory: String) {
-        let old = tag.categoryRaw
-        guard newCategory != (old ?? "") else { return }
-        let contextSnippet = (tag.articles ?? []).first.map {
-            [$0.title, $0.extractedKnowledge?.essence ?? ""].joined(separator: " ")
-        } ?? ""
-        services.correctionStore?.record(
-            tagName: tag.name,
-            contextSnippet: contextSnippet,
-            wrongCategory: old,
-            correctCategory: newCategory
+        CategoryCorrectionApplier.apply(
+            tag: tag, to: newCategory,
+            store: services.correctionStore, context: modelContext, refresh: refresh
         )
-        tag.categoryRaw = newCategory
-        tag.categoryConfidence = ClassificationConfidence.high.rawValue  // ユーザー確認済み
-        try? modelContext.save()
-        ConceptSynthesisCommon.healConcepts(forTag: tag, context: modelContext, refreshTrigger: refresh)
     }
 
     @ViewBuilder

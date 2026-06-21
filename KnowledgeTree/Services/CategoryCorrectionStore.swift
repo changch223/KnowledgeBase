@@ -89,3 +89,28 @@ final class CategoryCorrectionStore {
         (try? context.fetchCount(FetchDescriptor<CategoryCorrectionExample>())) ?? 0
     }
 }
+
+/// spec 097 Phase 2b/4: タグの分野手修正を一貫して適用する共通処理。
+/// 記録 (学習) + categoryRaw 反映 + 確信度 High + 概念ヒール。
+/// TagManagementView / CategoryReviewView で共用 (ロジックの drift 防止)。
+enum CategoryCorrectionApplier {
+    @MainActor
+    static func apply(
+        tag: Tag,
+        to newCategory: String,
+        store: CategoryCorrectionStore?,
+        context: ModelContext,
+        refresh: RefreshTrigger?
+    ) {
+        let old = tag.categoryRaw
+        guard newCategory != (old ?? "") else { return }
+        let snippet = (tag.articles ?? []).first.map {
+            [$0.title, $0.extractedKnowledge?.essence ?? ""].joined(separator: " ")
+        } ?? ""
+        store?.record(tagName: tag.name, contextSnippet: snippet, wrongCategory: old, correctCategory: newCategory)
+        tag.categoryRaw = newCategory
+        tag.categoryConfidence = ClassificationConfidence.high.rawValue
+        try? context.save()
+        ConceptSynthesisCommon.healConcepts(forTag: tag, context: context, refreshTrigger: refresh)
+    }
+}
