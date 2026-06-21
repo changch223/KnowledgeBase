@@ -140,12 +140,10 @@ struct KnowledgeTreeApp: App {
                     if storeLoadFailed {
                         storeLoadFailedBanner
                     }
-                    if let coordinator = serviceContainer.correctionCoordinator,
-                       let article = coordinator.anyAwaitingReview,
-                       let pending = coordinator.pendingConfirmation(for: article) {
-                        ReviewCompleteTopBanner(count: pending.diff.total) {
-                            reviewConfirmArticle = article
-                        }
+                    // 独立 View にして coordinator.awaitingReview を確実に observe する
+                    // (Scene body 直書きだと @Observable 変化で再評価されず popup が出ない bug の回避)。
+                    ReviewCompletionBannerHost(services: serviceContainer) { article in
+                        reviewConfirmArticle = article
                     }
                 }
             }
@@ -331,9 +329,12 @@ struct KnowledgeTreeApp: App {
         )
         // spec 042: 翻訳失敗 → SettingsView 誘導 flag
         let translationAvailability = TranslationAvailability()
+        // spec 096 (perf): 翻訳結果のセッションキャッシュ (再抽出時の再翻訳を回避)。
+        let translationCache = TranslationCache()
         let knowledgeExtractor = KnowledgeExtractor(
             session: session,
-            translationAvailability: translationAvailability
+            translationAvailability: translationAvailability,
+            translationCache: translationCache
         )
         let knowledgeService = DefaultKnowledgeExtractionService(
             extractor: knowledgeExtractor,
