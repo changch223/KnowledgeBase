@@ -436,11 +436,16 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     }
 
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
-        try await generateStructured("generateKnowledge (知識抽出)", ExtractedKnowledgeOutput.self, prompt: prompt)
+        // spec 099: 出力ハード上限で overflow を防御。legit 出力 (~700tok) には十分余裕、
+        // 暴走時のみ作動 (入力~1100 + 1200 + FM overhead < 4096)。品質は落とさない。
+        try await generateStructured("generateKnowledge (知識抽出)", ExtractedKnowledgeOutput.self,
+                                     prompt: prompt, maxResponseTokens: 1200)
     }
 
     func generateChunkKnowledge(prompt: String) async throws -> ChunkKnowledgeOutput {
-        try await generateStructured("generateChunkKnowledge (chunk知識/小型)", ChunkKnowledgeOutput.self, prompt: prompt)
+        // spec 099: 小型スキーマ。legit ~300tok、暴走時のみ作動。
+        try await generateStructured("generateChunkKnowledge (chunk知識/小型)", ChunkKnowledgeOutput.self,
+                                     prompt: prompt, maxResponseTokens: 600)
     }
 
     /// spec 018: Category 統合ダイジェスト生成
