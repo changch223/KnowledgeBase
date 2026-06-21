@@ -3654,7 +3654,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari / Chrome / X / 他のアプリの共有メニューから「Knowledge Base」を選ぶだけ。記事の本文 + 知識を端末内で自動抽出します。"
+            "value" : "Safari・X・他のアプリの共有メニューから「Knowledge Base」を選ぶだけ。記事・PDF・写真・音声を端末内で自動で知識化します。"
           }
         }
       }
@@ -3698,7 +3698,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「知識 Clip」タブの「続きが気になる」から、AI 家庭教師と対話して理解を深められます。「✓ わかった」で理解度が育ちます。"
+            "value" : "AI チャットタブで、保存した記事だけを根拠に質問できます。答えには番号付きの出典が付き、元記事へすぐ戻れます。"
           }
         }
       }
@@ -3709,7 +3709,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "家庭教師と一緒に学ぶ"
+            "value" : "保存した知識に質問"
           }
         }
       }

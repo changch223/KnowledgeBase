@@ -4,11 +4,11 @@
 //
 //  spec 049 — 初回起動 onboarding。4 ページ TabView (PageStyle) で iKnow の核を説明。
 //
-//  Karpathy「保存したものが時間と共に compound する」原則を最初に体験させる:
-//    Page 1: ようこそ — iKnow は「あなた専用の第二の脳」
-//    Page 2: 保存する — Share Sheet で記事 / PDF をどこからでも
-//    Page 3: 自動で整理 — AI が概念ページ + 知識ダイジェストを作る
-//    Page 4: 家庭教師と学ぶ — 「✓ わかった」で理解度を育てる
+//  「保存したものが時間と共に compound する」体験を最初に伝える:
+//    Page 1: ようこそ — Knowledge Base は「あなた専用の第二の脳」
+//    Page 2: 保存する — Share Sheet で記事 / PDF / 写真 / 音声をどこからでも
+//    Page 3: 自動で整理 — AI が概念ページ (Wiki) を作る
+//    Page 4: AI チャット — 保存した知識に質問、出典付きで答える
 //
 //  完了後 UserDefaults `iKnow_onboarding_v1_done` を true、再起動でスキップ。
 //  KnowledgeTreeApp の WindowGroup root で fullScreenCover として表示。
@@ -20,8 +20,7 @@ struct OnboardingView: View {
     @Binding var isPresented: Bool
     @State private var currentPage: Int = 0
 
-    // spec 059 (P0-2): 全 4 ページを xcstrings key 化。Page 4 は V3.0 で廃止された
-    // 「学習タブ」案内を現行 3 タブ導線 (知識 Clip →「続きが気になる」→ 家庭教師) に書き換え。
+    // spec 099: Page 4 を廃止された家庭教師案内から現行の「AI チャット」(保存した知識に質問) に更新。
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             symbol: "brain.head.profile",
@@ -42,7 +41,7 @@ struct OnboardingView: View {
             highlightColor: .orange
         ),
         OnboardingPage(
-            symbol: "book.fill",
+            symbol: "bubble.left.and.bubble.right.fill",
             title: "onboarding.page4.title",
             body: "onboarding.page4.body",
             highlightColor: .purple
