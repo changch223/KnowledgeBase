@@ -18,18 +18,45 @@ import os
 struct CategoryClassificationOutput: Sendable {
     @Guide(description: "テクノロジー / 経済 / 健康 / デザイン / 学術 / アート / ニュース / スポーツ / エンタメ / その他 のいずれか 1 つ。完全一致")
     let categoryName: String
+    @Guide(description: "確信度: High / Medium / Low のいずれか 1 つ")
+    let confidence: String
+}
+
+/// spec 097: 分類の確信度。Low → その他 (保守) / Medium・Low → lint で優先再分類。
+enum ClassificationConfidence: String, Sendable {
+    case high = "High"
+    case medium = "Medium"
+    case low = "Low"
+
+    /// LM 出力文字列を寛容にパース (不明は安全側で medium)。
+    static func parse(_ raw: String) -> ClassificationConfidence {
+        switch raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "high": return .high
+        case "low": return .low
+        default: return .medium
+        }
+    }
+}
+
+/// spec 097: 分類結果 (カテゴリ + 確信度)。
+struct CategoryClassification: Sendable {
+    let category: String
+    let confidence: ClassificationConfidence
 }
 
 @MainActor
 protocol AutoCategoryClassifier {
-    /// Tag の name を入力に、CategorySeed の category 名を返す。
-    /// 失敗 / 不明 → "その他" (= CategorySeed.otherCategory.name)。
-    /// spec 072: context (記事タイトル/essence 等) を渡すと文脈込みで分類精度が上がる。nil でタグ名のみ。
-    func classify(tagName: String, context: String?) async -> String
+    /// spec 097: Tag の name を入力に、カテゴリ + 確信度を返す。
+    /// 失敗 / 不明 / Low → "その他" (= CategorySeed.otherCategory.name)。
+    /// context (記事タイトル/essence 等) を渡すと文脈込みで精度が上がる。nil でタグ名のみ。
+    func classifyDetailed(tagName: String, context: String?) async -> CategoryClassification
 }
 
 extension AutoCategoryClassifier {
-    /// 後方互換: context なし呼び出し。
+    /// 後方互換: カテゴリ名のみ返す。
+    func classify(tagName: String, context: String?) async -> String {
+        await classifyDetailed(tagName: tagName, context: context).category
+    }
     func classify(tagName: String) async -> String {
         await classify(tagName: tagName, context: nil)
     }
@@ -51,16 +78,17 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         self.categoryRegistry = categoryRegistry
     }
 
-    func classify(tagName: String, context: String? = nil) async -> String {
+    func classifyDetailed(tagName: String, context: String? = nil) async -> CategoryClassification {
+        let other = CategorySeed.otherCategory.name
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             logger.debug("classify skipped: empty tagName")
-            return CategorySeed.otherCategory.name
+            return CategoryClassification(category: other, confidence: .low)
         }
 
         guard availabilityChecker.isAvailable else {
             logger.debug("classify fallback to other: language model unavailable")
-            return CategorySeed.otherCategory.name
+            return CategoryClassification(category: other, confidence: .low)
         }
 
         // spec 072: context (記事タイトル/essence) があれば文脈ブロックを足す。
@@ -81,13 +109,18 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
             次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
             必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
             判断に迷う人名・組織名・一般語は「その他」にしてください。
-            ただし明確な技術用語 (AI / 人工知能 / 機械学習 / LLM / 生成AI / プログラミング言語 / フレームワーク / クラウド等) は迷わず「テクノロジー」に分類すること。
+            ただし下記の特例に当てはまる場合は、迷わずその分野に分類すること:
+            \(CategorySeed.firstPassTieBreakers)
 
             # カテゴリー候補 (定義と例)
             \(candidatesText)
 
             # 分類するタグ
             \(trimmed)\(contextBlock)
+
+            # 確信度
+            回答の最後に確信度を [High / Medium / Low] のいずれかで出力してください。
+            High=文脈や一般的事実から直接の根拠がある / Medium=情報が一部不足だが推論で妥当 / Low=情報が足りず推測の域を出ない。
             """
 
         do {
@@ -98,17 +131,22 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
                 prompt
             }
             let candidate = response.content.categoryName
+            let confidence = ClassificationConfidence.parse(response.content.confidence)
             // 出力が有効カテゴリ (レジストリ or CategorySeed) に存在するか検証
-            if validNames.contains(candidate) {
-                logger.notice("classify '\(trimmed, privacy: .public)' -> '\(candidate, privacy: .public)'")
-                return candidate
-            } else {
+            guard validNames.contains(candidate) else {
                 logger.notice("classify '\(trimmed, privacy: .public)' returned unknown category '\(candidate, privacy: .public)', fallback")
-                return CategorySeed.otherCategory.name
+                return CategoryClassification(category: other, confidence: .low)
             }
+            // spec 097: Low は確信が低いので保守的に「その他」へ (lint 第2段で再分類される)。
+            if confidence == .low {
+                logger.notice("classify '\(trimmed, privacy: .public)' -> '\(candidate, privacy: .public)' but Low → その他")
+                return CategoryClassification(category: other, confidence: .low)
+            }
+            logger.notice("classify '\(trimmed, privacy: .public)' -> '\(candidate, privacy: .public)' [\(confidence.rawValue, privacy: .public)]")
+            return CategoryClassification(category: candidate, confidence: confidence)
         } catch {
             logger.error("classify failed for '\(trimmed, privacy: .public)': \(String(describing: error), privacy: .public)")
-            return CategorySeed.otherCategory.name
+            return CategoryClassification(category: other, confidence: .low)
         }
     }
 }
@@ -118,15 +156,27 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
 final class InMemoryAutoCategoryClassifier: AutoCategoryClassifier {
     private let mapping: [String: String]
     private let defaultCategory: String
+    /// spec 097: テストで返す確信度 (default High)。tagName(lowercased)→confidence を上書き可。
+    private let confidenceMapping: [String: ClassificationConfidence]
+    private let defaultConfidence: ClassificationConfidence
 
-    init(mapping: [String: String] = [:], defaultCategory: String = "その他") {
+    init(
+        mapping: [String: String] = [:],
+        defaultCategory: String = "その他",
+        confidenceMapping: [String: ClassificationConfidence] = [:],
+        defaultConfidence: ClassificationConfidence = .high
+    ) {
         self.mapping = mapping
         self.defaultCategory = defaultCategory
+        self.confidenceMapping = confidenceMapping
+        self.defaultConfidence = defaultConfidence
     }
 
-    func classify(tagName: String, context: String? = nil) async -> String {
+    func classifyDetailed(tagName: String, context: String? = nil) async -> CategoryClassification {
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !trimmed.isEmpty else { return defaultCategory }
-        return mapping[trimmed] ?? defaultCategory
+        guard !trimmed.isEmpty else { return CategoryClassification(category: defaultCategory, confidence: .low) }
+        let category = mapping[trimmed] ?? defaultCategory
+        let confidence = confidenceMapping[trimmed] ?? defaultConfidence
+        return CategoryClassification(category: category, confidence: confidence)
     }
 }

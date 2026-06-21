@@ -27,11 +27,17 @@ final class Tag {
     /// (CloudKit lightweight migration 安全 = default nil)。
     var lastLintedAt: Date? = nil
 
-    init(name: String, categoryRaw: String? = nil, lastLintedAt: Date? = nil) {
+    /// spec 097: 直近の分類の確信度 ("High" / "Medium" / "Low" / nil)。
+    /// Low / Medium は lint ループが優先的に再分類する対象 (精度向上ループ)。
+    /// nil = 未分類 or 旧データ (CloudKit lightweight migration 安全 = default nil)。
+    var categoryConfidence: String? = nil
+
+    init(name: String, categoryRaw: String? = nil, lastLintedAt: Date? = nil, categoryConfidence: String? = nil) {
         // name は呼び出し側で必ず TagNormalizer.normalize 済を渡すこと。
         // 防御的に再正規化までは行わない (パフォーマンス + 呼び出し責務明示)。
         self.name = name
         self.categoryRaw = categoryRaw
         self.lastLintedAt = lastLintedAt
+        self.categoryConfidence = categoryConfidence
     }
 }

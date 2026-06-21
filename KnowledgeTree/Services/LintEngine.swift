@@ -412,18 +412,24 @@ final class DefaultLintEngine: LintEngineProtocol {
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
                 .joined(separator: " / ")
-            let predicted = await classifier.classify(tagName: tag.name, context: contextText)
+            let result = await classifier.classifyDetailed(tagName: tag.name, context: contextText)
+            let predicted = result.category
             let predictedNonEmpty = !predicted.isEmpty && predicted != "その他"
             let currentRaw = tag.categoryRaw ?? ""
 
             if currentRaw.isEmpty, predictedNonEmpty {
                 tag.categoryRaw = predicted
+                tag.categoryConfidence = result.confidence.rawValue
                 logLintAction(.reclassifyTag, targetName: tag.name, before: "(none)", after: predicted)
                 reclassifyCount += 1
             } else if predictedNonEmpty, predicted != currentRaw {
                 logLintAction(.reclassifyTag, targetName: tag.name, before: currentRaw, after: predicted)
                 tag.categoryRaw = predicted
+                tag.categoryConfidence = result.confidence.rawValue
                 reclassifyCount += 1
+            } else {
+                // 分類が変わらなくても確信度は更新 (Low/Medium の再訪対象判定に使う)。
+                tag.categoryConfidence = result.confidence.rawValue
             }
             // 分類が変わらなくても「処理済」マーク (周回が前進する)。
             tag.lastLintedAt = .now

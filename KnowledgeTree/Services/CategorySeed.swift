@@ -78,4 +78,14 @@ enum CategorySeed {
     static var promptCandidatesWithDefinitions: String {
         seedDefinitions.map { "- \($0.name): \($0.definition)" }.joined(separator: "\n")
     }
+
+    /// spec 097: 第1段分類の「迷ったらこの分野」特例 (主要分野のみ、token 微増)。
+    /// 既定の「迷ったらその他」から各分野の代表語を救い、IT 偏重を是正。各 1 行 + 反例 1 つ。
+    static let firstPassTieBreakers = """
+        - 明確な技術用語 (AI / 人工知能 / 機械学習 / LLM / 生成AI / プログラミング / クラウド) は迷わずテクノロジー (反例:「AIのハルシネーション」は健康でなくテクノロジー)
+        - 病気 / 栄養 / 睡眠 / メンタル / 医療 は迷わず健康 (反例:「医療AI」の AI はテクノロジー)
+        - 株価 / 決算 / 資金調達 / マーケティング / 経営 は迷わず経済
+        - 競技 / 選手 / 試合 / チーム は迷わずスポーツ (反例: スポーツ以外の人名はスポーツにしない)
+        - 政治 / 事件 / 災害 / 法改正 は迷わずニュース
+        """
 }
