@@ -45,4 +45,20 @@ struct ClassificationConfidenceTests {
         let s = await classifier.classify(tagName: "AI")
         #expect(s == "テクノロジー")
     }
+
+    // spec 097 Phase 2: few-shot ブロックにユーザー修正 (誤り→正解) が入る。
+    @Test func exampleBlockIncludesCorrections() {
+        let block = FoundationModelsAutoCategoryClassifier.buildExampleBlock([
+            CategoryFewShot(tagName: "AI", correctCategory: "テクノロジー", wrongCategory: "健康")
+        ])
+        #expect(block.contains("過去のユーザー修正"))
+        #expect(block.contains("AI"))
+        #expect(block.contains("テクノロジー"))
+        #expect(block.contains("「健康」ではない"))
+    }
+
+    // 例が無ければ空文字 (プロンプトを膨らませない)。
+    @Test func exampleBlockEmptyWhenNoExamples() {
+        #expect(FoundationModelsAutoCategoryClassifier.buildExampleBlock([]).isEmpty)
+    }
 }

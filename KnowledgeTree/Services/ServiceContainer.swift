@@ -81,6 +81,8 @@ final class ServiceContainer {
     var healthScoreService: HealthScoreServiceProtocol?
     /// spec 095: ユーザー訂正のバックグラウンド継続 + 進捗 (画面を閉じても続く)
     var correctionCoordinator: ArticleCorrectionCoordinator?
+    /// spec 097 Phase 2: カテゴリ分類の学習ストア (ユーザー修正の few-shot 供給 + 記録)。
+    var correctionStore: CategoryCorrectionStore?
 }
 
 /// spec 045: 「再生成」trigger payload。

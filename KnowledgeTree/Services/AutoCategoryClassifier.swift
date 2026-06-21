@@ -44,18 +44,30 @@ struct CategoryClassification: Sendable {
     let confidence: ClassificationConfidence
 }
 
+/// spec 097 Phase 2: 学習用の few-shot 例 (ユーザー修正の正解)。@Model を classifier に持ち込まない値型。
+struct CategoryFewShot: Sendable {
+    let tagName: String
+    let correctCategory: String
+    let wrongCategory: String?
+}
+
 @MainActor
 protocol AutoCategoryClassifier {
     /// spec 097: Tag の name を入力に、カテゴリ + 確信度を返す。
     /// 失敗 / 不明 / Low → "その他" (= CategorySeed.otherCategory.name)。
     /// context (記事タイトル/essence 等) を渡すと文脈込みで精度が上がる。nil でタグ名のみ。
-    func classifyDetailed(tagName: String, context: String?) async -> CategoryClassification
+    /// spec 097 Phase 2: examples (過去のユーザー修正) を渡すと few-shot として注入し精度が上がる。
+    func classifyDetailed(tagName: String, context: String?, examples: [CategoryFewShot]) async -> CategoryClassification
 }
 
 extension AutoCategoryClassifier {
+    /// 例なし版 (Phase 1 経路、初回分類)。
+    func classifyDetailed(tagName: String, context: String?) async -> CategoryClassification {
+        await classifyDetailed(tagName: tagName, context: context, examples: [])
+    }
     /// 後方互換: カテゴリ名のみ返す。
     func classify(tagName: String, context: String?) async -> String {
-        await classifyDetailed(tagName: tagName, context: context).category
+        await classifyDetailed(tagName: tagName, context: context, examples: []).category
     }
     func classify(tagName: String) async -> String {
         await classify(tagName: tagName, context: nil)
@@ -78,7 +90,7 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         self.categoryRegistry = categoryRegistry
     }
 
-    func classifyDetailed(tagName: String, context: String? = nil) async -> CategoryClassification {
+    func classifyDetailed(tagName: String, context: String? = nil, examples: [CategoryFewShot] = []) async -> CategoryClassification {
         let other = CategorySeed.otherCategory.name
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -105,13 +117,16 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         let validNames = categoryRegistry?.validNames()
             ?? Set(CategorySeed.allSeeds.map { $0.name })
 
+        // spec 097 Phase 2: 過去のユーザー修正を few-shot で注入 (最大 8 件)。
+        let exampleBlock = Self.buildExampleBlock(examples)
+
         let prompt = """
             次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
             必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
             判断に迷う人名・組織名・一般語は「その他」にしてください。
             ただし下記の特例に当てはまる場合は、迷わずその分野に分類すること:
             \(CategorySeed.firstPassTieBreakers)
-
+            \(exampleBlock)
             # カテゴリー候補 (定義と例)
             \(candidatesText)
 
@@ -149,6 +164,23 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
             return CategoryClassification(category: other, confidence: .low)
         }
     }
+
+    /// spec 097 Phase 2: ユーザー修正の few-shot ブロックを組み立てる (最大 8 件、空なら空文字)。
+    static func buildExampleBlock(_ examples: [CategoryFewShot]) -> String {
+        guard !examples.isEmpty else { return "" }
+        let lines = examples.prefix(8).map { ex -> String in
+            if let wrong = ex.wrongCategory, !wrong.isEmpty, wrong != ex.correctCategory {
+                return "- 「\(ex.tagName)」→「\(ex.correctCategory)」(「\(wrong)」ではない)"
+            }
+            return "- 「\(ex.tagName)」→「\(ex.correctCategory)」"
+        }
+        return """
+
+            # 過去のユーザー修正 (同じ間違いを避ける)
+            \(lines.joined(separator: "\n"))
+
+            """
+    }
 }
 
 /// test 用。hardcoded mapping または default を返す。Foundation Models 不要。
@@ -172,7 +204,7 @@ final class InMemoryAutoCategoryClassifier: AutoCategoryClassifier {
         self.defaultConfidence = defaultConfidence
     }
 
-    func classifyDetailed(tagName: String, context: String? = nil) async -> CategoryClassification {
+    func classifyDetailed(tagName: String, context: String? = nil, examples: [CategoryFewShot] = []) async -> CategoryClassification {
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !trimmed.isEmpty else { return CategoryClassification(category: defaultCategory, confidence: .low) }
         let category = mapping[trimmed] ?? defaultCategory
