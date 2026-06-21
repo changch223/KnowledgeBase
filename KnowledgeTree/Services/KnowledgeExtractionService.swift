@@ -344,6 +344,10 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         let chunks = split.chunks
         let skippedTail = split.skippedTailChars
         let guidance = extractionGuidance(of: article)
+        // spec 101: 言語は記事単位で 1 回だけ判定し、全 chunk に適用する。
+        // chunk ごとの判定は参照・数式・著者名などの断片を id/fr/nl 等に誤検知し、
+        // 無駄で遅い翻訳 + translationd クラッシュを招くため。先頭サンプルで支配的言語を読む。
+        let articleLanguage = LanguageDetector.detect(String(text.prefix(3000)))
 
         // spec 010: chunks > 10 で階層化
         let useHierarchical = chunks.count > 10
@@ -381,7 +385,7 @@ final class DefaultKnowledgeExtractionService: KnowledgeExtractionServiceProtoco
         // 残り chunks のみ処理
         for chunk in chunks where !completedIndices.contains(chunk.index) {
             if Task.isCancelled { return }
-            let result = await extractor.extractFromChunk(chunk, guidance: guidance)
+            let result = await extractor.extractFromChunk(chunk, guidance: guidance, sourceLanguage: articleLanguage)
             results.append(result)
             // incremental save
             if let output = result.output {

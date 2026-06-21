@@ -27,6 +27,15 @@ struct TranslationCacheTests {
         #expect(cache.cached(source: "en", text: "hello") == "やあ")
     }
 
+    // spec 101: notInstalled で失敗した言語を記録し、以後スキップ判定できる。
+    @Test func tracksUnavailableLanguages() {
+        let cache = TranslationCache()
+        #expect(cache.isUnavailable(source: "id") == false)
+        cache.markUnavailable(source: "id")
+        #expect(cache.isUnavailable(source: "id"))
+        #expect(cache.isUnavailable(source: "en") == false)  // 別言語は影響なし
+    }
+
     // 上限を超えると最古から破棄。
     @Test func evictsOldestOverCapacity() {
         let cache = TranslationCache(capacity: 2)

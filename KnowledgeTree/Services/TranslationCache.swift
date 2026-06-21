@@ -18,9 +18,17 @@ final class TranslationCache {
     private var order: [String] = []
     private let capacity: Int
 
+    /// spec 101: 翻訳モデル未インストール (notInstalled) で失敗した言語。以後この言語はスキップ。
+    private var unavailableLanguages: Set<String> = []
+
     init(capacity: Int = 256) {
         self.capacity = capacity
     }
+
+    /// この言語は翻訳できない (notInstalled) と記録。
+    func markUnavailable(source: String) { unavailableLanguages.insert(source) }
+    /// この言語は翻訳できない (記録済み) か。
+    func isUnavailable(source: String) -> Bool { unavailableLanguages.contains(source) }
 
     private func key(source: String, text: String) -> String {
         source + "\u{0}" + text
