@@ -387,6 +387,12 @@ struct KnowledgeTreeApp: App {
         BackgroundExtractionScheduler.shared.runnerProvider = { [weak bgRunner] in bgRunner }
         // spec 042: ConceptPage 再合成 BGTask に synthesis service を bind
         BackgroundExtractionScheduler.shared.conceptSynthesisProvider = { conceptSynthesisService }
+        // spec 097 Phase 2: カテゴリ分類の学習ストア (アプリ専用の別 ModelContainer、CloudKit 同期)。
+        // 失敗時 nil = 学習なし (Phase 1 相当) で graceful。
+        let correctionStore: CategoryCorrectionStore? = CategoryCorrectionStore.makeContainer(
+            cloudKitEnabled: SharedSchema.isCloudKitEnabledByUser
+        ).map { CategoryCorrectionStore(context: $0.mainContext) }
+        serviceContainer.correctionStore = correctionStore
         // spec 058: 週 1 Lint loop BGTask に LintEngine を bind
         let lintEngine: LintEngineProtocol = DefaultLintEngine(
             context: context,
@@ -394,7 +400,8 @@ struct KnowledgeTreeApp: App {
             categoryClassifier: categoryClassifier,
             // spec 077: 新カテゴリ昇格 (その他 クラスタ → AI 命名 → 動的追加)
             session: session,
-            categoryRegistry: categoryRegistry
+            categoryRegistry: categoryRegistry,
+            correctionStore: correctionStore
         )
         BackgroundExtractionScheduler.shared.lintEngineProvider = { lintEngine }
 

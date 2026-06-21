@@ -123,7 +123,8 @@ final class DefaultLintEngine: LintEngineProtocol {
         loopMarker: LintLoopMarkerStoring = UserDefaultsLintLoopMarker(),
         defaultBatchSize: Int = 15,
         session: LanguageModelSessionProtocol? = nil,
-        categoryRegistry: CategoryRegistry? = nil
+        categoryRegistry: CategoryRegistry? = nil,
+        correctionStore: CategoryCorrectionStore? = nil
     ) {
         self.context = context
         self.refreshTrigger = refreshTrigger
@@ -134,7 +135,11 @@ final class DefaultLintEngine: LintEngineProtocol {
         self.defaultBatchSize = defaultBatchSize
         self.session = session
         self.categoryRegistry = categoryRegistry
+        self.correctionStore = correctionStore
     }
+
+    /// spec 097 Phase 2: 学習ストア (ユーザー修正の few-shot 供給)。nil で例なし (Phase 1 相当)。
+    private let correctionStore: CategoryCorrectionStore?
 
     /// 1 周完走するまで batch を回す。resumable (中断後は続きから)。週1 BGTask / ボタン用。
     func runFullLintLoop() async -> LintLoopResult {
@@ -399,9 +404,22 @@ final class DefaultLintEngine: LintEngineProtocol {
         let allTags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
 
         // 今周回の未処理 = lastLintedAt が nil または loopStart より前
+        // spec 097 Phase 2: 確信度が低い (Low/Medium) or その他 のタグを優先して再訪する
+        // (精度向上ループ: 不確実なものから直す)。同優先度内は lastLintedAt 古い順。
+        let other = CategorySeed.otherCategory.name
+        func isUncertain(_ t: Tag) -> Bool {
+            let conf = t.categoryConfidence
+            return conf == ClassificationConfidence.low.rawValue
+                || conf == ClassificationConfidence.medium.rawValue
+                || (t.categoryRaw ?? "") == other
+        }
         let pending = allTags
             .filter { ($0.lastLintedAt ?? .distantPast) < loopStart }
-            .sorted { ($0.lastLintedAt ?? .distantPast) < ($1.lastLintedAt ?? .distantPast) }
+            .sorted { a, b in
+                let ua = isUncertain(a), ub = isUncertain(b)
+                if ua != ub { return ua }  // 不確実を先に
+                return (a.lastLintedAt ?? .distantPast) < (b.lastLintedAt ?? .distantPast)
+            }
         let batch = Array(pending.prefix(maxTags))
         var reclassifyCount = 0
 
@@ -412,18 +430,26 @@ final class DefaultLintEngine: LintEngineProtocol {
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
                 .joined(separator: " / ")
-            let predicted = await classifier.classify(tagName: tag.name, context: contextText)
+            // spec 097 Phase 2: 学習例 (ユーザー修正) を few-shot として渡し、第2段の再分類精度を上げる。
+            let examples = correctionStore?.fewShot(for: tag.name) ?? []
+            let result = await classifier.classifyDetailed(tagName: tag.name, context: contextText, examples: examples)
+            let predicted = result.category
             let predictedNonEmpty = !predicted.isEmpty && predicted != "その他"
             let currentRaw = tag.categoryRaw ?? ""
 
             if currentRaw.isEmpty, predictedNonEmpty {
                 tag.categoryRaw = predicted
+                tag.categoryConfidence = result.confidence.rawValue
                 logLintAction(.reclassifyTag, targetName: tag.name, before: "(none)", after: predicted)
                 reclassifyCount += 1
             } else if predictedNonEmpty, predicted != currentRaw {
                 logLintAction(.reclassifyTag, targetName: tag.name, before: currentRaw, after: predicted)
                 tag.categoryRaw = predicted
+                tag.categoryConfidence = result.confidence.rawValue
                 reclassifyCount += 1
+            } else {
+                // 分類が変わらなくても確信度は更新 (Low/Medium の再訪対象判定に使う)。
+                tag.categoryConfidence = result.confidence.rawValue
             }
             // 分類が変わらなくても「処理済」マーク (周回が前進する)。
             tag.lastLintedAt = .now

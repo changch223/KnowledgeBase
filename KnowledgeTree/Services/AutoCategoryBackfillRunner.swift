@@ -86,8 +86,9 @@ final class AutoCategoryBackfillRunner {
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
                 .joined(separator: " / ")
-            let categoryName = await classifier.classify(tagName: tag.name, context: contextText)
-            tag.categoryRaw = categoryName
+            let result = await classifier.classifyDetailed(tagName: tag.name, context: contextText)
+            tag.categoryRaw = result.category
+            tag.categoryConfidence = result.confidence.rawValue
             try? context.save()
             processedIndex += 1
             processingMonitor?.updateProgress(

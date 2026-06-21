@@ -775,7 +775,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         ## 関連記事の要点
         \(essenceText)
-
+        \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw))
         ## 出力要件
         - summary: 120〜180 字、上記の具体トピックと要点を俯瞰した分野全体像、推測禁止、断定調
         - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この分野で最も大事な要点・結論を重要度順
@@ -813,7 +813,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         ## 元記事 (essence + KeyFact)
         \(lines)
-
+        \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw))
         ## 出力要件
         - summary: 120〜180 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
         - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この概念で最も大事な要点・結論を重要度順
@@ -884,7 +884,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         ## 記事チャンク要約 (元 \(totalArticles) 件記事、上位 \(cappedChunks.count) チャンク)
         \(chunkText)
-
+        \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw))
         ## 出力要件
         - summary: 120〜180 字、チャンク要約のみから統合、推測禁止、断定調
         - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この概念で最も大事な要点・結論を重要度順

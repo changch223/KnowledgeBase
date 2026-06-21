@@ -79,10 +79,11 @@ final class TagStore {
                 .filter { !$0.isEmpty }
                 .joined(separator: " / ")
             Task { [weak self] in
-                let categoryName = await classifier.classify(tagName: normalized, context: contextText)
+                let result = await classifier.classifyDetailed(tagName: normalized, context: contextText)
                 await MainActor.run {
                     guard let self else { return }
-                    tag.categoryRaw = categoryName
+                    tag.categoryRaw = result.category
+                    tag.categoryConfidence = result.confidence.rawValue
                     try? self.context.save()
                     self.refreshTrigger?.bump()
                     // spec 077: 分類完了 → この tag に紐づく [その他] 概念を再ヒール (タイミング競合の解消)

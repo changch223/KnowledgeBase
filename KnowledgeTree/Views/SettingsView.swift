@@ -12,8 +12,15 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
+    // spec 097 Phase 4: 整理レポートの「要確認」件数表示用。
+    @Query private var allTags: [Tag]
+    private var uncertainCount: Int {
+        allTags.filter { CategoryReviewView.isUncertain($0) }.count
+    }
+
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
     /// spec 051 Phase A 完成: iCloud sync 有効化 toggle (default OFF、opt-in)。
     /// 切替後はアプリ再起動が必要 (ModelContainer は launch 時に 1 度だけ構築)。
@@ -145,6 +152,26 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.tag.entry")
+
+                // spec 097 Phase 4: 分類の整理レポート (要確認件数バッジ付き)。
+                NavigationLink(value: CategoryReviewDestination()) {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "checklist")
+                            .foregroundStyle(DS.Color.actionBlue)
+                            .frame(width: 24)
+                        Text("settings.categoryReview.entry")
+                        Spacer()
+                        if uncertainCount > 0 {
+                            Text("\(uncertainCount)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(.orange))
+                        }
+                    }
+                }
+                .accessibilityIdentifier("settings.categoryReview.entry")
             } header: {
                 Text("settings.section.manage")
             }
@@ -259,6 +286,9 @@ struct SettingsView: View {
         .navigationDestination(for: TagManagementDestination.self) { _ in
             TagManagementView()
         }
+        .navigationDestination(for: CategoryReviewDestination.self) { _ in
+            CategoryReviewView()
+        }
         .navigationDestination(for: TranslationSetupDestination.self) { _ in
             TranslationSetupView()
         }
@@ -327,3 +357,6 @@ struct SavedAnswerHistoryDestination: Hashable {}
 
 /// SettingsView から TagManagementView (spec 024) に push 遷移する Hashable destination。
 struct TagManagementDestination: Hashable {}
+
+/// spec 097 Phase 4: 分類の整理レポートへ push 遷移する Hashable destination。
+struct CategoryReviewDestination: Hashable {}
