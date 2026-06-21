@@ -23,24 +23,16 @@ final class CategoryCorrectionStore {
     }
 
     /// アプリ専用の学習用 ModelContainer を作る。
-    /// CloudKit 有効時は private DB 同期を試み、失敗したらローカルのみにフォールバック (crash しない)。
+    /// spec 100 fix: **local-only**。別 ModelContainer で 2 つ目の CloudKit private DB ミラーリングを
+    /// 張ると、実機でメイン store と同一 iCloud コンテナ (`iCloud.app.KnowledgeTree`) を二重ミラーリング
+    /// して競合し、"has no persistent stores / Store Removed" で学習 store が落ち、記録が保存されなく
+    /// なる。学習例は端末内のパーソナライズ補助なので local で十分 (cloudKitEnabled は無視)。
+    /// 端末間同期が要るなら別 iCloud コンテナ or 別方式で再設計する。
     static func makeContainer(cloudKitEnabled: Bool) -> ModelContainer? {
         let schema = Schema([CategoryCorrectionExample.self])
-        if cloudKitEnabled {
-            let cloud = ModelConfiguration(
-                "CategoryLearning",
-                schema: schema,
-                cloudKitDatabase: .private("iCloud.app.KnowledgeTree")
-            )
-            if let container = try? ModelContainer(for: schema, configurations: cloud) {
-                logger.notice("category learning container: CloudKit")
-                return container
-            }
-            logger.notice("category learning container: CloudKit failed → local fallback")
-        }
         let local = ModelConfiguration("CategoryLearning", schema: schema)
         if let container = try? ModelContainer(for: schema, configurations: local) {
-            logger.notice("category learning container: local")
+            logger.notice("category learning container: local-only")
             return container
         }
         logger.error("category learning container: failed to create")
