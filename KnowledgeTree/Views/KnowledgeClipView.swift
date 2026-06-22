@@ -2,16 +2,14 @@
 //  KnowledgeClipView.swift
 //  KnowledgeTree
 //
-//  spec 056 — V3.0 redesign: 8 セクション → 3 セクションに削減。
-//  「気になったものが、勝手に整理される」体験の中核タブ (Today)。
+//  「iKnow」タブ — 概念(まとめ)中心のフィード (spec 075/080/087/088 で再設計)。
+//  新着記事の横棚 + For You Wiki 棚 + 概念の超まとめ縦カード + カテゴリ/タグ ハイライト。
+//  「気になったものが、勝手に整理される」体験の中核タブ。
 //
-//  セクション順 (固定):
-//   1. RecentArticlesSection — 最近の記事 (差分 3 件、cache 維持)
-//   2. InterestingNextSection — 続きが気になるもの (ConceptPage 深掘り + Topic Dashboard 混在)
-//   3. FollowingPeopleSection — 追っている人物・モノ (isFollowing + ⚠️ 更新が必要 badge)
+//  ※ 旧 V3.0 の 3 section view (RecentArticlesSection / InterestingNextSection /
+//    FollowingPeopleSection) は spec 075 以降で未使用になり、spec 102 で削除した。
 //
 //  右上 toolbar: AvatarMenu (Settings 遷移)
-//  contracts/knowledge-clip-view.md 準拠。
 //
 
 import SwiftUI

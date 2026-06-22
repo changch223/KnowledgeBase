@@ -7,7 +7,7 @@
 - [x] **暗号輸出申告**: `ITSAppUsesNonExemptEncryption = false`（`KnowledgeTree/Info.plist`）→ 毎回の手動回答が不要
 - [x] **Privacy Manifest**: `KnowledgeTree/PrivacyInfo.xcprivacy` 同梱（NSPrivacyTracking=false / 収集データなし / Required Reason API = UserDefaults CA92.1）
 - [x] **最小 OS**: iOS 26.4（`IPHONEOS_DEPLOYMENT_TARGET`）→ Apple Intelligence 対応端末が前提
-- [ ] **バージョン / ビルド番号**: `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` を 1.0 / 1 に
+- [x] **バージョン / ビルド番号**: `MARKETING_VERSION = 1.0` / `CURRENT_PROJECT_VERSION = 1`（設定済み）
 - [ ] **署名**: Distribution 証明書 + App Store provisioning（自動署名でも可）
 - [ ] **アプリアイコン**: 1024×1024 を含む全サイズが Assets に入っているか
 
