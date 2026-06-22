@@ -33,8 +33,8 @@
 - [ ] 概要・キーワード・プロモーションテキストを貼り付け（listing.md から）
 - [ ] カテゴリ: プライマリ=Productivity / セカンダリ=Reference
 - [ ] サポートURL / プライバシーポリシーURL を設定
-      - 現状: `https://github.com/changch223/<repo>/blob/main/docs/support.md` 等
-      - ⚠️ リポジトリ名が `KnowledgeTree` → `KnowledgeBase` に変わっている場合はURLを合わせる
+      - サポート: `https://github.com/changch223/KnowledgeBase/blob/main/docs/support.md`
+      - プライバシー: `https://github.com/changch223/KnowledgeBase/blob/main/docs/privacy-policy.md`
 - [ ] **Appのプライバシー**: 「**データを収集していません**」を選択
 - [ ] **年齢評価アンケート**: 基本4+。「任意のWebページ取得・表示」が無制限Webアクセス判定だと17+になり得る → アンケートの実回答に従う
 - [ ] スクリーンショットをアップロード
@@ -56,7 +56,7 @@
 ---
 
 ## 任意（やると良いが必須でない）
-- [ ] リポジトリ名変更に伴う **README 内リンクの `KnowledgeTree → KnowledgeBase` 一括更新**（私に頼めば対応）
+- [x] リポジトリ名変更に伴う **README 内リンクの `KnowledgeTree → KnowledgeBase` 一括更新**（✅ 完了済み）
 - [ ] **GitHub Pages** でサポート/プライバシーをホスト（URL を `changch223.github.io/...` に）
 - [ ] **note 公開**（`docs/app-intro-note.md` / `docs/dev-story-note.md`、画像差し込み後）
 - [ ] ハードコード文言の xcstrings 化（残っている英語直書きの掃除。私に頼めば対応）

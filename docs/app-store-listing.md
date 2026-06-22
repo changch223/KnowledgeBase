@@ -144,13 +144,13 @@ second brain,notes,AI,summary,read later,bookmark,PDF,OCR,transcribe,knowledge,o
 
 ```
 サポート URL (Support URL):
-https://github.com/changch223/KnowledgeTree/blob/main/docs/support.md
+https://github.com/changch223/KnowledgeBase/blob/main/docs/support.md
 
 プライバシーポリシー URL (Privacy Policy URL):
-https://github.com/changch223/KnowledgeTree/blob/main/docs/privacy-policy.md
+https://github.com/changch223/KnowledgeBase/blob/main/docs/privacy-policy.md
 
 マーケティング URL (任意 / Marketing URL — optional):
-https://github.com/changch223/KnowledgeTree
+https://github.com/changch223/KnowledgeBase
 ```
 ※ GitHub Pages を有効化する場合は、より見栄えの良い `https://changch223.github.io/...` 形式に差し替え推奨。
 

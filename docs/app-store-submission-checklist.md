@@ -14,8 +14,8 @@
 ## 2. App Store Connect（Web 側）
 - [ ] **App 情報**: 名前 / サブタイトル / プライマリ=Productivity・セカンダリ=Reference（`app-store-listing.md`）
 - [ ] **概要 / キーワード / プロモーションテキスト**: `app-store-listing.md` から貼り付け
-- [ ] **サポート URL**: `https://github.com/changch223/KnowledgeTree/blob/main/docs/support.md`
-- [ ] **プライバシーポリシー URL**: `https://github.com/changch223/KnowledgeTree/blob/main/docs/privacy-policy.md`
+- [ ] **サポート URL**: `https://github.com/changch223/KnowledgeBase/blob/main/docs/support.md`
+- [ ] **プライバシーポリシー URL**: `https://github.com/changch223/KnowledgeBase/blob/main/docs/privacy-policy.md`
 - [ ] **App のプライバシー（Nutrition Label）**: 「**データを収集していません**」を選択
       - 理由: 全データは端末内 + ユーザー自身の iCloud private DB のみ。開発者送信ゼロ・トラッキングなし。
 - [ ] **年齢評価アンケート**: 基本 4+。ただし「ユーザー指定の任意 Web ページを取得・表示」が

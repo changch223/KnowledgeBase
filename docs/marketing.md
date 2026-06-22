@@ -168,7 +168,7 @@ PDF URL を保存すると、PDFKit で内部 metadata (タイトル / 著者 / 
 
 ## 🗺️ 開発ロードマップ
 
-進行中・将来計画は [ROADMAP.md](https://github.com/changch223/KnowledgeTree/blob/main/specs/ROADMAP.md) を参照してください。
+進行中・将来計画は [ROADMAP.md](https://github.com/changch223/KnowledgeBase/blob/main/specs/ROADMAP.md) を参照してください。
 
 直近の方針:
 - **spec 038**: 用語のやさしさ整理 (非エンジニア向け)
@@ -179,8 +179,8 @@ PDF URL を保存すると、PDFKit で内部 metadata (タイトル / 著者 / 
 
 ## 💌 フィードバック
 
-- 不具合報告 / 機能要望: [GitHub Issues](https://github.com/changch223/KnowledgeTree/issues)
-- サポート FAQ: [docs/support.md](https://github.com/changch223/KnowledgeTree/blob/main/docs/support.md)
+- 不具合報告 / 機能要望: [GitHub Issues](https://github.com/changch223/KnowledgeBase/issues)
+- サポート FAQ: [docs/support.md](https://github.com/changch223/KnowledgeBase/blob/main/docs/support.md)
 
 ---
 
