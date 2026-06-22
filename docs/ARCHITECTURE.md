@@ -369,3 +369,19 @@ VISION v2 (7 原則 + 3 層) に対する現状評価:
 - **フィードの見た目を変えたい** → `KnowledgeClipView` + `*FeedCard` / `*ShelfCard` / `*HighlightCard`
 - **token を実測したい** → `TokenBudgetProbe` (spec 071、デバッグ起動でログ)
 - **全 spec の実装履歴** → repo root `CLAUDE.md`
+
+---
+
+## 付録: 退役・レガシーモデル (spec 102 整理メモ)
+
+LLM Wiki 再設計 (spec 063-067) で「人物・モノ・概念」を `ConceptPage` 1 種類に畳んだ結果、
+いくつかの旧 `@Model` は **生成を停止したが定義は残置**している。理由と現状を明記しておく。
+
+| モデル | 生成 | 現状の使われ方 | なぜ物理削除しないか |
+|---|---|---|---|
+| `GraphNode` / `GraphEdge` | 停止 (spec 065) | 既存データは ChatService RAG の関連エンティティ / CategoryGraphView 表示で**今も読まれる** | CloudKit の `CD_*` record type 削除は不可・Article inverse 変更が破壊的 |
+| `UserTopic` | 停止 (spec 065) | 完全孤児。表示 View も削除済 (spec 067) | 同上 (record type 残置が安全)。`SharedSchema` 登録 + Article inverse のみ残す |
+| `KnowledgeDigest` | オンデマンドのみ | Category 詳細 / pull-to-refresh で使用 | 現役 (退役対象外) |
+
+**方針**: 新規生成は止める / 既存表示は壊さない / `@Model` 定義と `SharedSchema` 登録は CloudKit 安全のため残す。
+死蔵していたのは**コードのみ** (旧 3 section view など) で、spec 102 で削除済み。
