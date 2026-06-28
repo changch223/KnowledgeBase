@@ -340,6 +340,7 @@ private struct ArticleListContent: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollDismissesKeyboard(.immediately)
                 .safeAreaInset(edge: .bottom) {
                     if !monitorIsIdle {
                         Color.clear.frame(height: 60)

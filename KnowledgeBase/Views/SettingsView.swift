@@ -153,13 +153,13 @@ struct SettingsView: View {
 
             // 知識の整合性チェック — 手動実行・ログ行。
             Section {
-                LintNowButton()
-
                 NavigationLink {
                     LintLogDetailView()
                 } label: {
                     LintLogSummaryLabel()
                 }
+
+                LintNowButton()
             } header: {
                 Text("settings.section.organize")
             } footer: {
