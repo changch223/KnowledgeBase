@@ -47,6 +47,40 @@ enum DS {
             dark:  SwiftUI.Color(red:  44.0/255.0, green:  44.0/255.0, blue:  46.0/255.0)
         )
 
+        // === 墨 (Sumi) パレット — ロゴ北斎モノクローム準拠 ===
+        // Light: 和紙白地 + 墨色階調 / Dark: 墨黒地 + 和紙文字（反転）
+
+        /// 最濃墨 — 本文・強調・インタラクティブ要素（Light: #1A1815 / Dark: #F0EDE8）
+        static let sumiInk = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 26/255, green: 24/255, blue: 21/255),
+            dark:  SwiftUI.Color(red: 240/255, green: 237/255, blue: 232/255)
+        )
+        /// 中墨 — セカンダリテキスト（Light: #4A4845 / Dark: #B0ADA8）
+        static let sumiMid = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 74/255, green: 72/255, blue: 69/255),
+            dark:  SwiftUI.Color(red: 176/255, green: 173/255, blue: 168/255)
+        )
+        /// 薄墨 — キャプション・補助（Light: #9A9895 / Dark: #6A6865）
+        static let sumiLight = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 154/255, green: 152/255, blue: 149/255),
+            dark:  SwiftUI.Color(red: 106/255, green: 104/255, blue: 101/255)
+        )
+        /// 墨水 — 罫線・区切り（Light: #DDD9D4 / Dark: #2A2825）
+        static let sumiRule = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 221/255, green: 217/255, blue: 212/255),
+            dark:  SwiftUI.Color(red: 42/255, green: 40/255, blue: 37/255)
+        )
+        /// 和紙 — カード背景（Light: #FFFFFF / Dark: #0F0F0D）
+        static let washiCard = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color.white,
+            dark:  SwiftUI.Color(red: 15/255, green: 15/255, blue: 13/255)
+        )
+        /// 和紙地 — 画面背景（Light: #F7F5F0 / Dark: #0A0A08）
+        static let washiBackground = SwiftUI.Color.adaptive(
+            light: SwiftUI.Color(red: 247/255, green: 245/255, blue: 240/255),
+            dark:  SwiftUI.Color(red: 10/255, green: 10/255, blue: 8/255)
+        )
+
         // === spec 014 既存 (維持) ===
 
         // Surface

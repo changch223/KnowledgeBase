@@ -112,7 +112,10 @@ struct KnowledgeClipView: View {
 
                         // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
                         // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
-                        ForEach(displayedConceptEntries) { entry in
+                        ForEach(Array(displayedConceptEntries.enumerated()), id: \.element.id) { index, entry in
+                            if index > 0 {
+                                SumiWaveDivider()
+                            }
                             ConceptSummaryCard(entry: entry, onSeen: { markConceptSeen(entry.page) })
                         }
                     }
@@ -120,6 +123,8 @@ struct KnowledgeClipView: View {
                 .padding(.vertical, DS.Spacing.xxl)
             }
             .scrollIndicators(.hidden)
+            .background(DS.Color.washiBackground)
+            .scrollContentBackground(.hidden)
             .navigationTitle("clip.nav.title")
             .navigationBarTitleDisplayMode(.large)
             // 既存 navigationDestination (V2.5 から継承、機能維持)
