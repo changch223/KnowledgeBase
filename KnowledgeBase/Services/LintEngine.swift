@@ -220,6 +220,7 @@ final class DefaultLintEngine: LintEngineProtocol {
         for i in 0..<pages.count {
             let pageA = pages[i]
             if processed.contains(pageA.id) { continue }
+            var pageADeleted = false
             for j in (i+1)..<pages.count {
                 let pageB = pages[j]
                 if processed.contains(pageB.id) { continue }
@@ -231,8 +232,15 @@ final class DefaultLintEngine: LintEngineProtocol {
                     logLintAction(.merge, targetName: loser.name, before: before, after: after)
                     processed.insert(loser.id)
                     mergeCount += 1
+                    // pageA が loser として削除された場合、内側ループを抜ける。
+                    // 削除済みオブジェクトに続けてアクセスすると "backing data detached" クラッシュになる。
+                    if loser.id == pageA.id {
+                        pageADeleted = true
+                        break
+                    }
                 }
             }
+            if pageADeleted { continue }
         }
         try? context.save()
         return mergeCount
