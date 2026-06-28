@@ -46,7 +46,7 @@ struct ChatMessageRow: View {
             .foregroundStyle(.white)
             .padding(.horizontal, DS.Spacing.lg)
             .padding(.vertical, DS.Spacing.md)
-            .background(DS.Color.sumiInk, in: RoundedRectangle(cornerRadius: 16))
+            .background(DS.Color.sumiFixedInk, in: RoundedRectangle(cornerRadius: 16))
             .frame(maxWidth: .infinity, alignment: .trailing)
     }
 

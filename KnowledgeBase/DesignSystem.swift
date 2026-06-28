@@ -80,6 +80,10 @@ enum DS {
             light: SwiftUI.Color(red: 247/255, green: 245/255, blue: 240/255),
             dark:  SwiftUI.Color(red: 10/255, green: 10/255, blue: 8/255)
         )
+        /// 固定墨色 — Light/Dark 両方で常に最濃墨 (#1A1815)。
+        /// 使用箇所: FAB ボタン背景、ユーザー発言バブル背景 (白文字が常に読めるように)。
+        /// sumiInk と異なり adaptive でないため Dark Mode でも黒のまま。
+        static let sumiFixedInk = SwiftUI.Color(red: 26/255, green: 24/255, blue: 21/255)
 
         // === spec 014 既存 (維持) ===
 

@@ -18,8 +18,8 @@ struct FABButton: View {
                 .font(.title2)
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
-                .background(Color.accentColor, in: .circle)
-                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                .background(DS.Color.sumiFixedInk, in: .circle)
+                .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
         }
         .padding(.trailing, 16)
         .padding(.bottom, 16)
