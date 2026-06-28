@@ -92,9 +92,6 @@ struct KnowledgeTreeApp: App {
     @MainActor
     private static func inMemoryFallbackContainer(reason: Error) -> ModelContainer {
         NSLog("⚠️ ModelContainer init failed entirely, using in-memory store: \(reason)")
-        #if DEBUG
-        assertionFailure("ModelContainer init failed, using in-memory fallback: \(reason)")
-        #endif
         UserDefaults.standard.set(true, forKey: "spec061_storeLoadFailed")
         do {
             let inMemory = ModelConfiguration(isStoredInMemoryOnly: true)

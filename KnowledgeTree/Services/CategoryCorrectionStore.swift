@@ -30,7 +30,9 @@ final class CategoryCorrectionStore {
     /// 端末間同期が要るなら別 iCloud コンテナ or 別方式で再設計する。
     static func makeContainer(cloudKitEnabled: Bool) -> ModelContainer? {
         let schema = Schema([CategoryCorrectionExample.self])
-        let local = ModelConfiguration("CategoryLearning", schema: schema)
+        // "CategoryLearningLocal" — 旧 "CategoryLearning" ファイルは CloudKit メタデータが
+        // 残存していてミラーリングエラーが出るため、新しいファイル名で回避する (旧ファイルは放置=無害)。
+        let local = ModelConfiguration("CategoryLearningLocal", schema: schema)
         if let container = try? ModelContainer(for: schema, configurations: local) {
             logger.notice("category learning container: local-only")
             return container
