@@ -21,11 +21,17 @@ import Foundation
 import SwiftData
 import os
 
+/// チャット応答のモード。
+enum ChatMode: Sendable {
+    case quick   // ⚡ キーワード検索 + 短い回答（速度優先）
+    case think   // 🧠 embedding RAG + 通常回答（精度優先、デフォルト）
+}
+
 @MainActor
 protocol ChatServiceProtocol: AnyObject {
     /// 質問を送信、retrieval + 回答生成 + 永続化を行い、assistant ChatMessage を返す。
-    /// spec 033: contextMessages で直前の会話履歴 (multi-turn 対応)。default 空 = single-turn。
-    func send(question: String, in session: ChatSession, contextMessages: [ChatMessage]) async throws -> ChatMessage
+    /// chatMode: .quick = キーワード検索 + 短答、.think = embedding RAG + 通常答え (デフォルト)
+    func send(question: String, in session: ChatSession, chatMode: ChatMode, contextMessages: [ChatMessage]) async throws -> ChatMessage
     /// 新セッション作成 (50 件超過なら最古を FIFO 削除)。
     func createSession() throws -> ChatSession
     /// 全セッション + メッセージ削除。
@@ -37,9 +43,13 @@ protocol ChatServiceProtocol: AnyObject {
 }
 
 extension ChatServiceProtocol {
-    /// 後方互換用: 既存 (single-turn) 呼び出しを維持。
+    /// 後方互換: chatMode なし呼び出し → .think デフォルト。
+    func send(question: String, in session: ChatSession, contextMessages: [ChatMessage]) async throws -> ChatMessage {
+        try await send(question: question, in: session, chatMode: .think, contextMessages: contextMessages)
+    }
+    /// 後方互換: single-turn。
     func send(question: String, in session: ChatSession) async throws -> ChatMessage {
-        try await send(question: question, in: session, contextMessages: [])
+        try await send(question: question, in: session, chatMode: .think, contextMessages: [])
     }
 }
 
@@ -98,7 +108,7 @@ final class ChatService: ChatServiceProtocol {
 
     // MARK: - send
 
-    func send(question: String, in session: ChatSession, contextMessages: [ChatMessage] = []) async throws -> ChatMessage {
+    func send(question: String, in session: ChatSession, chatMode: ChatMode = .think, contextMessages: [ChatMessage] = []) async throws -> ChatMessage {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw ChatServiceError.emptyQuestion
@@ -136,7 +146,7 @@ final class ChatService: ChatServiceProtocol {
                 case .immediate(let answer):
                     // spec 082: 検索優先セーフティネット — 分類器が immediate でも、
                     // 関連する保存記事があれば引用回答に上書き (挨拶・雑談は retrieval 空で従来通り即答)。
-                    let retrieval = await retrieve(question: trimmed)
+                    let retrieval = await retrieve(question: trimmed, chatMode: chatMode)
                     let candidates = mergeArticleCandidates(retrieval: retrieval)
                     if !candidates.isEmpty {
                         return try await executeFullRAGAnswer(
@@ -144,6 +154,7 @@ final class ChatService: ChatServiceProtocol {
                             aboveThreshold: candidates,
                             conceptPages: retrieval.conceptPages.map { $0.page },
                             contextMessages: contextMessages,
+                            chatMode: chatMode,
                             in: session
                         )
                     }
@@ -153,6 +164,7 @@ final class ChatService: ChatServiceProtocol {
                             originalQuestion: trimmed,
                             aboveThreshold: recent,
                             contextMessages: contextMessages,
+                            chatMode: chatMode,
                             in: session
                         )
                     }
@@ -169,7 +181,7 @@ final class ChatService: ChatServiceProtocol {
                     return try persistAssistant(text: q, citedIDs: [], suggestions: Array(suggestions.prefix(3)), in: session)
 
                 case .searchArticles(let searchQuery):
-                    return try await executeRAG(originalQuestion: trimmed, searchQuestion: searchQuery, contextMessages: contextMessages, in: session)
+                    return try await executeRAG(originalQuestion: trimmed, searchQuestion: searchQuery, contextMessages: contextMessages, chatMode: chatMode, in: session)
 
                 case .finalAnswer(let text, let ids):
                     let filtered = HedgePhraseFilter.replace(text)
@@ -180,7 +192,7 @@ final class ChatService: ChatServiceProtocol {
         }
 
         // Fallback: 既存 RAG 経路
-        return try await executeRAG(originalQuestion: trimmed, searchQuestion: trimmed, contextMessages: contextMessages, in: session)
+        return try await executeRAG(originalQuestion: trimmed, searchQuestion: trimmed, contextMessages: contextMessages, chatMode: chatMode, in: session)
     }
 
     /// session 内で「直近 user message 以前の連続 clarification (assistant + clarificationSuggestions 非空) 数」を数える。
@@ -268,6 +280,7 @@ final class ChatService: ChatServiceProtocol {
         originalQuestion: String,
         searchQuestion: String,
         contextMessages: [ChatMessage],
+        chatMode: ChatMode = .think,
         in session: ChatSession
     ) async throws -> ChatMessage {
         // spec 058 polish: Category 名キーワード検出 → category filter 経路
@@ -276,18 +289,19 @@ final class ChatService: ChatServiceProtocol {
             let categoryArticles = fetchArticlesInCategory(category)
             if !categoryArticles.isEmpty {
                 logger.notice("ChatService: category filter hit, category=\(category, privacy: .public), articles=\(categoryArticles.count)")
-                let aboveThreshold = categoryArticles.prefix(5).map { ($0, Float(1.0)) }  // category filter は全件 high score 扱い
+                let aboveThreshold = categoryArticles.prefix(5).map { ($0, Float(1.0)) }
                 return try await executeFullRAGAnswer(
                     originalQuestion: originalQuestion,
                     aboveThreshold: Array(aboveThreshold),
                     contextMessages: contextMessages,
+                    chatMode: chatMode,
                     in: session
                 )
             }
         }
 
         // 2. retrieval (記事 + spec 081: Wiki/概念ページ)
-        let retrieval = await retrieve(question: searchQuestion)
+        let retrieval = await retrieve(question: searchQuestion, chatMode: chatMode)
 
         // 3. spec 081: 概念ページ由来の relatedArticles を引用候補に merge
         //    (記事単体では弱いが、まとめ経由で関連する記事も拾う)。
@@ -295,9 +309,9 @@ final class ChatService: ChatServiceProtocol {
         var conceptPages = retrieval.conceptPages.map { $0.page }
 
         // spec 083: recall 補強 — standalone 検索クエリと元質問が異なる場合は元質問でも検索しマージ
-        //   (クエリ書き換えが意図を外しても元質問の手がかりを取りこぼさない、embedding のみで LM 不要)。
-        if searchQuestion != originalQuestion {
-            let rawRetrieval = await retrieve(question: originalQuestion)
+        //   Quick モードはスキップ (1 回の keyword 検索で十分)。
+        if chatMode == .think, searchQuestion != originalQuestion {
+            let rawRetrieval = await retrieve(question: originalQuestion, chatMode: chatMode)
             let rawCandidates = mergeArticleCandidates(retrieval: rawRetrieval)
             var byID: [UUID: (article: Article, similarity: Float)] = [:]
             for candidate in aboveThreshold + rawCandidates {
@@ -323,6 +337,7 @@ final class ChatService: ChatServiceProtocol {
                     originalQuestion: originalQuestion,
                     aboveThreshold: recent,
                     contextMessages: contextMessages,
+                    chatMode: chatMode,
                     in: session
                 )
             }
@@ -336,6 +351,7 @@ final class ChatService: ChatServiceProtocol {
             aboveThreshold: aboveThreshold,
             conceptPages: conceptPages,
             contextMessages: contextMessages,
+            chatMode: chatMode,
             in: session
         )
     }
@@ -456,6 +472,7 @@ final class ChatService: ChatServiceProtocol {
         aboveThreshold: [(article: Article, similarity: Float)],
         conceptPages: [ConceptPage] = [],
         contextMessages: [ChatMessage],
+        chatMode: ChatMode = .think,
         in session: ChatSession
     ) async throws -> ChatMessage {
         let trimmed = originalQuestion
@@ -472,7 +489,8 @@ final class ChatService: ChatServiceProtocol {
                     articles: aboveThreshold.map { $0.article },
                     conceptPages: conceptPages,
                     contextMessages: contextMessages,
-                    relatedEntities: relatedEntities
+                    relatedEntities: relatedEntities,
+                    chatMode: chatMode
                 )
                 answer = try await self.session.generateChatAnswer(prompt: prompt)
             } catch {
@@ -591,12 +609,14 @@ final class ChatService: ChatServiceProtocol {
 
     // MARK: - Private helpers
 
-    /// 質問 → top-k 関連記事。embedding 可なら cosine、不可なら keyword マッチ。
-    private func retrieve(question: String) async -> ChatRetrievalResult {
+    /// 質問 → top-k 関連記事。
+    /// chatMode == .quick の場合は常に keyword 経路 (速度優先、embedding スキップ)。
+    /// chatMode == .think の場合は embedding 可なら cosine、不可なら keyword マッチ。
+    private func retrieve(question: String, chatMode: ChatMode = .think) async -> ChatRetrievalResult {
         let descriptor = FetchDescriptor<Article>()
         let allArticles = (try? context.fetch(descriptor)) ?? []
 
-        if embeddingService.isAvailable, let queryVector = embeddingService.embed(question) {
+        if chatMode == .think, embeddingService.isAvailable, let queryVector = embeddingService.embed(question) {
             // Embedding 経路
             // メインスレッドで external-storage embedding を取り出し (faulting)、
             // spec 086: cosine + sort はメインスレッド外で実行 (全記事スキャンは維持 = recall 不変)。
@@ -693,7 +713,13 @@ final class ChatService: ChatServiceProtocol {
     /// spec 033: contextMessages で multi-turn 対応。
     /// spec 040: relatedEntities が非空なら「## 関連エンティティ」セクションを記事一覧の後に挿入。
     /// spec 081: 番号引用契約 (本文に裸マーカー `(article-id://UUID)`) + Wiki まとめを文脈に注入 (引用不可)。
-    static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = []) -> String {
+    static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = [], chatMode: ChatMode = .think) -> String {
+        let quickConstraint = chatMode == .quick ? """
+
+        ## Quick モード制約
+        200 字以内で簡潔に答えること。出典は最も重要な 2 件のみ挙げること。
+        """ : ""
+
         var prompt = """
         あなたは Knowledge Base の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
 
@@ -705,7 +731,7 @@ final class ChatService: ChatServiceProtocol {
         5. 参考記事に答えがない場合は answer を空文字にし、citedArticleIDs を空配列にしてください。
         6. 簡潔に、3 段落以内で日本語で回答してください。
         7. 直近の会話があれば、文脈を踏まえて回答してください。「詳しく教えて」のような短い質問は直前の話題の深掘りとして扱ってください。
-
+        \(quickConstraint)
         """
 
         // spec 033: multi-turn 対応 — 直前の会話履歴

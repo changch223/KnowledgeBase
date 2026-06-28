@@ -5,44 +5,78 @@
 //  spec 097 Phase 2 — カテゴリ分類の「ユーザー修正の正解例」を貯め、分類プロンプトに
 //  few-shot として供給する学習ストア。
 //
-//  ※ アプリ専用の別 ModelContainer に保存 (SharedSchema に入れない = 拡張ターゲットの
-//     pbxproj 編集が不要)。CloudKit private DB で端末間同期、失敗時はローカルにフォールバック。
+//  ※ アプリ専用の別 ModelContainer (SharedSchema に入れない = 拡張ターゲット pbxproj 編集不要)。
+//  CloudKit は使わない (local-only)。
+//
+//  クラッシュ防止: SwiftData の context.fetchCount は store が削除されると try? で
+//  捕捉できない EXC_BREAKPOINT (precondition failure) を起こす。
+//  NSPersistentStoreCoordinator の storesDidChange 通知でストア削除を検知し、
+//  isValid=false 後は context に一切触れない。
 //
 
 import Foundation
 import SwiftData
+import CoreData
 import os
 
 @MainActor
 final class CategoryCorrectionStore {
     private static let logger = Logger(subsystem: "app.KnowledgeTree", category: "category-learning")
     private let context: ModelContext
+    /// ストアが削除された後は false になり、以降の fetch/save を全てスキップする。
+    private(set) var isValid: Bool = true
+    private var storeObserver: NSObjectProtocol?
 
     init(context: ModelContext) {
         self.context = context
+        // ストア削除を監視して isValid を下げる。
+        // NSPersistentStoreCoordinatorStoresDidChange は追加/削除どちらでも届くため
+        // NSRemovedPersistentStoresKey で「削除」のみを拾う。
+        storeObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name.NSPersistentStoreCoordinatorStoresDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let self else { return }
+            if let removed = note.userInfo?[NSRemovedPersistentStoresKey] as? [NSPersistentStore],
+               !removed.isEmpty {
+                Self.logger.warning("category learning store: store removed — invalidating context")
+                self.isValid = false
+            }
+        }
     }
 
-    /// アプリ専用の学習用 ModelContainer を作る。
-    /// spec 100 fix: **local-only**。別 ModelContainer で 2 つ目の CloudKit private DB ミラーリングを
-    /// 張ると、実機でメイン store と同一 iCloud コンテナ (`iCloud.app.KnowledgeTree`) を二重ミラーリング
-    /// して競合し、"has no persistent stores / Store Removed" で学習 store が落ち、記録が保存されなく
-    /// なる。学習例は端末内のパーソナライズ補助なので local で十分 (cloudKitEnabled は無視)。
-    /// 端末間同期が要るなら別 iCloud コンテナ or 別方式で再設計する。
+    deinit {
+        if let obs = storeObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+    }
+
+    // MARK: - Container factory
+
     static func makeContainer(cloudKitEnabled: Bool) -> ModelContainer? {
         let schema = Schema([CategoryCorrectionExample.self])
-        // "CategoryLearningLocal" — 旧 "CategoryLearning" ファイルは CloudKit メタデータが
-        // 残存していてミラーリングエラーが出るため、新しいファイル名で回避する (旧ファイルは放置=無害)。
-        let local = ModelConfiguration("CategoryLearningLocal", schema: schema)
-        if let container = try? ModelContainer(for: schema, configurations: local) {
-            logger.notice("category learning container: local-only")
+        // cloudKitDatabase: .none — アプリ entitlements があっても CloudKit を無効化。
+        // .automatic だとメイン store と同一 iCloud コンテナを二重ミラーリングして競合し
+        // "Store Removed" → fetchCount で EXC_BREAKPOINT になる。
+        let config = ModelConfiguration(
+            "CategoryLearningLocal",
+            schema: schema,
+            cloudKitDatabase: .none
+        )
+        if let container = try? ModelContainer(for: schema, configurations: config) {
+            logger.notice("category learning container: ready (local-only, cloudKit=none)")
             return container
         }
         logger.error("category learning container: failed to create")
         return nil
     }
 
-    /// ユーザー修正を 1 件記録する。同じ (tagName, correctCategory) が既にあれば createdAt を更新するだけ。
+    // MARK: - Public API
+
+    /// ユーザー修正を 1 件記録する。
     func record(tagName: String, contextSnippet: String = "", wrongCategory: String? = nil, correctCategory: String) {
+        guard isValid else { return }
         let tag = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
         let correct = correctCategory.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !tag.isEmpty, !correct.isEmpty else { return }
@@ -64,8 +98,9 @@ final class CategoryCorrectionStore {
         try? context.save()
     }
 
-    /// 分類対象 tagName の few-shot 例を返す。同名タグの修正を最優先、続いて新しい順。
+    /// 分類対象 tagName の few-shot 例を返す。
     func fewShot(for tagName: String, limit: Int = 8) -> [CategoryFewShot] {
+        guard isValid else { return [] }
         let descriptor = FetchDescriptor<CategoryCorrectionExample>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
@@ -73,20 +108,21 @@ final class CategoryCorrectionStore {
         guard !all.isEmpty else { return [] }
         let lower = tagName.lowercased()
         let matches = all.filter { $0.tagName.lowercased() == lower }
-        let rest = all.filter { $0.tagName.lowercased() != lower }
+        let rest    = all.filter { $0.tagName.lowercased() != lower }
         return (matches + rest).prefix(limit).map {
             CategoryFewShot(tagName: $0.tagName, correctCategory: $0.correctCategory, wrongCategory: $0.wrongCategory)
         }
     }
 
     var count: Int {
-        (try? context.fetchCount(FetchDescriptor<CategoryCorrectionExample>())) ?? 0
+        guard isValid else { return 0 }
+        return (try? context.fetchCount(FetchDescriptor<CategoryCorrectionExample>())) ?? 0
     }
 }
 
+// MARK: - CategoryCorrectionApplier
+
 /// spec 097 Phase 2b/4: タグの分野手修正を一貫して適用する共通処理。
-/// 記録 (学習) + categoryRaw 反映 + 確信度 High + 概念ヒール。
-/// TagManagementView / CategoryReviewView で共用 (ロジックの drift 防止)。
 enum CategoryCorrectionApplier {
     @MainActor
     static func apply(

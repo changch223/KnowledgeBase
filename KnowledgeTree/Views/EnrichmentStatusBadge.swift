@@ -21,9 +21,7 @@ struct EnrichmentStatusBadge: View {
                   label: "enrichment.statusUnfetched",
                   identifier: "articleEnrichmentStatusUnfetched")
         case .permanentlyFailed:
-            badge(systemName: "exclamationmark.triangle",
-                  label: "enrichment.statusFailed",
-                  identifier: "articleEnrichmentStatusFailed")
+            EmptyView()
         case .succeeded:
             EmptyView()
         }

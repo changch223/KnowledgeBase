@@ -6,6 +6,7 @@
 //  - 1〜4 行 vertical 拡張
 //  - isThinking 中は disabled (TextField + Button 両方)
 //  - 送信不可 (空 / thinking) は actionBlue → tertiary fade
+//  - spec 099: chatMode toggle (⚡ Quick / 🧠 Think) を入力欄左に配置
 //
 
 import SwiftUI
@@ -13,12 +14,32 @@ import SwiftUI
 struct ChatInputField: View {
     @Binding var text: String
     @Binding var isThinking: Bool
+    @Binding var chatMode: ChatMode
     let onSend: () -> Void
     /// spec 083: clarification「その他」から入力欄にフォーカスするための binding (optional)。
     var focused: FocusState<Bool>.Binding? = nil
 
     var body: some View {
         HStack(alignment: .bottom, spacing: DS.Spacing.md) {
+            // モード切り替えボタン (Fast / Think)
+            Button {
+                chatMode = chatMode == .quick ? .think : .quick
+            } label: {
+                Text(chatMode == .quick ? "Fast" : "Think")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(chatMode == .quick ? DS.Color.actionBlue : .secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        chatMode == .quick
+                            ? DS.Color.actionBlue.opacity(0.12)
+                            : Color(.tertiarySystemFill),
+                        in: Capsule()
+                    )
+            }
+            .accessibilityIdentifier("chat.input.modeToggle")
+            .accessibilityLabel(Text(chatMode == .quick ? "Fast" : "Think"))
+
             inputTextField
                 .lineLimit(1...4)
                 .textFieldStyle(.roundedBorder)

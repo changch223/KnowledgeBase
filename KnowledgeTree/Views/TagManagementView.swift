@@ -23,6 +23,17 @@ struct TagManagementView: View {
     @State private var selectedCategory: CategoryDefinition?
     @State private var searchQuery: String = ""
 
+    // 分類確認セクション用
+    private var uncertainTags: [Tag] {
+        allTags
+            .filter { CategoryReviewView.isUncertain($0) }
+            .sorted { lhs, rhs in
+                let lc = (lhs.articles ?? []).count, rc = (rhs.articles ?? []).count
+                if lc != rc { return lc > rc }
+                return lhs.name < rhs.name
+            }
+    }
+
     // spec 097 Phase 2b: 分野の手修正 = 学習ストアへの記録トリガ。
     @Environment(\.modelContext) private var modelContext
     @Environment(ServiceContainer.self) private var services
@@ -84,6 +95,14 @@ struct TagManagementView: View {
             ContentUnavailableView("tag.management.empty", systemImage: "tag.slash")
         } else {
             List {
+                // 分類の確認 — 一番上
+                if !uncertainTags.isEmpty {
+                    TagCategoryReviewSection(
+                        uncertainTags: uncertainTags,
+                        allCategories: allCategories
+                    )
+                }
+                // タグ一覧
                 Section {
                     ForEach(filteredTags) { tag in
                         Button { selectedTag = tag } label: { TagRow(tag: tag) }
@@ -138,6 +157,183 @@ struct TagManagementView: View {
         }
     }
 }
+
+// MARK: - 分類の確認インラインセクション
+
+/// 確信度 Medium → Low の順でタグを表示し、ユーザーが分野を確定。
+/// 確定後は isUncertain が false になり行が消える。
+/// 「一括確定」= checkbox モードで checkmark が付いたものを high confidence として保存。
+private struct TagCategoryReviewSection: View {
+    let uncertainTags: [Tag]
+    let allCategories: [CategoryDefinition]
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(ServiceContainer.self) private var services
+    @Environment(RefreshTrigger.self) private var refresh
+
+    @State private var isBulkMode: Bool = false
+    @State private var bulkChecked: Set<PersistentIdentifier> = []
+
+    // 確信度：中 → カテゴリ別グループ (名前昇順)
+    private var mediumByCategory: [(category: String, tags: [Tag])] {
+        let med = uncertainTags.filter {
+            $0.categoryConfidence == ClassificationConfidence.medium.rawValue
+        }
+        var dict: [String: [Tag]] = [:]
+        for tag in med {
+            dict[tag.categoryRaw ?? CategorySeed.otherCategory.name, default: []].append(tag)
+        }
+        return dict.map { ($0.key, $0.value) }.sorted { $0.category < $1.category }
+    }
+
+    // 確信度：低 (medium 以外で uncertain なもの全て)
+    private var lowTags: [Tag] {
+        uncertainTags.filter {
+            $0.categoryConfidence != ClassificationConfidence.medium.rawValue
+        }
+    }
+
+    var body: some View {
+        Group {
+            // ヘッダー行: タイトル + 一括ボタン
+            Section {
+                HStack {
+                    Image(systemName: "checklist")
+                        .foregroundStyle(.orange)
+                    Text("分類の確認")
+                        .font(.subheadline.weight(.semibold))
+                    Text("(\(uncertainTags.count)件)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if isBulkMode {
+                        Button("キャンセル") { cancelBulk() }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Button("一括確定") { enterBulkMode() }
+                            .font(.subheadline)
+                            .foregroundStyle(DS.Color.actionBlue)
+                    }
+                }
+                .padding(.vertical, 2)
+
+                // 一括モード時の「確定する」ボタン
+                if isBulkMode {
+                    Button {
+                        confirmBulk()
+                    } label: {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("チェックしたものを確定 (\(bulkChecked.count)件)")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .foregroundStyle(.white)
+                    .listRowBackground(DS.Color.actionBlue)
+                    .disabled(bulkChecked.isEmpty)
+                }
+            }
+
+            // 確信度：中 (カテゴリ別グループ)
+            ForEach(mediumByCategory, id: \.category) { group in
+                Section {
+                    ForEach(group.tags) { tag in reviewRow(tag) }
+                } header: {
+                    Text("確信度：中 — \(group.category)")
+                        .font(.caption).textCase(nil).foregroundStyle(.secondary)
+                }
+            }
+
+            // 確信度：低
+            if !lowTags.isEmpty {
+                Section {
+                    ForEach(lowTags) { tag in reviewRow(tag) }
+                } header: {
+                    Text("確信度：低")
+                        .font(.caption).textCase(nil).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func reviewRow(_ tag: Tag) -> some View {
+        HStack(spacing: DS.Spacing.md) {
+            // 一括モード: チェックボックス
+            if isBulkMode {
+                let checked = bulkChecked.contains(tag.persistentModelID)
+                Image(systemName: checked ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(checked ? DS.Color.actionBlue : Color(.tertiaryLabel))
+                    .font(.title3)
+                    .onTapGesture { toggleBulk(tag) }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tag.name).font(.body)
+                Text(tag.categoryRaw ?? CategorySeed.otherCategory.name)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text("\((tag.articles ?? []).count)件")
+                .font(.caption2).foregroundStyle(.secondary)
+
+            // 通常モード: 分野選択 Menu
+            if !isBulkMode {
+                Menu {
+                    ForEach(allCategories.filter { !$0.isHidden }) { cat in
+                        Button(cat.name) { apply(tag, to: cat.name) }
+                    }
+                } label: {
+                    Image(systemName: "square.grid.2x2")
+                        .foregroundStyle(DS.Color.actionBlue)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { if isBulkMode { toggleBulk(tag) } }
+    }
+
+    private func toggleBulk(_ tag: Tag) {
+        if bulkChecked.contains(tag.persistentModelID) {
+            bulkChecked.remove(tag.persistentModelID)
+        } else {
+            bulkChecked.insert(tag.persistentModelID)
+        }
+    }
+
+    private func enterBulkMode() {
+        isBulkMode = true
+        bulkChecked = []
+    }
+
+    private func cancelBulk() {
+        isBulkMode = false
+        bulkChecked = []
+    }
+
+    private func confirmBulk() {
+        for tag in uncertainTags where bulkChecked.contains(tag.persistentModelID) {
+            tag.categoryConfidence = ClassificationConfidence.high.rawValue
+        }
+        try? modelContext.save()
+        refresh.bump()
+        isBulkMode = false
+        bulkChecked = []
+    }
+
+    private func apply(_ tag: Tag, to category: String) {
+        CategoryCorrectionApplier.apply(
+            tag: tag, to: category,
+            store: services.correctionStore, context: modelContext, refresh: refresh
+        )
+    }
+}
+
+// MARK: - TagRow
 
 private struct TagRow: View {
     let tag: Tag

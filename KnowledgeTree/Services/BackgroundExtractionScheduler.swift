@@ -251,6 +251,7 @@ final class BackgroundExtractionScheduler {
 
         let result = await lintEngine.runFullLintLoop()
         logger.notice("BG scheduler: weekly lint done, ops=\(result.totalOperations), elapsed=\(result.elapsedSeconds)s")
+        LintRunStore.markRan()
         task.setTaskCompleted(success: true)
 
         // 次回分を chain submit (来週の日曜 3 AM)

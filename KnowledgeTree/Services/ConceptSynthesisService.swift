@@ -674,6 +674,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
     /// spec 080拡張: 概念合成を実行。overflow (exceededContextWindowSize) を検知したら
     /// 1 回だけ compact (小型スキーマ) で再試行する。compact も失敗 / 別エラーは rethrow → 上位で fallback。
+    /// decodingFailure (LM が不完全 JSON を出力) の場合は JSON 修復を試みる。
     private func synthesizeWithAdaptiveRetry(
         conceptPage: ConceptPage,
         articles: [Article]
@@ -690,15 +691,63 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         do {
             return try await run(compact: false)
         } catch {
-            guard Self.isContextOverflow(error) else { throw error }
-            logger.notice("concept synthesis overflow for \(conceptPage.name, privacy: .public) → compact retry (要点≤2)")
-            return try await run(compact: true)
+            if Self.isContextOverflow(error) {
+                logger.notice("concept synthesis overflow for \(conceptPage.name, privacy: .public) → compact retry (要点≤2)")
+                return try await run(compact: true)
+            }
+            // decodingFailure: LM が 「」等の日本語引用符を含む文字列の閉じ " を忘れた場合に発生。
+            // エラーテキストから部分 JSON を抽出して修復を試みる。修復失敗は rethrow → essence-list fallback。
+            if let partial = Self.extractPartialOutput(from: error) {
+                logger.notice("concept synthesis decodingFailure for \(conceptPage.name, privacy: .public) → repaired partial JSON")
+                return partial
+            }
+            throw error
         }
     }
 
     /// exceededContextWindowSize 系エラーか (型 import 不要で頑健に文字列判定)。
     static func isContextOverflow(_ error: Error) -> Bool {
         String(describing: error).contains("exceededContextWindowSize")
+    }
+
+    /// decodingFailure エラーのテキストから部分的に有効な ConceptSynthesisOutput を抽出する。
+    /// LM が文字列の閉じ " を忘れた / 末尾ゴミがある場合をカバー。
+    static func extractPartialOutput(from error: Error) -> ConceptSynthesisOutput? {
+        let desc = String(describing: error)
+        // エラー説明から "Text: ..." を取り出す
+        guard desc.contains("decodingFailure") else { return nil }
+        guard let textRange = desc.range(of: "Text: ") else { return nil }
+        let jsonCandidate = String(desc[textRange.upperBound...])
+        return repairAndDecode(jsonCandidate)
+    }
+
+    /// 不完全 JSON を修復してデコードを試みる。
+    /// 戦略: JSON オブジェクトの開始 `{` を探し、最後に出現する `}` で切り取る。
+    /// それでも失敗したら summary だけ取り出す。
+    static func repairAndDecode(_ text: String) -> ConceptSynthesisOutput? {
+        // まず `{` から最後の `}` までを試す
+        guard let start = text.firstIndex(of: "{"),
+              let end   = text.lastIndex(of: "}") else { return nil }
+        let slice = String(text[start...end])
+
+        if let data = slice.data(using: .utf8),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let summary  = obj["summary"] as? String ?? ""
+            let insights = obj["crossSourceInsights"] as? [String] ?? []
+            if !summary.isEmpty { return ConceptSynthesisOutput(summary: summary, crossSourceInsights: insights) }
+        }
+
+        // `}` 切り取りでも失敗 → summary フィールドだけ正規表現で取り出す
+        if let match = slice.range(of: "\"summary\"\\s*:\\s*\"([^\"]+)\"", options: .regularExpression) {
+            let raw = String(slice[match])
+            if let valStart = raw.firstIndex(of: ":"),
+               let q1 = raw[raw.index(after: valStart)...].firstIndex(of: "\""),
+               let q2 = raw[raw.index(after: q1)...].firstIndex(of: "\"") {
+                let summary = String(raw[raw.index(after: q1)..<q2])
+                if !summary.isEmpty { return ConceptSynthesisOutput(summary: summary, crossSourceInsights: []) }
+            }
+        }
+        return nil
     }
 
     /// hierarchical + meta-summary (5+ 件、chunk_size=4 で分割 → 各 chunk 要約 → meta prompt で最終合成)。

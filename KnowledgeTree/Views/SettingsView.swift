@@ -15,12 +15,6 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    // spec 097 Phase 4: 整理レポートの「要確認」件数表示用。
-    @Query private var allTags: [Tag]
-    private var uncertainCount: Int {
-        allTags.filter { CategoryReviewView.isUncertain($0) }.count
-    }
-
     @AppStorage("settings.safariSetupCompleted") private var safariSetupCompleted: Bool = false
     /// spec 051 Phase A 完成: iCloud sync 有効化 toggle (default OFF、opt-in)。
     /// 切替後はアプリ再起動が必要 (ModelContainer は launch 時に 1 度だけ構築)。
@@ -153,38 +147,36 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.tag.entry")
 
-                // spec 097 Phase 4: 分類の整理レポート (要確認件数バッジ付き)。
-                NavigationLink(value: CategoryReviewDestination()) {
-                    HStack(spacing: DS.Spacing.lg) {
-                        Image(systemName: "checklist")
-                            .foregroundStyle(DS.Color.actionBlue)
-                            .frame(width: 24)
-                        Text("settings.categoryReview.entry")
-                        Spacer()
-                        if uncertainCount > 0 {
-                            Text("\(uncertainCount)")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(.orange))
-                        }
-                    }
-                }
-                .accessibilityIdentifier("settings.categoryReview.entry")
             } header: {
                 Text("settings.section.manage")
             }
 
-            // 記事の分類/整理 (自動) — 今すぐ分類・整理 + 整理ログ。
-            // 「全 AI 再処理 (テスト)」(DebugReprocessButton) は非表示 (spec 087)。
+            // 知識の整合性チェック — 説明・最終実行・手動実行・ログ行。
             Section {
+                // 説明文 + 最終実行時刻
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("settings.lint.description")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    if let lastRun = LintRunStore.formattedLastRun() {
+                        Text(String(format: NSLocalizedString("settings.lint.lastRun", comment: ""), lastRun))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Text("settings.lint.neverRun")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
                 LintNowButton()
 
                 NavigationLink {
                     LintLogDetailView()
                 } label: {
-                    Label("settings.lintLog.section.title", systemImage: "list.bullet.rectangle")
+                    LintLogSummaryLabel()
                 }
             } header: {
                 Text("settings.section.organize")
@@ -285,9 +277,6 @@ struct SettingsView: View {
         }
         .navigationDestination(for: TagManagementDestination.self) { _ in
             TagManagementView()
-        }
-        .navigationDestination(for: CategoryReviewDestination.self) { _ in
-            CategoryReviewView()
         }
         .navigationDestination(for: TranslationSetupDestination.self) { _ in
             TranslationSetupView()

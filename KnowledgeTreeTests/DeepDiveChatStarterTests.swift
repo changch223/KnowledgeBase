@@ -39,7 +39,7 @@ struct DeepDiveChatStarterTests {
             return session
         }
 
-        func send(question: String, in session: ChatSession, contextMessages: [ChatMessage]) async throws -> ChatMessage {
+        func send(question: String, in session: ChatSession, chatMode: ChatMode, contextMessages: [ChatMessage]) async throws -> ChatMessage {
             sendCount += 1
             lastSendQuestion = question
             if sendThrows {

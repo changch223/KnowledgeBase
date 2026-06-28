@@ -10,6 +10,57 @@
 import SwiftUI
 import SwiftData
 
+/// Settings の「整理ログ」NavigationLink ラベル。直近ログのサマリを 1 行で表示。
+struct LintLogSummaryLabel: View {
+    @Query(
+        sort: [SortDescriptor(\LintLog.timestamp, order: .reverse)]
+    )
+    private var recentLogs: [LintLog]
+
+    private var summaryText: String? {
+        let logs = Array(recentLogs.prefix(50))
+        guard !logs.isEmpty else { return nil }
+
+        var mergeCount = 0
+        var reclassifyCount = 0
+        var deleteCount = 0
+        var linkCount = 0
+        var promoteCount = 0
+
+        for log in logs {
+            switch log.action {
+            case .merge:                        mergeCount += 1
+            case .reclassifyTag:                reclassifyCount += 1
+            case .deleteConceptPage, .deleteTag: deleteCount += 1
+            case .linkConceptPage:              linkCount += 1
+            case .promoteCategory:              promoteCount += 1
+            case .refreshSavedAnswer, .unknown: break
+            }
+        }
+
+        var parts: [String] = []
+        if mergeCount > 0    { parts.append("統合 \(mergeCount)") }
+        if reclassifyCount > 0 { parts.append("再分類 \(reclassifyCount)") }
+        if deleteCount > 0   { parts.append("削除 \(deleteCount)") }
+        if linkCount > 0     { parts.append("リンク \(linkCount)") }
+        if promoteCount > 0  { parts.append("分野追加 \(promoteCount)") }
+
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: "・")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("settings.lintLog.section.title")
+            if let summary = summaryText {
+                Text(String(format: NSLocalizedString("settings.lintLog.recent.summary", comment: ""), summary))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
 /// spec 087: 設定の「整理ログ」NavigationLink から push される一覧画面。
 struct LintLogDetailView: View {
     @Query(

@@ -124,6 +124,7 @@ struct KnowledgeTreeApp: App {
                     .tabItem {
                         Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
                     }
+                    .badge(AIPriorityCoordinator.shared.isChatActive ? 1 : 0)
                     .tag(AppTab.chat)
                     .accessibilityIdentifier("tab.chat")
             }

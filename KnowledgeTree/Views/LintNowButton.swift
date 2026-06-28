@@ -2,9 +2,9 @@
 //  LintNowButton.swift
 //  KnowledgeTree
 //
-//  spec 058 — Settings 内「今すぐ整理する」 button。
-//  tap で Lint loop 即時実行、完了後 toast でサマリ表示。
-//  60 秒 debounce で連打防止。
+//  spec 058 — Settings 内「今すぐ検知・修正する」 button。
+//  tap で Lint loop 即時実行、完了後 alert でサマリ表示。
+//  60 秒 debounce で連打防止。アイコンなし、件数非表示。
 //
 
 import SwiftUI
@@ -17,11 +17,9 @@ struct LintNowButton: View {
     @State private var lastRunCompletedAt: Date?
     @State private var lastResult: LintLoopResult?
     @State private var showResultAlert: Bool = false
-    /// spec 076: 今周回の残り未整理タグ数 (進捗表示)。
     @State private var remainingTags: Int = 0
 
     private static let debounceSeconds: TimeInterval = 60
-    /// spec 076: 1 batch の再分類タグ数。
     private static let batchSize: Int = 15
 
     private var isDebounced: Bool {
@@ -35,14 +33,17 @@ struct LintNowButton: View {
         } label: {
             HStack(spacing: DS.Spacing.sm) {
                 if isRunning {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "wand.and.stars")
+                    ProgressView().controlSize(.small)
                 }
-                // spec 076/088: 実行中は残り件数、待機中は「記事を今すぐ分類/整理（対象 N 件）」。
-                Text(buttonTitle)
-                    .font(.body)
+                if isRunning {
+                    Text(remainingTags > 0
+                         ? "検知・修正中… (残り \(remainingTags))"
+                         : NSLocalizedString("settings.lintNow.button.running", comment: ""))
+                        .font(.body)
+                } else {
+                    Text("settings.lintNow.button")
+                        .font(.body)
+                }
             }
         }
         .disabled(isRunning || isDebounced)
@@ -52,27 +53,6 @@ struct LintNowButton: View {
         } message: { result in
             Text("settings.lintNow.result.summary \(result.totalOperations)")
         }
-        .task { recomputeTargetCount() }
-        .onChange(of: refreshTrigger.version) { _, _ in recomputeTargetCount() }
-    }
-
-    /// spec 088: HealthScoreCard と LintNowButton を 1 行に統合。整理対象 N 件をボタン名に内包。
-    @State private var targetCount: Int = 0
-
-    private var buttonTitle: String {
-        if isRunning {
-            return remainingTags > 0
-                ? "整理中… (残り \(remainingTags))"
-                : NSLocalizedString("settings.lintNow.button", comment: "")
-        }
-        if targetCount > 0 {
-            return String(format: NSLocalizedString("settings.lintNow.button.withCount", comment: ""), targetCount)
-        }
-        return NSLocalizedString("settings.lintNow.button", comment: "")
-    }
-
-    private func recomputeTargetCount() {
-        targetCount = services.healthScoreService?.compute().total ?? 0
     }
 
     private func run() async {
@@ -80,9 +60,6 @@ struct LintNowButton: View {
         isRunning = true
         defer { isRunning = false; remainingTags = 0 }
 
-        // spec 076: 1 周完走するまで batch を回す。各 batch で進捗 (残り件数) を反映。
-        // 途中で View が消える等で Task が cancel されても、lastLintedAt + マーカーが永続化
-        // されているので次回押下時は続きから再開する (1 からやり直さない)。
         var accumulated = LintLoopResult()
         var complete = false
         while !complete {
@@ -102,6 +79,7 @@ struct LintNowButton: View {
             accumulated.loopComplete = true
             lastResult = accumulated
             lastRunCompletedAt = .now
+            LintRunStore.markRan()
             showResultAlert = true
         }
         refreshTrigger.bump()
