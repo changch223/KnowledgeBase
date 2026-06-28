@@ -2,13 +2,14 @@
 //  OnboardingView.swift
 //  KnowledgeTree
 //
-//  spec 049 — 初回起動 onboarding。4 ページ TabView (PageStyle) で iKnow の核を説明。
+//  spec 049 — 初回起動 onboarding。5 ページ TabView (PageStyle) で Knowledge Base の核を説明。
 //
 //  「保存したものが時間と共に compound する」体験を最初に伝える:
 //    Page 1: ようこそ — Knowledge Base は「あなた専用の第二の脳」
-//    Page 2: 保存する — Share Sheet で記事 / PDF / 写真 / 音声をどこからでも
-//    Page 3: 自動で整理 — AI が概念ページ (Wiki) を作る
-//    Page 4: AI チャット — 保存した知識に質問、出典付きで答える
+//    Page 2: 保存する — Share Sheet / ＋ボタン で記事 / PDF / 写真 / 音声 / 多言語
+//    Page 3: 自動で整理 — AI が概念ページ (Wiki) を作り iKnow フィードに育てる
+//    Page 4: 直せる・育てられる — 本文訂正 (spec 095) + 分類自己学習 (spec 097)
+//    Page 5: AI チャット — 保存した知識に質問、出典付きで答える
 //
 //  完了後 UserDefaults `iKnow_onboarding_v1_done` を true、再起動でスキップ。
 //  KnowledgeTreeApp の WindowGroup root で fullScreenCover として表示。
@@ -20,7 +21,10 @@ struct OnboardingView: View {
     @Binding var isPresented: Bool
     @State private var currentPage: Int = 0
 
-    // spec 099: Page 4 を廃止された家庭教師案内から現行の「AI チャット」(保存した知識に質問) に更新。
+    // spec 049/099: 5 ページ構成。
+    // Page 3: lightbulb → newspaper.fill (iKnow タブの実アイコンに統一)
+    // Page 4: 新規 — 本文訂正 (spec 095) + 分類自己学習 (spec 097)
+    // Page 5: 旧 Page 4 の AI チャット
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             symbol: "brain.head.profile",
@@ -35,15 +39,21 @@ struct OnboardingView: View {
             highlightColor: .green
         ),
         OnboardingPage(
-            symbol: "lightbulb.fill",
+            symbol: "newspaper.fill",
             title: "onboarding.page3.title",
             body: "onboarding.page3.body",
             highlightColor: .orange
         ),
         OnboardingPage(
-            symbol: "bubble.left.and.bubble.right.fill",
+            symbol: "pencil.and.scribble",
             title: "onboarding.page4.title",
             body: "onboarding.page4.body",
+            highlightColor: .mint
+        ),
+        OnboardingPage(
+            symbol: "bubble.left.and.bubble.right.fill",
+            title: "onboarding.page5.title",
+            body: "onboarding.page5.body",
             highlightColor: .purple
         )
     ]

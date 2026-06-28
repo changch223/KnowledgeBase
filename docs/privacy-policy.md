@@ -25,7 +25,7 @@ Knowledge Base ("the App") is a personal knowledge app that saves articles you c
 
 ### お問い合わせ
 ご質問・ご要望は GitHub Issues よりご連絡ください:
-https://github.com/changch223/KnowledgeTree/issues
+https://github.com/changch223/KnowledgeBase/issues
 
 ## English
 
@@ -48,4 +48,4 @@ https://github.com/changch223/KnowledgeTree/issues
 
 ### Contact
 Please reach us via GitHub Issues:
-https://github.com/changch223/KnowledgeTree/issues
+https://github.com/changch223/KnowledgeBase/issues

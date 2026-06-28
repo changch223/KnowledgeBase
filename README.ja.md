@@ -228,7 +228,7 @@ iKnowWidget/                 # ホーム画面ウィジェット
 **要件**: Xcode 26+ / iOS・iPadOS **26.4+** / **Apple Intelligence 対応端末**（Simulator はキーワード/ヒューリスティック経路に degrade）
 
 ```bash
-git clone https://github.com/changch223/KnowledgeTree.git
+git clone https://github.com/changch223/KnowledgeBase.git
 cd KnowledgeTree
 open KnowledgeTree.xcodeproj   # KnowledgeTree scheme を実機で実行
 ```
@@ -270,7 +270,7 @@ xcodebuild test -scheme KnowledgeTree \
 
 ## 💬 サポート
 
-質問・不具合・要望 → [GitHub Issues](https://github.com/changch223/KnowledgeTree/issues)。[サポートページ](docs/support.md) も。
+質問・不具合・要望 → [GitHub Issues](https://github.com/changch223/KnowledgeBase/issues)。[サポートページ](docs/support.md) も。
 
 ---
 

@@ -20,6 +20,29 @@ struct ArticleListView: View {
     /// spec 056 Phase B: FAB tap で URL 入力 sheet
     @State private var showAddArticle: Bool = false
 
+    // MARK: - 検索候補用データソース
+    @Query(sort: \Tag.name) private var allTags: [Tag]
+    @Query(filter: #Predicate<ConceptPage> { !$0.isHidden },
+           sort: \ConceptPage.name) private var allConcepts: [ConceptPage]
+    @State private var recentSearches: [String] = SearchSuggestionStore.shared.recent
+
+    /// タグを記事数の多い順に最大5件
+    private var topTags: [Tag] {
+        allTags
+            .sorted { ($0.articles?.count ?? 0) > ($1.articles?.count ?? 0) }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    /// 概念ページを関連記事数の多い順に最大5件
+    private var topConcepts: [ConceptPage] {
+        allConcepts
+            .filter { !($0.relatedArticles?.isEmpty ?? true) }
+            .sorted { ($0.relatedArticles?.count ?? 0) > ($1.relatedArticles?.count ?? 0) }
+            .prefix(5)
+            .map { $0 }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
@@ -70,6 +93,49 @@ struct ArticleListView: View {
                 placement: .navigationBarDrawer(displayMode: .always),
                 prompt: Text("search.placeholder")
             )
+            .searchSuggestions {
+                // クエリが空の時だけ候補を出す
+                if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if !recentSearches.isEmpty {
+                        Section(header: Text("search.suggestions.recent")) {
+                            ForEach(recentSearches.prefix(5), id: \.self) { query in
+                                Label(query, systemImage: "clock")
+                                    .searchCompletion(query)
+                            }
+                        }
+                    }
+                    if !topTags.isEmpty {
+                        Section(header: Text("search.suggestions.tags")) {
+                            ForEach(topTags) { tag in
+                                Label(tag.name, systemImage: "tag")
+                                    .searchCompletion(tag.name)
+                            }
+                        }
+                    }
+                    if !topConcepts.isEmpty {
+                        Section(header: Text("search.suggestions.concepts")) {
+                            ForEach(topConcepts) { concept in
+                                Label(concept.name, systemImage: "doc.text.fill")
+                                    .searchCompletion(concept.name)
+                            }
+                        }
+                    }
+                }
+            }
+            // 検索実行 (Return キー or 候補選択) で最近の検索に記録
+            .onSubmit(of: .search) {
+                let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !q.isEmpty {
+                    SearchSuggestionStore.shared.record(q)
+                    recentSearches = SearchSuggestionStore.shared.recent
+                }
+            }
+            // 検索クリア時に最近の検索リストを再読み込み
+            .onChange(of: searchQuery) { _, new in
+                if new.isEmpty {
+                    recentSearches = SearchSuggestionStore.shared.recent
+                }
+            }
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
             }

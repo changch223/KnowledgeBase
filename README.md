@@ -237,7 +237,7 @@ A project **constitution** (`.specify/memory/constitution.md`) encodes 7 core pr
 - An **Apple Intelligence–capable device** (on-device models; the Simulator falls back to keyword/heuristic paths)
 
 ```bash
-git clone https://github.com/changch223/KnowledgeTree.git
+git clone https://github.com/changch223/KnowledgeBase.git
 cd KnowledgeTree
 open KnowledgeTree.xcodeproj
 # Select the KnowledgeTree scheme → run on an Apple Intelligence device
@@ -285,7 +285,7 @@ Yes. Open *Settings → Review classifications* (or long-press a tag in tag mana
 
 ## 💬 Support
 
-Questions, bugs, or requests → [GitHub Issues](https://github.com/changch223/KnowledgeTree/issues). See also the [Support page](docs/support.md).
+Questions, bugs, or requests → [GitHub Issues](https://github.com/changch223/KnowledgeBase/issues). See also the [Support page](docs/support.md).
 
 ---
 
