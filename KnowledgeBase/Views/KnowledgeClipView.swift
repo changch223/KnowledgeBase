@@ -100,15 +100,10 @@ struct KnowledgeClipView: View {
                     }
 
                     if displayedConceptEntries.isEmpty {
-                        feedEmptyState
+                        SeigaihaEmptyState(message: "clip.empty.concepts")
                     } else {
-                        // spec 087: 概念カード群の見出し (「新着記事」棚と同じスタイル)。
-                        Text("clip.section.concepts")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, DS.Spacing.xxl)
+                        // 北斎スタイル見出し
+                        SumiSectionHeader(title: "clip.section.concepts")
 
                         // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
                         // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
@@ -222,11 +217,7 @@ struct KnowledgeClipView: View {
     /// 既存 ArticleShelfCard 流用。概念化されると newShelfArticles から外れて自動的に消える。
     private var newArticleShelf: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
-            Text("feed.new.title")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, DS.Spacing.xxl)
+            SumiSectionHeader(title: "feed.new.title")
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: DS.Spacing.md) {

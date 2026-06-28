@@ -27,13 +27,11 @@ struct ChatInputField: View {
             } label: {
                 Text(chatMode == .quick ? "Fast" : "Think")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(chatMode == .quick ? DS.Color.sumiInk : .secondary)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(
-                        chatMode == .quick
-                            ? DS.Color.sumiInk.opacity(0.12)
-                            : Color(.tertiarySystemFill),
+                        DS.Color.sumiInk.opacity(chatMode == .quick ? 0.12 : 0.06),
                         in: Capsule()
                     )
             }
