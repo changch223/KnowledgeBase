@@ -54,7 +54,7 @@ struct ConflictProposalRow: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(DS.Color.actionBlue)
+                .tint(DS.Color.sumiInk)
 
                 Button {
                     resolve(.keepBoth)
@@ -91,7 +91,7 @@ struct ConflictProposalRow: View {
                 .padding(.horizontal, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(emphasized ? DS.Color.actionBlue.opacity(0.15) : Color.gray.opacity(0.15))
+                        .fill(emphasized ? DS.Color.sumiInk.opacity(0.15) : Color.gray.opacity(0.15))
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

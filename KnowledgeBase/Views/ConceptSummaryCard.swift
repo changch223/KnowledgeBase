@@ -50,7 +50,7 @@ struct ConceptSummaryCard: View {
                 } else {
                     Text(previewText)
                         .font(.subheadline)
-                        .foregroundStyle(page.isSynthesisInProgress ? .tertiary : .secondary)
+                        .foregroundStyle(page.isSynthesisInProgress ? DS.Color.sumiLight : DS.Color.sumiMid)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -64,7 +64,23 @@ struct ConceptSummaryCard: View {
             }
             .padding(DS.Spacing.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsCardBackground()
+            // 墨スタイル: 白カード + 細い墨線ボーダー
+            .background(DS.Color.washiCard,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .stroke(DS.Color.sumiRule, lineWidth: 0.8)
+            )
+            // 柱4: 右上に薄く「知」ウォーターマーク
+            .overlay(alignment: .topTrailing) {
+                Text("知")
+                    .font(.system(size: 38, weight: .black, design: .serif))
+                    .foregroundStyle(DS.Color.sumiInk.opacity(0.045))
+                    .padding(.top, DS.Spacing.xs)
+                    .padding(.trailing, DS.Spacing.md)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
         .buttonStyle(.plain)
         .padding(.horizontal, DS.Spacing.xxl)
@@ -108,10 +124,10 @@ struct ConceptSummaryCard: View {
 
     private var kindIconTile: some View {
         ZStack {
-            DS.Color.tagFill
+            DS.Color.sumiRule
             Image(systemName: page.kind.symbolName)
                 .font(.subheadline)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiMid)
         }
     }
 
@@ -119,32 +135,33 @@ struct ConceptSummaryCard: View {
         HStack(alignment: .center, spacing: DS.Spacing.sm) {
             // spec 087: サムネイル/アイコン + タイトルを 1 行に。
             thumbnail
+            // 明朝体（Hiragino Mincho）でロゴの和の格調を表現
             Text(page.name)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundStyle(.primary)
+                .font(.title3.weight(.semibold))
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
                 .lineLimit(1)
             if page.isFollowing {
                 Image(systemName: "pin.fill")
                     .font(.caption2)
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiMid)
                     .accessibilityHidden(true)
             }
             Spacer(minLength: 0)
         }
     }
 
-    /// spec 080: 最重要の要点 1-2 点を青•箇条書きで (答え先出し)。
+    /// spec 080: 最重要の要点 1-2 点を墨•箇条書きで (答え先出し)。青→墨に変更。
     private var keyPointsView: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.xs) {
             ForEach(Array(displayPoints.prefix(2).enumerated()), id: \.offset) { _, point in
                 HStack(alignment: .top, spacing: DS.Spacing.sm) {
                     Text("•")
                         .font(.subheadline)
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                     Text(point)
                         .font(.subheadline)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(DS.Color.sumiInk)
                         // spec 080拡張: クリック不要で読めるよう全文表示 (lineLimit 撤去)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -171,8 +188,8 @@ struct ConceptSummaryCard: View {
             .lineLimit(1)
             .padding(.horizontal, DS.Spacing.sm)
             .padding(.vertical, DS.Spacing.xxs)
-            .background(DS.Color.tagFill, in: Capsule())
-            .foregroundStyle(.secondary)
+            .background(DS.Color.sumiRule.opacity(0.5), in: Capsule())
+            .foregroundStyle(DS.Color.sumiMid)
     }
 
     private var footer: some View {
@@ -186,6 +203,6 @@ struct ConceptSummaryCard: View {
             Text(SavedAtFormatter.format(page.updatedAt))
         }
         .font(.caption2)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(DS.Color.sumiLight)
     }
 }

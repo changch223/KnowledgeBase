@@ -101,8 +101,8 @@ struct TranslationSetupView: View {
 
     private var statusColor: Color {
         switch status {
-        case .installed: return DS.Color.actionBlue
-        case .supported: return DS.Color.actionBlue
+        case .installed: return DS.Color.sumiInk
+        case .supported: return DS.Color.sumiInk
         case .unsupported, .unknown: return .secondary
         }
     }
@@ -165,7 +165,7 @@ struct TranslationSetupView: View {
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
-        .tint(DS.Color.actionBlue)
+        .tint(DS.Color.sumiInk)
         .accessibilityIdentifier("settings.translationSetup.complete")
     }
 
@@ -176,7 +176,7 @@ struct TranslationSetupView: View {
         HStack(alignment: .top, spacing: DS.Spacing.lg) {
             ZStack {
                 Circle()
-                    .fill(DS.Color.actionBlue)
+                    .fill(DS.Color.sumiInk)
                     .frame(width: 32, height: 32)
                 Text("\(number)")
                     .font(.headline)

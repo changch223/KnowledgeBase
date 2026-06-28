@@ -94,16 +94,15 @@ struct ChatTabView: View {
                 // spec 099: 非同期処理中バナー
                 if isThinking {
                     HStack(spacing: DS.Spacing.sm) {
-                        ProgressView()
-                            .scaleEffect(0.8)
+                        SumiKnowledgeSpinnerSmall()
                         Text("chat.thinking.banner")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DS.Color.sumiMid)
                         Spacer()
                     }
                     .padding(.horizontal, DS.Spacing.xl)
                     .padding(.vertical, DS.Spacing.sm)
-                    .background(DS.Color.surfaceSecondary.opacity(0.8))
+                    .background(DS.Color.washiBackground.opacity(0.9))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
@@ -115,6 +114,7 @@ struct ChatTabView: View {
                     focused: $inputFocused
                 )
             }
+            .background(DS.Color.washiBackground)
             .navigationTitle("chat.tab.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -248,10 +248,10 @@ struct ChatTabView: View {
                     }
                     if isThinking {
                         HStack(spacing: DS.Spacing.sm) {
-                            ProgressView()
+                            SumiKnowledgeSpinnerSmall()
                             Text("chat.message.assistant.thinking")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DS.Color.sumiMid)
                         }
                         .padding(DS.Spacing.lg)
                         .id("thinking")

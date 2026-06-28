@@ -62,7 +62,7 @@ struct ArticleShelfCard: View {
             DS.Color.tagFill
             Image(systemName: "doc.text")
                 .font(.title2)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
         }
     }
 }

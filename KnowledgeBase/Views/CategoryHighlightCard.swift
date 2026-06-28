@@ -21,7 +21,7 @@ struct CategoryHighlightCard: View {
             HStack(spacing: DS.Spacing.md) {
                 Image(systemName: category.symbolName)
                     .font(.title2)
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .frame(width: 36, height: 36)
                     .background(DS.Color.tagFill, in: RoundedRectangle(cornerRadius: DS.Radius.chip))
 
@@ -42,7 +42,7 @@ struct CategoryHighlightCard: View {
                     Text(String(format: String(localized: "feed.highlight.recent"), recentCount))
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                         .padding(.horizontal, DS.Spacing.sm)
                         .padding(.vertical, DS.Spacing.xxs)
                         .background(DS.Color.tagFill, in: Capsule())

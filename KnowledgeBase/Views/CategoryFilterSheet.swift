@@ -67,7 +67,7 @@ struct CategoryFilterSheet: View {
                             Image(systemName: selectedCategories.contains(row.name)
                                   ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(selectedCategories.contains(row.name)
-                                    ? DS.Color.actionBlue : Color(.tertiaryLabel))
+                                    ? DS.Color.sumiInk : Color(.tertiaryLabel))
                                 .font(.body)
                         }
                         .contentShape(Rectangle())
@@ -83,7 +83,7 @@ struct CategoryFilterSheet: View {
                     Button("library.filter.clear") {
                         selectedCategories.removeAll()
                     }
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .disabled(selectedCategories.isEmpty)
                 }
                 ToolbarItem(placement: .topBarTrailing) {

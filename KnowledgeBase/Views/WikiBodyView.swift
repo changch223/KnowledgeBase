@@ -50,7 +50,7 @@ struct WikiBodyView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
             HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                Text("•").foregroundStyle(DS.Color.actionBlue)
+                Text("•").foregroundStyle(DS.Color.sumiInk)
                 Text(inline(String(line.dropFirst(2))))
                     .font(.body)
                     .frame(maxWidth: .infinity, alignment: .leading)

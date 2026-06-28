@@ -40,7 +40,7 @@ struct AIInsightCard: View {
         HStack(spacing: DS.Spacing.xl) {
             Image(systemName: iconName)
                 .font(.title3)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
                 .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
@@ -66,12 +66,12 @@ struct AIInsightCard: View {
         .padding(.horizontal, DS.Spacing.xxl)
         .padding(.vertical, DS.Spacing.xl)
         .background(
-            DS.Color.actionBlue.opacity(0.06),
+            DS.Color.sumiInk.opacity(0.06),
             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .stroke(DS.Color.actionBlue.opacity(0.20), lineWidth: 0.5)
+                .stroke(DS.Color.sumiInk.opacity(0.20), lineWidth: 0.5)
         )
         .accessibilityIdentifier("aibrain.insight_card")
         .accessibilityElement(children: .combine)

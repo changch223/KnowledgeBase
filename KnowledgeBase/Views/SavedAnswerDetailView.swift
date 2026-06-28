@@ -208,7 +208,7 @@ struct SavedAnswerDetailView: View {
                 Label("SavedAnswer.detail.pin.toggle", systemImage: "pin.fill")
                     .font(.caption)
                     .labelStyle(.titleAndIcon)
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiInk)
             }
             Spacer()
         }

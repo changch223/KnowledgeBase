@@ -151,6 +151,8 @@ struct KnowledgeBaseApp: App {
             // V3.0 polish (2026-05-28): AI 出力含む全 Text を長押しで選択 + Copy 可能に。
             // TabView root に適用すると全 descendant の Text に伝播 (Apple HIG 準拠)。
             .textSelection(.enabled)
+            // 墨スタイル: タブバー・ナビゲーション・ボタンのアクセントカラーを sumiInk (黒/白) に統一
+            .tint(DS.Color.sumiInk)
             .task {
                 await bootstrap()
             }

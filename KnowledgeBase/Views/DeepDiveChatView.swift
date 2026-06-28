@@ -93,7 +93,7 @@ struct DeepDiveChatView: View {
             } label: {
                 Image(systemName: "paperplane.fill")
                     .font(.title3)
-                    .foregroundStyle(canSend ? DS.Color.actionBlue : Color.gray)
+                    .foregroundStyle(canSend ? DS.Color.sumiInk : Color.gray)
             }
             .disabled(!canSend)
             .accessibilityIdentifier("deepdive.send")

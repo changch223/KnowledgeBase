@@ -15,7 +15,7 @@ struct SavedAnswerRow: View {
             if answer.isPinned {
                 Image(systemName: "pin.fill")
                     .font(.caption2)
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .accessibilityHidden(true)
             }
             // spec 045: isStale 視覚マーク (orange 🕒)

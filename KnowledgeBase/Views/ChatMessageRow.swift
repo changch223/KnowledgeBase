@@ -46,7 +46,7 @@ struct ChatMessageRow: View {
             .foregroundStyle(.white)
             .padding(.horizontal, DS.Spacing.lg)
             .padding(.vertical, DS.Spacing.md)
-            .background(DS.Color.actionBlue, in: RoundedRectangle(cornerRadius: 16))
+            .background(DS.Color.sumiFixedInk, in: RoundedRectangle(cornerRadius: 16))
             .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
@@ -169,7 +169,7 @@ struct ChatMessageRow: View {
                 if let url = URL(string: "article-id://\(articleID.uuidString)") {
                     marker.link = url
                 }
-                marker.foregroundColor = DS.Color.actionBlue
+                marker.foregroundColor = DS.Color.sumiInk
                 marker.font = .footnote
                 output.append(marker)
             }
@@ -213,7 +213,7 @@ private struct CitationSourcesSection: View {
                         HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
                             Text("[\(row.number)]")
                                 .font(.caption.monospacedDigit())
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                             Text(row.article.title)
                                 .font(.caption)
                                 .lineLimit(2)

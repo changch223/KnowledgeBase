@@ -27,13 +27,11 @@ struct ChatInputField: View {
             } label: {
                 Text(chatMode == .quick ? "Fast" : "Think")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(chatMode == .quick ? DS.Color.actionBlue : .secondary)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(
-                        chatMode == .quick
-                            ? DS.Color.actionBlue.opacity(0.12)
-                            : Color(.tertiarySystemFill),
+                        DS.Color.sumiInk.opacity(chatMode == .quick ? 0.12 : 0.06),
                         in: Capsule()
                     )
             }
@@ -51,7 +49,7 @@ struct ChatInputField: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 32))
-                    .foregroundStyle(canSend ? DS.Color.actionBlue : .secondary.opacity(0.4))
+                    .foregroundStyle(canSend ? DS.Color.sumiInk : .secondary.opacity(0.4))
             }
             .disabled(!canSend)
             .accessibilityIdentifier("chat.input.send")

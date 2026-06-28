@@ -36,7 +36,7 @@ struct KnowledgeCategoryRow: View {
                             .frame(height: 6)
 
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(DS.Color.actionBlue)
+                            .fill(DS.Color.sumiInk)
                             .frame(width: proxy.size.width * ratio, height: 6)
                     }
                     .frame(height: proxy.size.height)

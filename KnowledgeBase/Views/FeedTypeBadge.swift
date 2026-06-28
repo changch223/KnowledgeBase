@@ -17,7 +17,7 @@ struct FeedTypeBadge: View {
         Label(labelKey, systemImage: systemImage)
             .font(.caption2)
             .fontWeight(.semibold)
-            .foregroundStyle(DS.Color.actionBlue)
+            .foregroundStyle(DS.Color.sumiInk)
             .padding(.horizontal, DS.Spacing.sm)
             .padding(.vertical, DS.Spacing.xxs)
             .background(DS.Color.tagFill, in: Capsule())

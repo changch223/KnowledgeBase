@@ -1680,6 +1680,17 @@
         }
       }
     },
+    "clip.empty.concepts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を保存すると\nAIが知識を整理します"
+          }
+        }
+      }
+    },
     "clip.empty.description" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6478,6 +6489,9 @@
         }
       }
     },
+    "処理中" : {
+
+    },
     "出現記事数" : {
 
     },
@@ -6550,6 +6564,9 @@
 
     },
     "理解が浅い" : {
+
+    },
+    "知" : {
 
     },
     "確信度" : {
