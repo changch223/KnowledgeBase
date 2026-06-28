@@ -15,9 +15,7 @@ struct BottomStatusBar: View {
     var body: some View {
         if let current = monitor.current {
             HStack(spacing: DS.Spacing.lg) {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(phaseTintColor(current.phase))
+                SumiKnowledgeSpinnerSmall()
 
                 VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                     HStack(spacing: DS.Spacing.sm) {

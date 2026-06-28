@@ -407,7 +407,7 @@ struct ArticleDetailView: View {
 
             HStack(spacing: DS.Spacing.md) {
                 if status == .extracting || status == .pending || status == nil || isRetryingKnowledge {
-                    ProgressView().controlSize(.small).tint(DS.Color.phaseKnowledge)
+                    SumiKnowledgeSpinnerSmall()
                 }
                 Text(messageKey(for: status))
                     .font(.body)
@@ -505,7 +505,7 @@ struct ArticleDetailView: View {
                 .padding(.vertical, DS.Spacing.md)
         } else {
             HStack(spacing: DS.Spacing.md) {
-                ProgressView().controlSize(.small)
+                SumiKnowledgeSpinnerSmall()
                 Text("detail.body.pending")
                     .font(.callout)
                     .foregroundStyle(.secondary)

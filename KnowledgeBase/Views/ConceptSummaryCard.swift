@@ -71,6 +71,16 @@ struct ConceptSummaryCard: View {
                 RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                     .stroke(DS.Color.sumiRule, lineWidth: 0.8)
             )
+            // 柱4: 右上に薄く「知」ウォーターマーク
+            .overlay(alignment: .topTrailing) {
+                Text("知")
+                    .font(.system(size: 38, weight: .black, design: .serif))
+                    .foregroundStyle(DS.Color.sumiInk.opacity(0.045))
+                    .padding(.top, DS.Spacing.xs)
+                    .padding(.trailing, DS.Spacing.md)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
         .buttonStyle(.plain)
         .padding(.horizontal, DS.Spacing.xxl)
