@@ -64,7 +64,7 @@ struct WikiShelfCard: View {
             DS.Color.tagFill
             Image(systemName: page.kind.symbolName)
                 .font(.title2)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
         }
     }
 }

@@ -57,7 +57,7 @@ struct GraphNodeEditSheet: View {
                     showMergePicker = true
                 } label: {
                     Label("他のノードと統合", systemImage: "arrow.triangle.merge")
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                 }
                 .disabled(mergeCandidates.isEmpty)
                 .accessibilityIdentifier("graph.node.edit.merge")

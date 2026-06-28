@@ -52,7 +52,7 @@ struct SavedAnswerSection: View {
                     NavigationLink(value: SavedAnswerListByConceptDestination(conceptPageID: conceptPageID)) {
                         Text(String(format: String(localized: "ConceptPage.detail.savedAnswers.showAll"), relatedAnswers.count - 5))
                             .font(.caption)
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                     }
                 }
             }

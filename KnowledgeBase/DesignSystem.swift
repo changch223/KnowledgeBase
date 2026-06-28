@@ -180,12 +180,15 @@ enum DS {
 
 extension View {
 
-    /// Card background using the secondary system surface and continuous rounded rect.
+    /// 墨スタイルカード背景: 和紙白 + 細墨線ボーダー。
     func dsCardBackground(radius: CGFloat = DS.Radius.card) -> some View {
-        background(
-            DS.Color.surfaceSecondary,
-            in: RoundedRectangle(cornerRadius: radius, style: .continuous)
-        )
+        self
+            .background(DS.Color.washiCard,
+                        in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(DS.Color.sumiRule, lineWidth: 0.8)
+            )
     }
 
     /// AI brand gradient background (accentColor → purple tint).

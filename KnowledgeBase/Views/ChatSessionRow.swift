@@ -25,7 +25,7 @@ struct ChatSessionRow: View {
                 }
                 Text(displayTitle)
                     .font(.body)
-                    .foregroundStyle(isActive ? DS.Color.actionBlue : .primary)
+                    .foregroundStyle(isActive ? DS.Color.sumiInk : .primary)
                     .lineLimit(1)
                 Spacer()
                 Text(relativeTimeKey)

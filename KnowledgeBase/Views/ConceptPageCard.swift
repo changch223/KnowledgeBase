@@ -48,7 +48,7 @@ struct ConceptPageCard: View {
         HStack(alignment: .top, spacing: DS.Spacing.md) {
             Image(systemName: iconName)
                 .font(.title3)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
                 .frame(width: 32, alignment: .center)
                 .accessibilityHidden(true)
 
@@ -60,7 +60,7 @@ struct ConceptPageCard: View {
                     if conceptPage.isFollowing {
                         Image(systemName: "pin.fill")
                             .font(.caption2)
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                             .accessibilityHidden(true)
                     }
                     Spacer(minLength: DS.Spacing.xs)

@@ -51,7 +51,7 @@ struct RecentLearningDetailView: View {
         HStack(alignment: .top, spacing: DS.Spacing.md) {
             Image(systemName: "sparkles")
                 .font(.title2)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
             if isLoading && headline.isEmpty {
                 HStack(spacing: DS.Spacing.sm) {
                     ProgressView().scaleEffect(0.8)

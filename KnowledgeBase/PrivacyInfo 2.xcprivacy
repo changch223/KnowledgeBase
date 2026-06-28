@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- iKnow はトラッキングを行わない -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!--
+	  データ収集なし: 保存した記事・知識・チャットは全て端末内 (SwiftData) + ユーザーの
+	  iCloud プライベートDB のみ。開発者へのデータ送信・第三者共有・トラッキングは行わない。
+	-->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<!-- Required Reason API: アプリは UserDefaults (App Group 共有) を設定・フラグ保存に使用 -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

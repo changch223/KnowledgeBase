@@ -65,7 +65,7 @@ struct UnderstandingCardRow: View {
 
     private var iconColor: Color {
         switch card.kind {
-        case .conceptPage: return DS.Color.actionBlue
+        case .conceptPage: return DS.Color.sumiInk
         case .savedAnswer: return .orange
         }
     }

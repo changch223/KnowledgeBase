@@ -170,8 +170,8 @@ struct CategoryGraphView: View {
         let circle = Path(ellipseIn: rect)
 
         if isCenter {
-            context.fill(circle, with: .color(DS.Color.actionBlue.opacity(0.85)))
-            context.stroke(circle, with: .color(DS.Color.actionBlue), lineWidth: 1.5)
+            context.fill(circle, with: .color(DS.Color.sumiInk.opacity(0.85)))
+            context.stroke(circle, with: .color(DS.Color.sumiInk), lineWidth: 1.5)
         } else {
             context.fill(circle, with: .color(DS.Color.aiBrandNodeFill))
             context.stroke(circle, with: .color(DS.Color.aiBrandNodeStroke), lineWidth: 1.0)

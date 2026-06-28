@@ -37,7 +37,7 @@ struct WikiFeedCard: View {
                     FeedTypeBadge(labelKey: "feed.badge.wiki", systemImage: page.kind.symbolName)
                     Label("feed.wiki.updated", systemImage: "sparkles")
                         .font(.caption2)
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                         .labelStyle(.titleAndIcon)
                 }
 
@@ -88,7 +88,7 @@ struct WikiFeedCard: View {
             DS.Color.tagFill
             Image(systemName: page.kind.symbolName)
                 .font(.system(size: 44))
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
         }
     }
 }
@@ -120,7 +120,7 @@ struct PeriodicDigestCard: View {
                     Label("feed.digest.title", systemImage: "calendar")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                     Spacer()
                     Text(String(format: String(localized: "feed.digest.count"), pages.count))
                         .font(.caption)
@@ -178,7 +178,7 @@ struct PeriodicDigestCard: View {
         ZStack {
             DS.Color.tagFill
             Image(systemName: page.kind.symbolName)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
         }
     }
 }

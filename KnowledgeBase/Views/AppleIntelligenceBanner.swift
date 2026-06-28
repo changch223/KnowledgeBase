@@ -37,7 +37,7 @@ struct AppleIntelligenceBanner: View {
                     Link(destination: url) {
                         Text("設定 App を開く")
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                     }
                     .padding(.top, DS.Spacing.xs)
                 }

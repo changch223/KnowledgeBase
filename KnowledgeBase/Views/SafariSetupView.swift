@@ -75,7 +75,7 @@ struct SafariSetupView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(DS.Color.actionBlue)
+                    .tint(DS.Color.sumiInk)
                     .padding(.top, DS.Spacing.md)
                     .accessibilityIdentifier("settings.safariSetup.completeButton")
                 }
@@ -122,7 +122,7 @@ struct SafariSetupView: View {
             Label("settings.safariSetup.openSettingsButton", systemImage: "arrow.up.forward.app")
         }
         .buttonStyle(.bordered)
-        .tint(DS.Color.actionBlue)
+        .tint(DS.Color.sumiInk)
         .accessibilityIdentifier("settings.safariSetup.openSettingsButton")
     }
 
@@ -142,7 +142,7 @@ struct SafariSetupView: View {
             )) {
                 Text("settings.safariSetup.autoSaveToggle")
             }
-            .tint(DS.Color.actionBlue)
+            .tint(DS.Color.sumiInk)
             .accessibilityIdentifier("settings.safariSetup.autoSaveToggle")
 
             Text("settings.safariSetup.autoSaveExplain")
@@ -179,7 +179,7 @@ struct SafariSetupView: View {
         HStack(alignment: .top, spacing: DS.Spacing.lg) {
             ZStack {
                 Circle()
-                    .fill(DS.Color.actionBlue)
+                    .fill(DS.Color.sumiInk)
                     .frame(width: 32, height: 32)
                 Text("\(number)")
                     .font(.headline)

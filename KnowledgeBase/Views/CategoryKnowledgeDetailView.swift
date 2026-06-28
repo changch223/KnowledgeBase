@@ -123,7 +123,7 @@ struct CategoryKnowledgeDetailView: View {
                 ForEach(Array(facts.enumerated()), id: \.offset) { _, entry in
                     HStack(alignment: .top, spacing: DS.Spacing.sm) {
                         Text("・")
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                         Text(entry.0)
                             .font(.body)
                             .frame(maxWidth: .infinity, alignment: .leading)

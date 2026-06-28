@@ -99,7 +99,7 @@ struct CategoryFilteredListView: View {
                             .padding(.horizontal, DS.Spacing.md)
                             .padding(.vertical, DS.Spacing.xs)
                             .background(DS.Color.tagFill, in: Capsule())
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("category.detail.expandButton")
@@ -215,7 +215,7 @@ private struct TagFilterChip: View {
             .padding(.horizontal, DS.Spacing.md)
             .padding(.vertical, DS.Spacing.xs)
             .background(
-                isSelected ? DS.Color.actionBlue : DS.Color.tagFill,
+                isSelected ? DS.Color.sumiInk : DS.Color.tagFill,
                 in: Capsule()
             )
             .foregroundStyle(isSelected ? Color.white : .primary)

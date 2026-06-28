@@ -73,6 +73,6 @@ struct BottomStatusBar: View {
     /// spec 015: 全 phase で単一 actionBlue を返す (Apple single-accent rule、DESIGN.md 準拠)。
     /// phase 識別は phaseLabel のテキストのみで担保。
     private func phaseTintColor(_ phase: ProcessingMonitor.Phase) -> Color {
-        DS.Color.actionBlue
+        DS.Color.sumiInk
     }
 }

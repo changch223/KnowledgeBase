@@ -213,7 +213,7 @@ private struct TagCategoryReviewSection: View {
                     } else {
                         Button("一括確定") { enterBulkMode() }
                             .font(.subheadline)
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                     }
                 }
                 .padding(.vertical, 2)
@@ -231,7 +231,7 @@ private struct TagCategoryReviewSection: View {
                         .frame(maxWidth: .infinity)
                     }
                     .foregroundStyle(.white)
-                    .listRowBackground(DS.Color.actionBlue)
+                    .listRowBackground(DS.Color.sumiInk)
                     .disabled(bulkChecked.isEmpty)
                 }
             }
@@ -265,7 +265,7 @@ private struct TagCategoryReviewSection: View {
             if isBulkMode {
                 let checked = bulkChecked.contains(tag.persistentModelID)
                 Image(systemName: checked ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(checked ? DS.Color.actionBlue : Color(.tertiaryLabel))
+                    .foregroundStyle(checked ? DS.Color.sumiInk : Color(.tertiaryLabel))
                     .font(.title3)
                     .onTapGesture { toggleBulk(tag) }
             }
@@ -288,7 +288,7 @@ private struct TagCategoryReviewSection: View {
                     }
                 } label: {
                     Image(systemName: "square.grid.2x2")
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                 }
             }
         }

@@ -112,10 +112,7 @@ struct KnowledgeClipView: View {
 
                         // spec 075: 縦フィードの主役 = 概念「超まとめ」カード。
                         // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
-                        ForEach(Array(displayedConceptEntries.enumerated()), id: \.element.id) { index, entry in
-                            if index > 0 {
-                                SumiWaveDivider()
-                            }
+                        ForEach(displayedConceptEntries) { entry in
                             ConceptSummaryCard(entry: entry, onSeen: { markConceptSeen(entry.page) })
                         }
                     }

@@ -215,7 +215,7 @@ struct ConceptPageDetailView: View {
     private var wikiBodySection: some View {
         if !conceptPage.bodyMarkdown.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("wiki.body.sectionTitle").font(.title3.bold())
+                Text("wiki.body.sectionTitle").font(.title3.bold()).fontDesign(.serif)
                 // spec 079: 行ベースレンダラで見出し/箇条書きを整形 + 生 concept-id 漏れを除去。
                 WikiBodyView(markdown: conceptPage.bodyMarkdown)
                     .environment(\.openURL, OpenURLAction { url in
@@ -253,7 +253,7 @@ struct ConceptPageDetailView: View {
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
             Text("ConceptPage.detail.summary.title")
-                .font(.title3.bold())
+                .font(.title3.bold()).fontDesign(.serif)
             if conceptPage.isSynthesisInProgress {
                 HStack(spacing: DS.Spacing.md) {
                     ProgressView()
@@ -288,13 +288,13 @@ struct ConceptPageDetailView: View {
         if !conceptPage.crossSourceInsights.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 Text("ConceptPage.detail.crossSourceInsights.title")
-                    .font(.title3.bold())
+                    .font(.title3.bold()).fontDesign(.serif)
                 ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { index, insight in
                     VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         HStack(alignment: .top, spacing: DS.Spacing.sm) {
                             Text("•")
                                 .font(.body)
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                             Text(insight)
                                 .font(.body)
                                 .foregroundStyle(.primary)
@@ -312,7 +312,7 @@ struct ConceptPageDetailView: View {
                                     Image(systemName: "chevron.right")
                                         .font(.caption2)
                                 }
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                             }
                             .buttonStyle(.plain)
                             .padding(.leading, DS.Spacing.lg)
@@ -328,7 +328,7 @@ struct ConceptPageDetailView: View {
     private var relatedArticlesSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
             Text(String(format: String(localized: "ConceptPage.detail.relatedArticles.title") + " (%lld)", (conceptPage.relatedArticles ?? []).count))
-                .font(.title3.bold())
+                .font(.title3.bold()).fontDesign(.serif)
             if (conceptPage.relatedArticles ?? []).isEmpty {
                 Text("ConceptPage.detail.emptyRelatedArticles")
                     .font(.body)
@@ -363,7 +363,7 @@ struct ConceptPageDetailView: View {
         if !others.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 Text(String(format: String(localized: "ConceptPage.detail.relatedConcepts.title") + " (%lld)", others.count))
-                    .font(.title3.bold())
+                    .font(.title3.bold()).fontDesign(.serif)
                 FlowingTagsLayout(spacing: DS.Spacing.sm) {
                     ForEach(others, id: \.id) { other in
                         NavigationLink(value: ConceptPageDetailDestination(id: other.id)) {
@@ -399,7 +399,7 @@ struct ConceptPageDetailView: View {
                         .lineLimit(1)
                 }
                 .font(.caption)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("conceptPageDetail_parentBreadcrumb")
@@ -413,13 +413,13 @@ struct ConceptPageDetailView: View {
         if !children.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 Text(String(format: String(localized: "concept.children.title") + " (%lld)", children.count))
-                    .font(.title3.bold())
+                    .font(.title3.bold()).fontDesign(.serif)
                 ForEach(children, id: \.id) { child in
                     NavigationLink(value: ConceptPageDetailDestination(id: child.id)) {
                         HStack(alignment: .top, spacing: DS.Spacing.md) {
                             Image(systemName: child.kind.symbolName)
                                 .font(.body)
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                                 .frame(width: 24, alignment: .center)
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: DS.Spacing.xxs) {

@@ -42,7 +42,7 @@ struct ChatHistorySidebar: View {
                 } label: {
                     HStack(spacing: DS.Spacing.sm) {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                         Text("chat.sidebar.newSession")
                             .font(.body)
                     }

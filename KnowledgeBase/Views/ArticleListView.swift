@@ -340,6 +340,8 @@ private struct ArticleListContent: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(DS.Color.washiBackground)
                 .scrollDismissesKeyboard(.immediately)
                 .safeAreaInset(edge: .bottom) {
                     if !monitorIsIdle {
@@ -439,15 +441,15 @@ private struct FilterChipsBar: View {
                                 Text("\(item.count)")
                                     .font(.caption2.monospacedDigit())
                                     .foregroundStyle(
-                                        isSelected ? DS.Color.actionBlue.opacity(0.7) : Color(.tertiaryLabel)
+                                        isSelected ? DS.Color.sumiInk.opacity(0.7) : Color(.tertiaryLabel)
                                     )
                             }
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(
-                                isSelected ? DS.Color.actionBlue.opacity(0.15) : Color(.tertiarySystemFill),
+                                isSelected ? DS.Color.sumiInk.opacity(0.15) : Color(.tertiarySystemFill),
                                 in: Capsule()
                             )
-                            .foregroundStyle(isSelected ? DS.Color.actionBlue : .primary)
+                            .foregroundStyle(isSelected ? DS.Color.sumiInk : .primary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -470,9 +472,9 @@ private struct ConceptSearchRow: View {
             // 種別アイコン
             Image(systemName: concept.kind.symbolName)
                 .font(.subheadline)
-                .foregroundStyle(DS.Color.actionBlue)
+                .foregroundStyle(DS.Color.sumiInk)
                 .frame(width: 28, height: 28)
-                .background(DS.Color.actionBlue.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
+                .background(DS.Color.sumiInk.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(concept.name)

@@ -34,7 +34,7 @@ struct GraphNodeDetailView: View {
                     showNodeEditSheet = true
                 } label: {
                     Image(systemName: "pencil")
-                        .foregroundStyle(DS.Color.actionBlue)
+                        .foregroundStyle(DS.Color.sumiInk)
                 }
                 .accessibilityIdentifier("graph.node.edit")
             }

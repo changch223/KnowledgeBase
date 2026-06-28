@@ -75,7 +75,7 @@ struct SettingsView: View {
                 )) {
                     HStack(spacing: DS.Spacing.lg) {
                         Image(systemName: "icloud")
-                            .foregroundStyle(iCloudSyncEnabled ? DS.Color.actionBlue : .secondary)
+                            .foregroundStyle(iCloudSyncEnabled ? DS.Color.sumiInk : .secondary)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("iCloud で同期")
@@ -104,13 +104,13 @@ struct SettingsView: View {
                 NavigationLink(value: SafariSetupDestination()) {
                     HStack(spacing: DS.Spacing.lg) {
                         Image(systemName: "safari")
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                             .frame(width: 24)
                         Text("settings.safariSetup.entry")
                         Spacer()
                         if safariSetupCompleted {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                                 .accessibilityIdentifier("settings.safariSetup.completedMark")
                         }
                     }
@@ -121,7 +121,7 @@ struct SettingsView: View {
                 NavigationLink(value: TranslationSetupDestination()) {
                     HStack(spacing: DS.Spacing.lg) {
                         Image(systemName: "character.book.closed")
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                             .frame(width: 24)
                         Text("settings.translationSetup.entry")
                         Spacer()
@@ -140,7 +140,7 @@ struct SettingsView: View {
                 NavigationLink(value: TagManagementDestination()) {
                     HStack(spacing: DS.Spacing.lg) {
                         Image(systemName: "tag")
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                             .frame(width: 24)
                         Text("settings.tag.entry")
                     }
@@ -199,7 +199,7 @@ struct SettingsView: View {
                     Link(destination: url) {
                         HStack(spacing: DS.Spacing.lg) {
                             Image(systemName: "lock.shield")
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                                 .frame(width: 24)
                             Text("プライバシーポリシー")
                             Spacer()
@@ -214,7 +214,7 @@ struct SettingsView: View {
                     Link(destination: url) {
                         HStack(spacing: DS.Spacing.lg) {
                             Image(systemName: "questionmark.bubble")
-                                .foregroundStyle(DS.Color.actionBlue)
+                                .foregroundStyle(DS.Color.sumiInk)
                                 .frame(width: 24)
                             Text("不具合の報告 / 要望")
                             Spacer()

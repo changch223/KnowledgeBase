@@ -77,7 +77,7 @@ struct KnowledgeClipCard: View {
             if snapshot.isStale {
                 Text("clip.card.staleLabel")
                     .font(.caption2)
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .accessibilityIdentifier("clip.card.staleMark")
             }
 
@@ -104,7 +104,7 @@ struct KnowledgeClipCard: View {
                     HStack(alignment: .top, spacing: DS.Spacing.sm) {
                         Text("・")
                             .font(.body)
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                         Text(fact)
                             .font(.body)
                             .foregroundStyle(.primary)

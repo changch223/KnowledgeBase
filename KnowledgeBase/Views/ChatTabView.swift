@@ -115,6 +115,7 @@ struct ChatTabView: View {
                     focused: $inputFocused
                 )
             }
+            .background(DS.Color.washiBackground)
             .navigationTitle("chat.tab.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

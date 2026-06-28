@@ -73,7 +73,7 @@ struct ArticleRow: View {
             // Leading edge accent: knowledge 完了記事のみ表示
             if knowledgeAvailable {
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(DS.Color.actionBlue)
+                    .fill(DS.Color.sumiInk)
                     .frame(width: 3)
                     .padding(.trailing, DS.Spacing.sm)
                     .accessibilityHidden(true)
@@ -86,6 +86,7 @@ struct ArticleRow: View {
                     VStack(alignment: .leading, spacing: DS.Spacing.xs) {
                         Text(displayTitle)
                             .font(DS.Typography.rowTitle)
+                            .fontDesign(.serif)
                             .lineLimit(2)
 
                         if let essence = essenceText {
@@ -129,10 +130,10 @@ struct ArticleRow: View {
                                 Text("knowledge.aiGeneratedLabel")
                                     .font(DS.Typography.aiLabel)
                             }
-                            .foregroundStyle(DS.Color.actionBlue)
+                            .foregroundStyle(DS.Color.sumiInk)
                             .padding(.horizontal, DS.Spacing.sm)
                             .padding(.vertical, DS.Spacing.xxs)
-                            .background(DS.Color.actionBlue.opacity(0.08), in: Capsule())
+                            .background(DS.Color.sumiInk.opacity(0.08), in: Capsule())
                             .accessibilityIdentifier("knowledgeAIGeneratedLabel")
                         }
                     }

@@ -91,7 +91,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, DS.Spacing.xxl)
                         .padding(.vertical, DS.Spacing.lg)
-                        .background(DS.Color.actionBlue, in: Capsule())
+                        .background(DS.Color.sumiInk, in: Capsule())
                 }
                 .accessibilityIdentifier("onboarding.next")
             }

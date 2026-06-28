@@ -129,7 +129,7 @@ struct CategoryReviewView: View {
             } label: {
                 Label("category.review.fix", systemImage: "square.grid.2x2")
                     .labelStyle(.iconOnly)
-                    .foregroundStyle(DS.Color.actionBlue)
+                    .foregroundStyle(DS.Color.sumiInk)
             }
             .accessibilityIdentifier("category.review.fix")
         }
