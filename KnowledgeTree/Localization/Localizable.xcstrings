@@ -4315,12 +4315,34 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI チャットタブで、保存した記事だけを根拠に質問できます。答えには番号付きの出典が付き、元記事へすぐ戻れます。"
+            "value" : "記事詳細の「訂正」ボタンから自然言語で指示するだけ（例: 「Claude Code を gloadcod と誤認識しています」）。分野の修正は次回の自動分類に活かされます。"
           }
         }
       }
     },
     "onboarding.page4.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI の誤りはすぐ直せる"
+          }
+        }
+      }
+    },
+    "onboarding.page5.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI チャットタブで、保存した記事だけを根拠に質問できます。答えには番号付きの出典が付き、元記事へすぐ戻れます。"
+          }
+        }
+      }
+    },
+    "onboarding.page5.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
