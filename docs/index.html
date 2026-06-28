@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KnowledgeBaseAI — 読んだ知識を、AIが自動で蓄積</title>
+  <meta name="description" content="Apple Intelligenceが、あなたの読んだ記事を自動で整理・要約・つなぎ合わせます。完全オンデバイス・完全無料。">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      background: #000; color: #f5f5f7;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 20px; text-align: center;
+    }
+    .icon {
+      width: 120px; height: 120px; border-radius: 26px;
+      background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+      border: 1px solid #3a3a3c;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px; margin: 0 auto 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700;
+         letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px; }
+    .subtitle {
+      font-size: clamp(1rem, 3vw, 1.3rem); color: #98989d;
+      max-width: 480px; margin: 0 auto 48px; line-height: 1.6;
+    }
+    .badge-row { display: flex; gap: 12px; justify-content: center;
+                 flex-wrap: wrap; margin-bottom: 48px; }
+    .badge {
+      background: #1c1c1e; border: 1px solid #3a3a3c;
+      border-radius: 100px; padding: 8px 18px;
+      font-size: 0.85rem; color: #aeaeb2;
+    }
+    .badge span { color: #007aff; }
+    .cta {
+      display: inline-block;
+      background: #007aff; color: #fff;
+      font-size: 1.05rem; font-weight: 600;
+      padding: 16px 40px; border-radius: 100px;
+      text-decoration: none; letter-spacing: -0.01em;
+      transition: opacity 0.2s;
+    }
+    .cta:hover { opacity: 0.85; }
+    .cta-note { color: #636366; font-size: 0.8rem; margin-top: 12px; }
+    footer { margin-top: 80px; color: #636366; font-size: 0.8rem; }
+    footer a { color: #636366; }
+  </style>
+</head>
+<body>
+
+  <div class="icon">🧠</div>
+
+  <h1>KnowledgeBaseAI</h1>
+  <p class="subtitle">
+    読んだ記事が、知識として蓄積される。<br>
+    Apple Intelligence が、あなた専用の知識ベースを自動で育てます。
+  </p>
+
+  <div class="badge-row">
+    <div class="badge"><span>完全無料</span></div>
+    <div class="badge"><span>完全オンデバイス</span> · プライバシー保護</div>
+    <div class="badge">Apple Intelligence 搭載</div>
+    <div class="badge">iCloud 同期対応</div>
+  </div>
+
+  <a class="cta" href="https://apps.apple.com/jp/app/knowledgebaseai/id0000000000">
+    App Store でダウンロード
+  </a>
+  <p class="cta-note">iOS 18.4以降 · 無料</p>
+
+  <footer>
+    <p>© 2026 Chia-Wei Chang ·
+      <a href="privacy-policy.html">プライバシーポリシー</a> ·
+      <a href="https://github.com/changch223/KnowledgeBase/issues">サポート</a>
+    </p>
+  </footer>
+
+</body>
+</html>
