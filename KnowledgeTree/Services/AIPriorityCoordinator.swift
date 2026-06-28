@@ -17,13 +17,15 @@
 //
 
 import Foundation
+import Observation
 
 @MainActor
+@Observable
 final class AIPriorityCoordinator {
     static let shared = AIPriorityCoordinator()
 
-    /// チャット応答 (送信〜回答永続化) が進行中か。
-    private(set) var isChatActive = false
+    /// チャット応答 (送信〜回答永続化) が進行中か。@Observable により View から監視可能。
+    var isChatActive = false
 
     /// チャット完了を待っている裏処理の継続。
     private var waiters: [CheckedContinuation<Void, Never>] = []

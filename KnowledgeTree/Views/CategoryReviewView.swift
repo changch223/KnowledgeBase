@@ -47,12 +47,14 @@ struct CategoryReviewView: View {
             }
     }
 
-    /// 確信度 Low/Medium or その他 = 要確認。
+    /// High confidence (ユーザー確定 / AI 確信) は確認不要。Low/Medium、または「その他」のまま未確認は要確認。
     static func isUncertain(_ t: Tag) -> Bool {
-        let c = t.categoryConfidence
-        return c == ClassificationConfidence.low.rawValue
-            || c == ClassificationConfidence.medium.rawValue
-            || (t.categoryRaw ?? "") == CategorySeed.otherCategory.name
+        // ユーザーが明示的に選択、または AI が高確信度で分類 → 確認不要
+        if t.categoryConfidence == ClassificationConfidence.high.rawValue { return false }
+        if t.categoryConfidence == ClassificationConfidence.low.rawValue { return true }
+        if t.categoryConfidence == ClassificationConfidence.medium.rawValue { return true }
+        // 確信度なし + 「その他」= AI が catch-all に逃げた = 要確認
+        return (t.categoryRaw ?? "") == CategorySeed.otherCategory.name
     }
 
     var body: some View {

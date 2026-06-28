@@ -15,6 +15,18 @@
 
 </div>
 
+## Why I built this
+
+Save things to read later — never read them. Understand something in the moment — forget it completely. Knowledge that never compounds, despite all the effort to collect it. That was my frustration.
+
+I wanted a place where everything I read **turns into knowledge that stays with me** — not a read-later pile, not a search index, but a living understanding that I can open anytime and see my latest thinking, organized and ready.
+
+That's what Knowledge Base is for: **retrieve your latest understanding whenever you need it.**
+
+Built on Apple Intelligence: **free**, **on-device privacy**, and **gets smarter automatically with every Apple update** — evolving as your own personal AI.
+
+---
+
 Knowledge Base is a **fully on-device, privacy-first knowledge app** for iPhone and iPad. Save an article — or a PDF, photo, voice memo, or any shared text — and Apple's on-device Foundation Models automatically extract its essence, key facts, and entities, then weave everything into a living **Wiki of concepts** you can browse, search, and chat with. Nothing leaves your device except the optional sync to *your own* iCloud private database. No accounts, no servers, no tracking.
 
 > [!NOTE]

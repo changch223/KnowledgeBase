@@ -63,14 +63,7 @@ struct ChatHistorySidebar: View {
                 }
             }
 
-            // 学習チャット (deepDive mode) — 学習カードから起動した家庭教師 session
-            if !deepDiveSessions.isEmpty {
-                Section(header: Text("chat.sidebar.section.deepDive")) {
-                    ForEach(deepDiveSessions) { session in
-                        sessionButton(session)
-                    }
-                }
-            }
+            // 学習チャット (deepDive mode) は非表示 (spec 099: 学習タブ廃止で導線なし)
         }
         .listStyle(.sidebar)
         .navigationTitle("chat.sidebar.title")

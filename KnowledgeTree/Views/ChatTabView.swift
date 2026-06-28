@@ -36,6 +36,8 @@ struct ChatTabView: View {
     @FocusState private var inputFocused: Bool
     @State private var isThinking: Bool = false
     @State private var errorMessage: String?
+    /// spec 099: Quick (⚡) / Think (🧠) モード切り替え。メッセージごとに独立。
+    @State private var chatMode: ChatMode = .quick
 
     /// spec 033: 擬似 streaming 中の assistant message ID と表示中の text
     @State private var streamingMessageID: UUID?
@@ -89,9 +91,26 @@ struct ChatTabView: View {
                     emptyStateView
                 }
 
+                // spec 099: 非同期処理中バナー
+                if isThinking {
+                    HStack(spacing: DS.Spacing.sm) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("chat.thinking.banner")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, DS.Spacing.xl)
+                    .padding(.vertical, DS.Spacing.sm)
+                    .background(DS.Color.surfaceSecondary.opacity(0.8))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
                 ChatInputField(
                     text: $inputText,
                     isThinking: $isThinking,
+                    chatMode: $chatMode,
                     onSend: { Task { await sendQuestion() } },
                     focused: $inputFocused
                 )
@@ -309,11 +328,13 @@ struct ChatTabView: View {
         inputText = ""
         isThinking = true
 
+        let mode = chatMode
         do {
             // ChatService が user/assistant message を永続化する
             let assistantMsg = try await chatService.send(
                 question: question,
                 in: session,
+                chatMode: mode,
                 contextMessages: context
             )
             isThinking = false

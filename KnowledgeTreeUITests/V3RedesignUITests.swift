@@ -111,9 +111,10 @@ final class V3RedesignUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        let clipTab = app.tabBars.buttons["tab.knowledgeClip"]
-        XCTAssertTrue(clipTab.waitForExistence(timeout: 5))
-        clipTab.tap()
+        // spec 087: AvatarMenu は Library タブの toolbar に移動 (Knowledge タブからは削除済)
+        let libraryTab = app.tabBars.buttons["tab.library"]
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 5))
+        libraryTab.tap()
 
         let avatar = app.buttons["toolbar.avatar"]
         guard avatar.waitForExistence(timeout: 5) else {
@@ -121,10 +122,9 @@ final class V3RedesignUITests: XCTestCase {
         }
         avatar.tap()
 
-        // Settings 内の健全性スコア / iCloud toggle 等が表示される
+        // Settings 内の iCloud toggle が表示される
         let icloudToggle = app.switches["settings.icloud.toggle"]
-        let healthSection = app.staticTexts["settings.health.section.title"]
-        XCTAssertTrue(icloudToggle.waitForExistence(timeout: 3) || healthSection.waitForExistence(timeout: 3),
+        XCTAssertTrue(icloudToggle.waitForExistence(timeout: 3),
                       "Avatar menu から Settings が開かなかった")
     }
 }

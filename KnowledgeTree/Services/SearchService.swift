@@ -139,24 +139,33 @@ enum SearchService {
     }
 
     /// query が空白のみ → 空配列。score > 0 のみ返す。
+    /// フルテキスト対象: name / nameAliases / summary / crossSourceInsights / bodyMarkdown
     static func searchConceptPages(query: String, in pages: [ConceptPage]) -> [ScoredConceptPage] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return [] }
 
-        let qLower = q.lowercased()
         var results: [ScoredConceptPage] = []
-        for page in pages {
+        for page in pages where !page.isHidden {
             var score = 0
-            if page.name.lowercased() == qLower {
-                score += 100
-            } else if page.name.localizedStandardContains(q) {
-                score += 50
+            // 名前 (完全一致 > 部分一致)
+            if page.name.localizedStandardContains(q) {
+                score += page.name.lowercased() == q.lowercased() ? 100 : 50
             }
+            // 別名
             if page.nameAliases.contains(where: { $0.localizedStandardContains(q) }) {
                 score += 30
             }
+            // 要点 (crossSourceInsights)
+            if page.crossSourceInsights.contains(where: { $0.localizedStandardContains(q) }) {
+                score += 20
+            }
+            // サマリー
             if page.summary.localizedStandardContains(q) {
                 score += 10
+            }
+            // Wiki 本文 (bodyMarkdown)
+            if !page.bodyMarkdown.isEmpty && page.bodyMarkdown.localizedStandardContains(q) {
+                score += 5
             }
             if score > 0 {
                 results.append(ScoredConceptPage(conceptPage: page, score: score))

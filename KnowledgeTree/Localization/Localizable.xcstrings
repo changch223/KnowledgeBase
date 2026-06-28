@@ -19,6 +19,9 @@
     "(%lld)" : {
 
     },
+    "(%lld件)" : {
+
+    },
     "[%lld]" : {
 
     },
@@ -141,6 +144,9 @@
           }
         }
       }
+    },
+    "%lld件" : {
+
     },
     "%lld記事" : {
 
@@ -1245,6 +1251,28 @@
         }
       }
     },
+    "chat.mode.quick" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚡ クイック"
+          }
+        }
+      }
+    },
+    "chat.mode.think" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🧠 じっくり"
+          }
+        }
+      }
+    },
     "chat.relativeTime.daysAgo %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1504,7 +1532,18 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI チャット"
+            "value" : "AI チャット β"
+          }
+        }
+      }
+    },
+    "chat.thinking.banner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "考え中… （この画面を閉じても続きます）"
           }
         }
       }
@@ -3226,6 +3265,9 @@
         }
       }
     },
+    "Fast" : {
+
+    },
     "feed.badge.article" : {
       "localizations" : {
         "ja" : {
@@ -4014,6 +4056,46 @@
         }
       }
     },
+    "library.filter.clear" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリア"
+          }
+        }
+      }
+    },
+    "library.filter.done" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
+          }
+        }
+      }
+    },
+    "library.filter.empty.description" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した分野の記事がまだ保存されていません。"
+          }
+        }
+      }
+    },
+    "library.filter.empty.title" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該当する記事がありません"
+          }
+        }
+      }
+    },
     "library.filter.tags" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4021,6 +4103,49 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "タグで絞る"
+          }
+        }
+      }
+    },
+    "library.filter.title" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野で絞り込む"
+          }
+        }
+      }
+    },
+    "library.scope.all" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて"
+          }
+        }
+      }
+    },
+    "library.scope.category" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野"
+          }
+        }
+      }
+    },
+    "library.scope.tag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タグ"
           }
         }
       }
@@ -4653,6 +4778,17 @@
         }
       }
     },
+    "search.concepts.header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wiki ページ"
+          }
+        }
+      }
+    },
     "search.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4751,6 +4887,15 @@
           }
         }
       }
+    },
+    "search.suggestions.concepts" : {
+
+    },
+    "search.suggestions.recent" : {
+
+    },
+    "search.suggestions.tags" : {
+
     },
     "settings.categoryReview.entry" : {
       "extractionState" : "manual",
@@ -4950,6 +5095,36 @@
         }
       }
     },
+    "settings.lint.description" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "孤立した概念・重複・分野のズレを検知し、修正を試みます。毎週日曜 3:00 に自動実行。"
+          }
+        }
+      }
+    },
+    "settings.lint.lastRun" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最終実行: %@"
+          }
+        }
+      }
+    },
+    "settings.lint.neverRun" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ実行されていません"
+          }
+        }
+      }
+    },
     "settings.lintLog.empty.body" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4972,6 +5147,16 @@
         }
       }
     },
+    "settings.lintLog.recent.summary" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直近: %@"
+          }
+        }
+      }
+    },
     "settings.lintLog.section.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4989,7 +5174,17 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記事を今すぐ分類/整理"
+            "value" : "今すぐ検知・修正する"
+          }
+        }
+      }
+    },
+    "settings.lintNow.button.running" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検知・修正中…"
           }
         }
       }
@@ -5297,7 +5492,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "整理"
+            "value" : "知識の整合性チェック"
           }
         }
       }
@@ -5984,6 +6179,9 @@
         }
       }
     },
+    "Think" : {
+
+    },
     "To" : {
 
     },
@@ -6122,6 +6320,9 @@
     "タップで該当記事一覧へ遷移" : {
 
     },
+    "チェックしたものを確定 (%lld件)" : {
+
+    },
     "ノードが見つかりません" : {
 
     },
@@ -6181,6 +6382,9 @@
 
     },
     "ラベル (例: 開発, 所属, 発表)" : {
+
+    },
+    "一括確定" : {
 
     },
     "不具合の報告 / 要望" : {
@@ -6280,6 +6484,9 @@
     "分野" : {
 
     },
+    "分類の確認" : {
+
+    },
     "削除" : {
 
     },
@@ -6346,6 +6553,12 @@
 
     },
     "確信度" : {
+
+    },
+    "確信度：中 — %@" : {
+
+    },
+    "確信度：低" : {
 
     },
     "空のままにすると「共起」(label なし) 扱いになります。" : {
