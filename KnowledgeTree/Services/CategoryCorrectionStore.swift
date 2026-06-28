@@ -27,11 +27,13 @@ final class CategoryCorrectionStore {
     private(set) var isValid: Bool = true
     private var storeObserver: NSObjectProtocol?
 
-    init(context: ModelContext) {
+    init(context: ModelContext, container: ModelContainer) {
         self.context = context
         // ストア削除を監視して isValid を下げる。
-        // NSPersistentStoreCoordinatorStoresDidChange は追加/削除どちらでも届くため
-        // NSRemovedPersistentStoresKey で「削除」のみを拾う。
+        // object: nil だと main SharedSchema の Coordinator のイベントも拾い、
+        // iCloud 同期時のストア置換で isValid=false になる誤動作が起きる。
+        // 自分の container のストア URL だけを対象にする。
+        let storeURL = container.configurations.first?.url
         storeObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name.NSPersistentStoreCoordinatorStoresDidChange,
             object: nil,
@@ -39,8 +41,10 @@ final class CategoryCorrectionStore {
         ) { [weak self] note in
             guard let self else { return }
             if let removed = note.userInfo?[NSRemovedPersistentStoresKey] as? [NSPersistentStore],
-               !removed.isEmpty {
-                Self.logger.warning("category learning store: store removed — invalidating context")
+               !removed.isEmpty,
+               let ourURL = storeURL,
+               removed.contains(where: { $0.url == ourURL }) {
+                Self.logger.warning("category learning store: our store removed — invalidating context")
                 self.isValid = false
             }
         }

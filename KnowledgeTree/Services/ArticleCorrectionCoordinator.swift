@@ -243,14 +243,14 @@ final class ArticleCorrectionCoordinator {
     }
 
     /// この記事だけが source の概念ページを削除 (複数記事が紐づくものは残す)。削除件数を返す。
+    /// article.relatedConcepts inverse を使い O(k) スキャン (k = この記事に紐づく概念数)。
     @discardableResult
     private func deleteSoleSourceConcepts(of article: Article, in context: ModelContext) -> Int {
-        let aid = article.id
-        guard let pages = try? context.fetch(FetchDescriptor<ConceptPage>()) else { return 0 }
+        let candidates = article.relatedConcepts ?? []
         var removed = 0
-        for page in pages {
+        for page in candidates {
             let related = page.relatedArticles ?? []
-            if related.count == 1, related.first?.id == aid {
+            if related.count == 1, related.first?.id == article.id {
                 context.delete(page)
                 removed += 1
             }

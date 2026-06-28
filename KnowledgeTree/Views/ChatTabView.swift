@@ -37,7 +37,7 @@ struct ChatTabView: View {
     @State private var isThinking: Bool = false
     @State private var errorMessage: String?
     /// spec 099: Quick (⚡) / Think (🧠) モード切り替え。メッセージごとに独立。
-    @State private var chatMode: ChatMode = .quick
+    @State private var chatMode: ChatMode = .think
 
     /// spec 033: 擬似 streaming 中の assistant message ID と表示中の text
     @State private var streamingMessageID: UUID?

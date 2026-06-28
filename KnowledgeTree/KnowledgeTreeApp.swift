@@ -124,7 +124,6 @@ struct KnowledgeTreeApp: App {
                     .tabItem {
                         Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
                     }
-                    .badge(AIPriorityCoordinator.shared.isChatActive ? 1 : 0)
                     .tag(AppTab.chat)
                     .accessibilityIdentifier("tab.chat")
             }
@@ -390,7 +389,7 @@ struct KnowledgeTreeApp: App {
         // 失敗時 nil = 学習なし (Phase 1 相当) で graceful。
         let correctionStore: CategoryCorrectionStore? = CategoryCorrectionStore.makeContainer(
             cloudKitEnabled: SharedSchema.isCloudKitEnabledByUser
-        ).map { CategoryCorrectionStore(context: $0.mainContext) }
+        ).map { CategoryCorrectionStore(context: $0.mainContext, container: $0) }
         serviceContainer.correctionStore = correctionStore
         // spec 058: 週 1 Lint loop BGTask に LintEngine を bind
         let lintEngine: LintEngineProtocol = DefaultLintEngine(

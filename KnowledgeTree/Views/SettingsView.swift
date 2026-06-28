@@ -347,5 +347,3 @@ struct SavedAnswerHistoryDestination: Hashable {}
 /// SettingsView から TagManagementView (spec 024) に push 遷移する Hashable destination。
 struct TagManagementDestination: Hashable {}
 
-/// spec 097 Phase 4: 分類の整理レポートへ push 遷移する Hashable destination。
-struct CategoryReviewDestination: Hashable {}

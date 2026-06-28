@@ -25,7 +25,8 @@ final class AIPriorityCoordinator {
     static let shared = AIPriorityCoordinator()
 
     /// チャット応答 (送信〜回答永続化) が進行中か。@Observable により View から監視可能。
-    var isChatActive = false
+    /// beginChat()/endChat() 経由でのみ変更すること (直接書くと waiters が resume されない)。
+    private(set) var isChatActive = false
 
     /// チャット完了を待っている裏処理の継続。
     private var waiters: [CheckedContinuation<Void, Never>] = []

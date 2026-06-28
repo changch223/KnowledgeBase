@@ -714,9 +714,14 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// LM が文字列の閉じ " を忘れた / 末尾ゴミがある場合をカバー。
     static func extractPartialOutput(from error: Error) -> ConceptSynthesisOutput? {
         let desc = String(describing: error)
-        // エラー説明から "Text: ..." を取り出す
         guard desc.contains("decodingFailure") else { return nil }
-        guard let textRange = desc.range(of: "Text: ") else { return nil }
+        guard let textRange = desc.range(of: "Text: ") else {
+            // "Text: " が見つからない = Apple がエラー format を変更した可能性。
+            // 修復を試みず rethrow させる。フォーマット変更の検出ログを残す。
+            Logger(subsystem: "app.KnowledgeTree", category: "concept")
+                .warning("concept synthesis decodingFailure: 'Text: ' prefix not found in error description — Apple may have changed the format")
+            return nil
+        }
         let jsonCandidate = String(desc[textRange.upperBound...])
         return repairAndDecode(jsonCandidate)
     }
