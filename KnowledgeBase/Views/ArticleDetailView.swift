@@ -332,8 +332,8 @@ struct ArticleDetailView: View {
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            // japanese-ui-redesign: OGP写真削除・タイトル大型明朝
+        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+            // japanese-ui-redesign: タイトル大型明朝が先（新聞スタイル）
             Text(displayTitle)
                 .font(.title2)
                 .fontWeight(.bold)
@@ -354,6 +354,26 @@ struct ArticleDetailView: View {
             }
             .font(.caption)
             .foregroundStyle(DS.Color.sumiLight)
+
+            // 写真 — タイトル下に配置 (ある程度欲しい・コンパクトに 160px)
+            if let urlString = article.enrichment?.ogImageURL,
+               let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        EmptyView()
+                    }
+                }
+                .frame(height: 160)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
+                        .stroke(DS.Color.sumiRule, lineWidth: 0.5)
+                )
+            }
 
             // spec 007: マルチページ追跡の取得状況
             if let enrichment = article.enrichment, enrichment.pageCountFetched > 1 {
