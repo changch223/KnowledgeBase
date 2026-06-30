@@ -332,29 +332,28 @@ struct ArticleDetailView: View {
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.xl) {
-            if let urlString = article.enrichment?.ogImageURL,
-               let url = URL(string: urlString) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    DS.Color.overlaySubtle
-                }
-                .frame(height: 200)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
-            }
-
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            // japanese-ui-redesign: OGP写真削除・タイトル大型明朝
             Text(displayTitle)
-                .font(.title2.bold())
-                .lineSpacing(2)
+                .font(.title2)
+                .fontWeight(.bold)
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("articleDetailTitle")
 
-            Text(article.url)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            // ソース + 日付を一行で (sumiLight)
+            HStack(spacing: DS.Spacing.xs) {
+                if let host = URL(string: article.url)?.host {
+                    Text(host.replacingOccurrences(of: "www.", with: ""))
+                        .lineLimit(1)
+                }
+                Text("·")
+                Text(SavedAtFormatter.format(article.savedAt))
+            }
+            .font(.caption)
+            .foregroundStyle(DS.Color.sumiLight)
 
             // spec 007: マルチページ追跡の取得状況
             if let enrichment = article.enrichment, enrichment.pageCountFetched > 1 {

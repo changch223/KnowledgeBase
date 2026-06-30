@@ -103,25 +103,53 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var aliveBody: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DS.Spacing.section) {
-                parentBreadcrumb
-                headerSection
-                // spec 080: 答え先出し。要点 (crossSourceInsights) を最上段に。
-                crossSourceInsightsSection
-                wikiBodySection
-                childConceptsSection
-                relatedArticlesSection
-                // spec 043: この概念についての質問と答え (SavedAnswer セクション)
-                SavedAnswerSection(conceptPageID: conceptPage.id)
-                relatedConceptsSection
+            VStack(alignment: .leading, spacing: 0) {
+                // ── グループ A: タイトル + 知識セクション ──────────────
+                Group {
+                    parentBreadcrumb
+                        .padding(.bottom, DS.Spacing.md)
+                    heroTitleSection
+                    sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    // spec 080: 要点先出し
+                    crossSourceInsightsSection
+                    if !conceptPage.crossSourceInsights.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    }
+                    wikiBodySection
+                    if !conceptPage.bodyMarkdown.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    }
+                    summarySection
+                        .padding(.bottom, DS.Spacing.section)
+                }
+
+                // ── グループ B: 階層 + 記事 + 関連 ──────────────────
+                Group {
+                    let children = childPages
+                    if !children.isEmpty {
+                        sumiRuleDivider.padding(.bottom, DS.Spacing.section)
+                        childConceptsSection
+                            .padding(.bottom, DS.Spacing.section)
+                    }
+                    sumiRuleDivider.padding(.bottom, DS.Spacing.section)
+                    relatedArticlesSection
+                        .padding(.bottom, DS.Spacing.section)
+                    // spec 043: この概念についての質問と答え
+                    SavedAnswerSection(conceptPageID: conceptPage.id)
+                    let others = relatedConcepts()
+                    if !others.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                        relatedConceptsSection
+                    }
+                }
             }
             .padding(.horizontal, DS.Spacing.xxl)
             .padding(.vertical, DS.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
-        .navigationTitle(conceptPage.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $wikiLinkTarget) { target in
             // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
             ConceptPageDetailLoader(destinationID: target.id)
@@ -182,32 +210,48 @@ struct ConceptPageDetailView: View {
         CategorySeed.category(for: conceptPage.categoryRaw).name
     }
 
-    private var headerSection: some View {
-        // spec 058 polish: navigationTitle 経由で表示するため、body 内の title 重複を削除。
-        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+    /// 全幅0.5px墨線（セクション間区切り）
+    private var sumiRuleDivider: some View {
+        Rectangle()
+            .fill(DS.Color.sumiRule)
+            .frame(height: 0.5)
+    }
+
+    /// スクロール内大タイトル + カテゴリチップ + メタデータ
+    private var heroTitleSection: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            Text(conceptPage.name)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+                .fixedSize(horizontal: false, vertical: true)
+
             HStack(spacing: DS.Spacing.md) {
-                // spec 063 (LLM Wiki): 種別バッジ (人物 / 概念 / プロジェクト)
-                Label(LocalizedStringKey(conceptPage.kind.displayNameKey), systemImage: conceptPage.kind.symbolName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("conceptPageDetail_kind")
                 Text(categoryDisplay)
                     .font(.caption)
                     .padding(.horizontal, DS.Spacing.md)
                     .padding(.vertical, DS.Spacing.xxs)
-                    .background(DS.Color.tagFill, in: Capsule())
+                    .overlay(Capsule().stroke(DS.Color.sumiRule, lineWidth: 0.5))
+                    .foregroundStyle(DS.Color.sumiMid)
+
                 Text(String(format: String(localized: "ConceptPage.card.relatedCount"), (conceptPage.relatedArticles ?? []).count))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.sumiLight)
                 Text("·")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.sumiLight)
                 Text(SavedAtFormatter.format(conceptPage.updatedAt))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.sumiLight)
             }
         }
         .accessibilityIdentifier("conceptPageDetail_header")
+    }
+
+    /// 旧 headerSection — heroTitleSection に統合のため空にする
+    private var headerSection: some View {
+        EmptyView()
     }
 
     /// spec 063 (LLM Wiki): AI が書いた Markdown 本文を整形表示。空なら非表示。

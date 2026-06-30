@@ -2,8 +2,8 @@
 //  ArticleShelfCard.swift
 //  KnowledgeTree
 //
-//  spec 068 (iKnow フィード) — おすすめ横スクロール carousel の記事カード (コンパクト)。
-//  縦用 ArticleFeedCard より小さい (~150pt 幅、写真上 + タイトル下)。tap → 記事詳細。
+//  japanese-ui-redesign: 写真削除・テキストのみ・細線ボーダーカード。
+//  元に戻す場合は git checkout main -- KnowledgeBase/Views/ArticleShelfCard.swift
 //
 
 import SwiftUI
@@ -11,58 +11,42 @@ import SwiftUI
 struct ArticleShelfCard: View {
     let article: Article
 
-    /// 横カード幅。LazyHStack 内で固定。
     static let cardWidth: CGFloat = 150
-    static let imageHeight: CGFloat = 100
-
-    private var imageURL: URL? {
-        guard let raw = article.enrichment?.ogImageURL,
-              let url = URL(string: raw), url.scheme == "https" else { return nil }
-        return url
-    }
 
     var body: some View {
         NavigationLink(value: article) {
-            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                photo
-                    .frame(width: Self.cardWidth, height: Self.imageHeight)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                Spacer(minLength: 0)
 
                 Text(article.title)
-                    .font(.caption)
+                    .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .fontDesign(.serif)
+                    .foregroundStyle(DS.Color.sumiInk)
+                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
-                    .frame(width: Self.cardWidth, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Spacer(minLength: 0)
+
+                Rectangle()
+                    .fill(DS.Color.sumiRule)
+                    .frame(height: 0.5)
+
+                Text(SavedAtFormatter.format(article.savedAt))
+                    .font(.caption2)
+                    .foregroundStyle(DS.Color.sumiLight)
             }
+            .padding(DS.Spacing.lg)
+            .frame(width: Self.cardWidth, height: 110, alignment: .leading)
+            .background(DS.Color.washiCard,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
+                    .stroke(DS.Color.sumiRule, lineWidth: 0.5)
+            )
         }
         .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private var photo: some View {
-        if let imageURL {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fill)
-                default:
-                    fallback
-                }
-            }
-        } else {
-            fallback
-        }
-    }
-
-    private var fallback: some View {
-        ZStack {
-            DS.Color.tagFill
-            Image(systemName: "doc.text")
-                .font(.title2)
-                .foregroundStyle(DS.Color.sumiInk)
-        }
     }
 }

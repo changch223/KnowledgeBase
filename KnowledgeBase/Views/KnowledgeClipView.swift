@@ -87,7 +87,7 @@ struct KnowledgeClipView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                LazyVStack(spacing: DS.Spacing.xxl) {
+                LazyVStack(spacing: 36) {
                     // spec 075: 上部「新着」棚 — まだ概念化されていない新着記事 (概念化で消える)。
                     if !newShelfArticles.isEmpty {
                         newArticleShelf
