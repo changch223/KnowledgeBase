@@ -56,7 +56,10 @@ struct ChatInputField: View {
             .accessibilityLabel(Text("chat.input.send"))
         }
         .padding(DS.Spacing.lg)
-        .background(.ultraThinMaterial)
+        .background(DS.Color.washiCard)
+        .overlay(alignment: .top) {
+            DS.Color.sumiRule.frame(height: 0.5)
+        }
     }
 
     @ViewBuilder
