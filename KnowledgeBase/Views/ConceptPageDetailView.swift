@@ -150,6 +150,7 @@ struct ConceptPageDetailView: View {
         .scrollIndicators(.hidden)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .navigationDestination(item: $wikiLinkTarget) { target in
             // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
             ConceptPageDetailLoader(destinationID: target.id)
