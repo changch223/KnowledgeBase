@@ -9,6 +9,29 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
+
+// UIKit 経由でナビゲーションバーを確実に非表示にする (SwiftUI の toolbar(.hidden) では
+// safe area が保持される既知の問題があるため、viewWillAppear/viewDidAppear で直接操作)。
+private struct NavBarHider: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> _VC { _VC() }
+    func updateUIViewController(_ vc: _VC, context: Context) {}
+
+    final class _VC: UIViewController {
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            navigationController?.setNavigationBarHidden(true, animated: false)
+        }
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            navigationController?.setNavigationBarHidden(true, animated: false)
+        }
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            navigationController?.setNavigationBarHidden(false, animated: false)
+        }
+    }
+}
 
 /// spec 064: 本文中 concept-id:// リンクの navigationDestination(item:) 用ラッパー。
 struct WikiLinkTarget: Identifiable, Hashable {
@@ -21,7 +44,6 @@ struct ConceptPageDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ServiceContainer.self) private var services
     @State private var showEditSheet: Bool = false
-    @State private var topInset: CGFloat = 0
     /// 削除/merge で page が消えた瞬間に空配列になる reactive guard。
     /// body 冒頭で `liveMatches.isEmpty` を見て短絡することで、@Bindable conceptPage の
     /// プロパティ (crossSourceInsights / relatedArticles 等) を一切読まず crash 回避。
@@ -103,10 +125,44 @@ struct ConceptPageDetailView: View {
 
     @ViewBuilder
     private var aliveBody: some View {
-        ZStack(alignment: .top) {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Spacer().frame(height: topInset + DS.Spacing.md)
+                // ── ナビゲーションコントロール (コンテンツと共にスクロール) ───
+                HStack(spacing: 0) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(DS.Color.sumiInk)
+                            .padding(.vertical, 4)
+                    }
+                    Spacer()
+                    HStack(spacing: DS.Spacing.md) {
+                        Toggle(isOn: pinBinding) {
+                            Image(systemName: conceptPage.isFollowing ? "pin.fill" : "pin")
+                        }
+                        .toggleStyle(.button)
+                        .accessibilityIdentifier("conceptPageDetail_pinToggle")
+                        .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
+                        Menu {
+                            Button { showEditSheet = true } label: {
+                                Label("編集", systemImage: "square.and.pencil")
+                            }
+                            Button(role: .destructive) {
+                                conceptPage.isHidden = true
+                                try? context.save()
+                                dismiss()
+                            } label: {
+                                Label("wiki.hide.action", systemImage: "eye.slash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                        .accessibilityIdentifier("conceptPageDetail_editButton")
+                    }
+                    .foregroundStyle(DS.Color.sumiInk)
+                }
+                .padding(.bottom, DS.Spacing.md)
+
                 // ── グループ A: タイトル + 知識セクション ──────────────
                 Group {
                     parentBreadcrumb
@@ -147,59 +203,14 @@ struct ConceptPageDetailView: View {
                 }
             }
             .padding(.horizontal, DS.Spacing.xxl)
-            .padding(.top, DS.Spacing.xs)
             .padding(.bottom, DS.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
-        .ignoresSafeArea(edges: .top)
-        .background {
-            GeometryReader { geo in
-                Color.clear.onAppear { topInset = geo.safeAreaInsets.top }
-            }
-        }
-
-        // ── フローティング操作ボタン (navBar 代替) ──────────────────
-        HStack(spacing: 0) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(DS.Color.sumiInk)
-                    .padding(10)
-            }
-            Spacer()
-            HStack(spacing: DS.Spacing.md) {
-                Toggle(isOn: pinBinding) {
-                    Image(systemName: conceptPage.isFollowing ? "pin.fill" : "pin")
-                }
-                .toggleStyle(.button)
-                .accessibilityIdentifier("conceptPageDetail_pinToggle")
-                .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
-                Menu {
-                    Button { showEditSheet = true } label: {
-                        Label("編集", systemImage: "square.and.pencil")
-                    }
-                    Button(role: .destructive) {
-                        conceptPage.isHidden = true
-                        try? context.save()
-                        dismiss()
-                    } label: {
-                        Label("wiki.hide.action", systemImage: "eye.slash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityIdentifier("conceptPageDetail_editButton")
-            }
-            .foregroundStyle(DS.Color.sumiInk)
-            .padding(.trailing, DS.Spacing.sm)
-        }
-        .padding(.top, topInset)
-        .frame(height: topInset + 44)
-
-        } // ZStack end
+        // UIKit 経由でナビバーを非表示 + safe area を縮小 (status bar のみに)。
+        // SwiftUI の toolbar(.hidden) では safe area が保持されるためこの方法が必要。
+        .background(NavBarHider())
         .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(item: $wikiLinkTarget) { target in
             // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
             ConceptPageDetailLoader(destinationID: target.id)

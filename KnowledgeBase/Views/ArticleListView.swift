@@ -342,7 +342,6 @@ private struct ArticleListContent: View {
                     }
                 }
                 .listStyle(.plain)
-                .listSectionSpacing(.compact)
                 .scrollContentBackground(.hidden)
                 .background(DS.Color.washiBackground)
                 .scrollDismissesKeyboard(.immediately)
