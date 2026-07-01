@@ -60,6 +60,8 @@ struct ArticleListView: View {
                 )
                 .navigationTitle("list.title")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         AvatarMenu()

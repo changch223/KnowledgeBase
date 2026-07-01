@@ -259,13 +259,27 @@ struct ArticleDetailView: View {
 
     // MARK: - Sections
 
+    /// 太細縦線 + serif 見出し（ConceptPageDetailView と同パターン、外側 padding 込みのため横 padding なし）
+    private func sectionHeader(_ titleKey: LocalizedStringKey) -> some View {
+        HStack(alignment: .center, spacing: DS.Spacing.sm) {
+            HStack(spacing: 2) {
+                Rectangle().frame(width: 3, height: 14).foregroundStyle(DS.Color.sumiInk)
+                Rectangle().frame(width: 1, height: 14).foregroundStyle(DS.Color.sumiMid)
+            }
+            Text(titleKey)
+                .font(.subheadline.weight(.semibold))
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+            Spacer()
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+
     /// spec 008: タグセクション (既存タグ chips + 自動提案 chips + 入力欄)
     @ViewBuilder
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("detail.tags.heading")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            sectionHeader("detail.tags.heading")
 
             // 既存タグ
             if !(article.tags ?? []).isEmpty {
@@ -421,8 +435,7 @@ struct ArticleDetailView: View {
             }
             .foregroundStyle(.secondary)
 
-            Text("detail.section.knowledge")
-                .font(DS.Typography.sectionTitle)
+            sectionHeader("detail.section.knowledge")
 
             HStack(spacing: DS.Spacing.md) {
                 if status == .extracting || status == .pending || status == nil || isRetryingKnowledge {
@@ -511,8 +524,7 @@ struct ArticleDetailView: View {
                     .padding(.top, DS.Spacing.md)
                 },
                 label: {
-                    Text("reader.bodyDisclosureLabel")
-                        .font(DS.Typography.sectionTitle)
+                    sectionHeader("reader.bodyDisclosureLabel")
                 }
             )
             .accessibilityIdentifier("reader.bodyDisclosure")
@@ -541,21 +553,17 @@ struct ArticleDetailView: View {
         let derived = fetchDerivedConceptPages()
         if !derived.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("ConceptPage.detail.derivedSectionTitle")
-                    .font(.title3.bold())
+                sectionHeader("ConceptPage.detail.derivedSectionTitle")
                 FlowingTagsLayout(spacing: DS.Spacing.sm) {
                     ForEach(derived, id: \.id) { page in
                         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
-                            HStack(spacing: DS.Spacing.xs) {
-                                Image(systemName: "lightbulb.fill")
-                                    .font(.caption2)
-                                Text(page.name)
-                                    .font(.caption)
-                            }
-                            .padding(.horizontal, DS.Spacing.md)
-                            .padding(.vertical, DS.Spacing.xs)
-                            .background(DS.Color.tagFill, in: Capsule())
-                            .foregroundStyle(.primary)
+                            Text(page.name)
+                                .font(.caption)
+                                .padding(.horizontal, DS.Spacing.md)
+                                .padding(.vertical, DS.Spacing.xs)
+                                .background(DS.Color.washiCard, in: Capsule())
+                                .overlay(Capsule().stroke(DS.Color.sumiRule, lineWidth: 0.8))
+                                .foregroundStyle(DS.Color.sumiInk)
                         }
                         .buttonStyle(.plain)
                     }

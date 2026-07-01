@@ -119,6 +119,8 @@ struct KnowledgeClipView: View {
             .scrollContentBackground(.hidden)
             .navigationTitle("clip.nav.title")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             // 既存 navigationDestination (V2.5 から継承、機能維持)
             .navigationDestination(for: CategoryDigestDetailDestination.self) { dest in
                 CategoryKnowledgeDetailView(category: dest.category)
