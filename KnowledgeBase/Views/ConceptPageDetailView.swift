@@ -144,7 +144,8 @@ struct ConceptPageDetailView: View {
                 }
             }
             .padding(.horizontal, DS.Spacing.xxl)
-            .padding(.vertical, DS.Spacing.xxl)
+            .padding(.top, DS.Spacing.xs)
+            .padding(.bottom, DS.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
