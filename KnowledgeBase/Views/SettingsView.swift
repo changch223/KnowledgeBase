@@ -261,8 +261,12 @@ struct SettingsView: View {
         .fullScreenCover(isPresented: $showOnboardingReplay) {
             OnboardingView(isPresented: $showOnboardingReplay)
         }
+        .scrollContentBackground(.hidden)
+        .background(DS.Color.washiBackground)
         .navigationTitle("settings.title")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .navigationDestination(for: SafariSetupDestination.self) { _ in
             SafariSetupView()
         }

@@ -117,6 +117,8 @@ struct ChatTabView: View {
             .background(DS.Color.washiBackground)
             .navigationTitle("chat.tab.title")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 // 履歴 sidebar (sheet) を開く button
                 ToolbarItem(placement: .topBarLeading) {

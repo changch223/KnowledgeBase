@@ -2,8 +2,8 @@
 //  ArticleShelfCard.swift
 //  KnowledgeTree
 //
-//  spec 068 (iKnow フィード) — おすすめ横スクロール carousel の記事カード (コンパクト)。
-//  縦用 ArticleFeedCard より小さい (~150pt 幅、写真上 + タイトル下)。tap → 記事詳細。
+//  japanese-ui-redesign: 写真あり (80px)・serif タイトル・細線ボーダー。
+//  元に戻す場合は git checkout main -- KnowledgeBase/Views/ArticleShelfCard.swift
 //
 
 import SwiftUI
@@ -11,9 +11,8 @@ import SwiftUI
 struct ArticleShelfCard: View {
     let article: Article
 
-    /// 横カード幅。LazyHStack 内で固定。
     static let cardWidth: CGFloat = 150
-    static let imageHeight: CGFloat = 100
+    static let imageHeight: CGFloat = 80
 
     private var imageURL: URL? {
         guard let raw = article.enrichment?.ogImageURL,
@@ -23,18 +22,25 @@ struct ArticleShelfCard: View {
 
     var body: some View {
         NavigationLink(value: article) {
-            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                // 写真 (ある程度欲しい → 上部に配置)
                 photo
                     .frame(width: Self.cardWidth, height: Self.imageHeight)
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
 
                 Text(article.title)
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .fontDesign(.serif)
+                    .foregroundStyle(DS.Color.sumiInk)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .frame(width: Self.cardWidth, alignment: .leading)
+
+                Text(SavedAtFormatter.format(article.savedAt))
+                    .font(.caption2)
+                    .foregroundStyle(DS.Color.sumiLight)
                     .frame(width: Self.cardWidth, alignment: .leading)
             }
         }
@@ -59,10 +65,10 @@ struct ArticleShelfCard: View {
 
     private var fallback: some View {
         ZStack {
-            DS.Color.tagFill
+            DS.Color.sumiRule.opacity(0.5)
             Image(systemName: "doc.text")
                 .font(.title2)
-                .foregroundStyle(DS.Color.sumiInk)
+                .foregroundStyle(DS.Color.sumiLight)
         }
     }
 }

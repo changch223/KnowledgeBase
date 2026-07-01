@@ -34,7 +34,13 @@ struct TagChip: View {
         }
         .padding(.horizontal, DS.Spacing.lg)
         .padding(.vertical, DS.Spacing.xs)
-        .background(isSuggested ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.tertiary), in: Capsule())
+        .background(DS.Color.washiCard, in: Capsule())
+        .overlay(
+            Capsule().stroke(
+                isSuggested ? DS.Color.sumiLight : DS.Color.sumiRule,
+                lineWidth: 0.8
+            )
+        )
         .accessibilityIdentifier(isSuggested ? "tagChipSuggested-\(name)" : "tagChip-\(name)")
     }
 }

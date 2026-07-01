@@ -153,6 +153,8 @@ struct KnowledgeBaseApp: App {
             .textSelection(.enabled)
             // 墨スタイル: タブバー・ナビゲーション・ボタンのアクセントカラーを sumiInk (黒/白) に統一
             .tint(DS.Color.sumiInk)
+            .toolbarBackground(DS.Color.washiBackground, for: .tabBar)
+            .toolbarBackground(.visible, for: .tabBar)
             .task {
                 await bootstrap()
             }
