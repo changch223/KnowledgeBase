@@ -217,6 +217,22 @@ struct ConceptPageDetailView: View {
             .frame(height: 0.5)
     }
 
+    /// セクション見出し — 太細縦線 + serif（SumiSectionHeader の padding なし版）
+    private func sectionHeader(_ titleKey: LocalizedStringKey) -> some View {
+        HStack(alignment: .center, spacing: DS.Spacing.sm) {
+            HStack(spacing: 2) {
+                Rectangle().frame(width: 3, height: 14).foregroundStyle(DS.Color.sumiInk)
+                Rectangle().frame(width: 1, height: 14).foregroundStyle(DS.Color.sumiMid)
+            }
+            Text(titleKey)
+                .font(.subheadline.weight(.semibold))
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+            Spacer()
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+
     /// スクロール内大タイトル + カテゴリチップ + メタデータ
     private var heroTitleSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
@@ -259,7 +275,7 @@ struct ConceptPageDetailView: View {
     private var wikiBodySection: some View {
         if !conceptPage.bodyMarkdown.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("wiki.body.sectionTitle").font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("wiki.body.sectionTitle")
                 // spec 079: 行ベースレンダラで見出し/箇条書きを整形 + 生 concept-id 漏れを除去。
                 WikiBodyView(markdown: conceptPage.bodyMarkdown)
                     .environment(\.openURL, OpenURLAction { url in
@@ -296,8 +312,7 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("ConceptPage.detail.summary.title")
-                .font(.title3.bold()).fontDesign(.serif)
+            sectionHeader("ConceptPage.detail.summary.title")
             if conceptPage.isSynthesisInProgress {
                 HStack(spacing: DS.Spacing.md) {
                     ProgressView()
@@ -331,8 +346,7 @@ struct ConceptPageDetailView: View {
     private var crossSourceInsightsSection: some View {
         if !conceptPage.crossSourceInsights.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("ConceptPage.detail.crossSourceInsights.title")
-                    .font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("ConceptPage.detail.crossSourceInsights.title")
                 ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { index, insight in
                     VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         HStack(alignment: .top, spacing: DS.Spacing.sm) {
@@ -371,8 +385,7 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var relatedArticlesSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text(String(format: String(localized: "ConceptPage.detail.relatedArticles.title") + " (%lld)", (conceptPage.relatedArticles ?? []).count))
-                .font(.title3.bold()).fontDesign(.serif)
+            sectionHeader("ConceptPage.detail.relatedArticles.title")
             if (conceptPage.relatedArticles ?? []).isEmpty {
                 Text("ConceptPage.detail.emptyRelatedArticles")
                     .font(.body)
@@ -406,8 +419,7 @@ struct ConceptPageDetailView: View {
         let others = relatedConcepts()
         if !others.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text(String(format: String(localized: "ConceptPage.detail.relatedConcepts.title") + " (%lld)", others.count))
-                    .font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("ConceptPage.detail.relatedConcepts.title")
                 FlowingTagsLayout(spacing: DS.Spacing.sm) {
                     ForEach(others, id: \.id) { other in
                         NavigationLink(value: ConceptPageDetailDestination(id: other.id)) {
@@ -456,8 +468,7 @@ struct ConceptPageDetailView: View {
         let children = childPages
         if !children.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text(String(format: String(localized: "concept.children.title") + " (%lld)", children.count))
-                    .font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("concept.children.title")
                 ForEach(children, id: \.id) { child in
                     NavigationLink(value: ConceptPageDetailDestination(id: child.id)) {
                         HStack(alignment: .top, spacing: DS.Spacing.md) {

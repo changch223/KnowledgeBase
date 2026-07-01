@@ -87,7 +87,7 @@ struct KnowledgeClipView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                LazyVStack(spacing: 36) {
+                LazyVStack(spacing: 26) {
                     // spec 075: 上部「新着」棚 — まだ概念化されていない新着記事 (概念化で消える)。
                     if !newShelfArticles.isEmpty {
                         newArticleShelf
@@ -232,20 +232,9 @@ struct KnowledgeClipView: View {
         .accessibilityIdentifier("clip.newShelf")
     }
 
-    /// spec 066: フィードが空のときの穏やかな空状態。
+    /// 空状態 — 青海波 + 「知」
     private var feedEmptyState: some View {
-        VStack(spacing: DS.Spacing.md) {
-            Image(systemName: "tray")
-                .font(.system(size: 44))
-                .foregroundStyle(.secondary)
-            Text("clip.recent.empty")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Spacing.section)
-        .padding(.horizontal, DS.Spacing.xxl)
+        SeigaihaEmptyState(message: "clip.recent.empty")
     }
 
     /// spec 056 polish: V3 migration tooltip の表示判定 (初回起動 1 回限り)。
