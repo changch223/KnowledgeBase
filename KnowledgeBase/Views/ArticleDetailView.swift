@@ -38,8 +38,6 @@ struct ArticleDetailView: View {
     @State private var showConfirmSheet: Bool = false
     /// spec 096: カスタマイズ抽出 (抽出の方向性を指定) のシート。
     @State private var showCustomizeSheet: Bool = false
-    /// spec 016: 本文 DisclosureGroup の展開状態。初期 collapsed、毎回 sheet 起動時にリセット。
-    @State private var isBodyExpanded: Bool = false
 
     /// 1秒 Timer ポーリング: 5 つの通知経路がすべて穴になる場合の最終保険。
     /// completion (knowledge succeeded + body succeeded) になったら止まる条件で
@@ -227,15 +225,18 @@ struct ArticleDetailView: View {
                 // spec 008: タグセクション (手動 + 自動提案)
                 tagsSection
 
-                // knowledge / body セクションだけ refreshTick で rebuild する。
-                // 完了状態 (本文・知識サマリ) を確実に live update するため。
-                Group {
-                    if shouldShowKnowledgeSection {
-                        knowledgeSection
-                    }
-                    bodySection
+                // knowledgeSection だけ refreshTick で rebuild する。
+                // 完了状態 (知識サマリ) を確実に live update するため。
+                // bodySection は .id(refreshTick) の外に置く:
+                // pollTimer が 1 秒ごとに refreshTick を変えると SwiftUI が Group を丸ごと
+                // 破棄・再生成し DisclosureGroup の展開アニメーションが毎秒リセットされ
+                // 永遠に開かない問題を防ぐ (headerSection と同じ対策)。
+                if shouldShowKnowledgeSection {
+                    knowledgeSection
+                        .id(refreshTick)
                 }
-                .id(refreshTick)
+
+                bodySection
 
                 // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
                 RelatedArticlesSection(article: article) { related in
@@ -376,17 +377,17 @@ struct ArticleDetailView: View {
                     switch phase {
                     case .success(let image):
                         image.resizable().scaledToFill()
+                            .frame(height: 160)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
+                                    .stroke(DS.Color.sumiRule, lineWidth: 0.5)
+                            )
                     default:
                         EmptyView()
                     }
                 }
-                .frame(height: 160)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
-                        .stroke(DS.Color.sumiRule, lineWidth: 0.5)
-                )
             }
 
             // spec 007: マルチページ追跡の取得状況
@@ -510,25 +511,18 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var bodySection: some View {
         if !paragraphs.isEmpty {
-            DisclosureGroup(
-                isExpanded: $isBodyExpanded,
-                content: {
-                    VStack(alignment: .leading, spacing: DS.Spacing.xl) {
-                        ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
-                            Text(p)
-                                .font(.body)
-                                .lineSpacing(DS.Typography.bodyLineSpacing)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                sectionHeader("reader.bodyDisclosureLabel")
+                VStack(alignment: .leading, spacing: DS.Spacing.xl) {
+                    ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
+                        Text(p)
+                            .font(.body)
+                            .lineSpacing(DS.Typography.bodyLineSpacing)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.top, DS.Spacing.md)
-                },
-                label: {
-                    sectionHeader("reader.bodyDisclosureLabel")
                 }
-            )
+            }
             .accessibilityIdentifier("reader.bodyDisclosure")
-            .accessibilityHint(Text("タップして本文を展開"))
         } else if let body = article.body, body.status == .failed || body.status == .permanentlyFailed {
             Text("detail.body.failed")
                 .font(.callout)
