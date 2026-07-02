@@ -118,7 +118,10 @@ struct KnowledgeClipView: View {
             .background(DS.Color.washiBackground)
             .scrollContentBackground(.hidden)
             .navigationTitle("clip.nav.title")
-            .navigationBarTitleDisplayMode(.large)
+            // japanese-ui-redesign: .large だと ~96px のタイトルバンドが確保され
+            // 「新規記事の上に写真サイズの余白」に見える。ConceptPageDetailView と揃えて
+            // .inline にすると余白バンドが消え、「Knowledge Base」はコンパクトに表示される。
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             // 既存 navigationDestination (V2.5 から継承、機能維持)
