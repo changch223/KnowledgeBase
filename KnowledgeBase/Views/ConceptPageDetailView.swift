@@ -103,60 +103,86 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var aliveBody: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DS.Spacing.section) {
-                parentBreadcrumb
-                headerSection
-                // spec 080: 答え先出し。要点 (crossSourceInsights) を最上段に。
-                crossSourceInsightsSection
-                wikiBodySection
-                childConceptsSection
-                relatedArticlesSection
-                // spec 043: この概念についての質問と答え (SavedAnswer セクション)
-                SavedAnswerSection(conceptPageID: conceptPage.id)
-                relatedConceptsSection
+            VStack(alignment: .leading, spacing: 0) {
+                // ── グループ A: タイトル + 知識セクション ──────────────
+                Group {
+                    parentBreadcrumb
+                        .padding(.bottom, DS.Spacing.md)
+                    heroTitleSection
+                    sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    // spec 080: 要点先出し
+                    crossSourceInsightsSection
+                    if !conceptPage.crossSourceInsights.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    }
+                    wikiBodySection
+                    if !conceptPage.bodyMarkdown.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    }
+                    summarySection
+                        .padding(.bottom, DS.Spacing.section)
+                }
+
+                // ── グループ B: 階層 + 記事 + 関連 ──────────────────
+                Group {
+                    let children = childPages
+                    if !children.isEmpty {
+                        sumiRuleDivider.padding(.bottom, DS.Spacing.section)
+                        childConceptsSection
+                            .padding(.bottom, DS.Spacing.section)
+                    }
+                    sumiRuleDivider.padding(.bottom, DS.Spacing.section)
+                    relatedArticlesSection
+                        .padding(.bottom, DS.Spacing.section)
+                    // spec 043: この概念についての質問と答え
+                    SavedAnswerSection(conceptPageID: conceptPage.id)
+                    let others = relatedConcepts()
+                    if !others.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                        relatedConceptsSection
+                    }
+                }
             }
             .padding(.horizontal, DS.Spacing.xxl)
-            .padding(.vertical, DS.Spacing.xxl)
+            .padding(.bottom, DS.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
         .navigationTitle(conceptPage.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: DS.Spacing.md) {
+                    Toggle(isOn: pinBinding) {
+                        Image(systemName: conceptPage.isFollowing ? "pin.fill" : "pin")
+                    }
+                    .toggleStyle(.button)
+                    .accessibilityIdentifier("conceptPageDetail_pinToggle")
+                    .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
+                    Menu {
+                        Button { showEditSheet = true } label: {
+                            Label("編集", systemImage: "square.and.pencil")
+                        }
+                        Button(role: .destructive) {
+                            conceptPage.isHidden = true
+                            try? context.save()
+                            dismiss()
+                        } label: {
+                            Label("wiki.hide.action", systemImage: "eye.slash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityIdentifier("conceptPageDetail_editButton")
+                }
+                .foregroundStyle(DS.Color.sumiInk)
+            }
+        }
         .navigationDestination(item: $wikiLinkTarget) { target in
             // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
             ConceptPageDetailLoader(destinationID: target.id)
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Toggle(isOn: pinBinding) {
-                    Image(systemName: conceptPage.isFollowing ? "pin.fill" : "pin")
-                }
-                .toggleStyle(.button)
-                .accessibilityIdentifier("conceptPageDetail_pinToggle")
-                .accessibilityLabel(String(localized: "ConceptPage.editSheet.pin"))
-            }
-            // spec 044: DeepDiveChat (学習/深掘り) 導線。
-            // spec 088: ユーザー要望で一旦非表示 (pin の隣の book ボタンを撤去)。
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        showEditSheet = true
-                    } label: {
-                        Label("編集", systemImage: "square.and.pencil")
-                    }
-                    // spec 063 (LLM Wiki): 非表示 (削除でなく隠す、データは残る)
-                    Button(role: .destructive) {
-                        conceptPage.isHidden = true
-                        try? context.save()
-                        dismiss()
-                    } label: {
-                        Label("wiki.hide.action", systemImage: "eye.slash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityIdentifier("conceptPageDetail_editButton")
-            }
         }
         // spec 058 polish: 親 NavigationStack (KnowledgeClipView) で同 destination 宣言済、
         // 重複宣言で warning が出るため削除。「学習する」 button からの navigation は親経由で動作。
@@ -182,32 +208,64 @@ struct ConceptPageDetailView: View {
         CategorySeed.category(for: conceptPage.categoryRaw).name
     }
 
-    private var headerSection: some View {
-        // spec 058 polish: navigationTitle 経由で表示するため、body 内の title 重複を削除。
-        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+    /// 全幅0.5px墨線（セクション間区切り）
+    private var sumiRuleDivider: some View {
+        Rectangle()
+            .fill(DS.Color.sumiRule)
+            .frame(height: 0.5)
+    }
+
+    /// セクション見出し — 太細縦線 + serif（SumiSectionHeader の padding なし版）
+    private func sectionHeader(_ titleKey: LocalizedStringKey) -> some View {
+        HStack(alignment: .center, spacing: DS.Spacing.sm) {
+            HStack(spacing: 2) {
+                Rectangle().frame(width: 3, height: 14).foregroundStyle(DS.Color.sumiInk)
+                Rectangle().frame(width: 1, height: 14).foregroundStyle(DS.Color.sumiMid)
+            }
+            Text(titleKey)
+                .font(.subheadline.weight(.semibold))
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+            Spacer()
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    /// スクロール内大タイトル + カテゴリチップ + メタデータ
+    private var heroTitleSection: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            Text(conceptPage.name)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+                .fixedSize(horizontal: false, vertical: true)
+
             HStack(spacing: DS.Spacing.md) {
-                // spec 063 (LLM Wiki): 種別バッジ (人物 / 概念 / プロジェクト)
-                Label(LocalizedStringKey(conceptPage.kind.displayNameKey), systemImage: conceptPage.kind.symbolName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("conceptPageDetail_kind")
                 Text(categoryDisplay)
                     .font(.caption)
                     .padding(.horizontal, DS.Spacing.md)
                     .padding(.vertical, DS.Spacing.xxs)
-                    .background(DS.Color.tagFill, in: Capsule())
+                    .overlay(Capsule().stroke(DS.Color.sumiRule, lineWidth: 0.5))
+                    .foregroundStyle(DS.Color.sumiMid)
+
                 Text(String(format: String(localized: "ConceptPage.card.relatedCount"), (conceptPage.relatedArticles ?? []).count))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.sumiLight)
                 Text("·")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.sumiLight)
                 Text(SavedAtFormatter.format(conceptPage.updatedAt))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.sumiLight)
             }
         }
         .accessibilityIdentifier("conceptPageDetail_header")
+    }
+
+    /// 旧 headerSection — heroTitleSection に統合のため空にする
+    private var headerSection: some View {
+        EmptyView()
     }
 
     /// spec 063 (LLM Wiki): AI が書いた Markdown 本文を整形表示。空なら非表示。
@@ -215,7 +273,7 @@ struct ConceptPageDetailView: View {
     private var wikiBodySection: some View {
         if !conceptPage.bodyMarkdown.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("wiki.body.sectionTitle").font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("wiki.body.sectionTitle")
                 // spec 079: 行ベースレンダラで見出し/箇条書きを整形 + 生 concept-id 漏れを除去。
                 WikiBodyView(markdown: conceptPage.bodyMarkdown)
                     .environment(\.openURL, OpenURLAction { url in
@@ -252,8 +310,7 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("ConceptPage.detail.summary.title")
-                .font(.title3.bold()).fontDesign(.serif)
+            sectionHeader("ConceptPage.detail.summary.title")
             if conceptPage.isSynthesisInProgress {
                 HStack(spacing: DS.Spacing.md) {
                     ProgressView()
@@ -287,8 +344,7 @@ struct ConceptPageDetailView: View {
     private var crossSourceInsightsSection: some View {
         if !conceptPage.crossSourceInsights.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("ConceptPage.detail.crossSourceInsights.title")
-                    .font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("ConceptPage.detail.crossSourceInsights.title")
                 ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { index, insight in
                     VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         HStack(alignment: .top, spacing: DS.Spacing.sm) {
@@ -327,8 +383,7 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var relatedArticlesSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text(String(format: String(localized: "ConceptPage.detail.relatedArticles.title") + " (%lld)", (conceptPage.relatedArticles ?? []).count))
-                .font(.title3.bold()).fontDesign(.serif)
+            sectionHeader("ConceptPage.detail.relatedArticles.title")
             if (conceptPage.relatedArticles ?? []).isEmpty {
                 Text("ConceptPage.detail.emptyRelatedArticles")
                     .font(.body)
@@ -362,8 +417,7 @@ struct ConceptPageDetailView: View {
         let others = relatedConcepts()
         if !others.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text(String(format: String(localized: "ConceptPage.detail.relatedConcepts.title") + " (%lld)", others.count))
-                    .font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("ConceptPage.detail.relatedConcepts.title")
                 FlowingTagsLayout(spacing: DS.Spacing.sm) {
                     ForEach(others, id: \.id) { other in
                         NavigationLink(value: ConceptPageDetailDestination(id: other.id)) {
@@ -412,8 +466,7 @@ struct ConceptPageDetailView: View {
         let children = childPages
         if !children.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text(String(format: String(localized: "concept.children.title") + " (%lld)", children.count))
-                    .font(.title3.bold()).fontDesign(.serif)
+                sectionHeader("concept.children.title")
                 ForEach(children, id: \.id) { child in
                     NavigationLink(value: ConceptPageDetailDestination(id: child.id)) {
                         HStack(alignment: .top, spacing: DS.Spacing.md) {

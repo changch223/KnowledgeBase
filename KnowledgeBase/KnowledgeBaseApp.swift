@@ -45,6 +45,9 @@ struct KnowledgeBaseApp: App {
 
     @MainActor
     init() {
+        // listSectionSpacing は section header があると iOS 17-18 でバグ (FB#13699952)。
+        // UIKit appearance で直接 0 に設定するのが確実な回避策。
+        UITableView.appearance().sectionHeaderTopPadding = 0
         // spec 009: BGTaskScheduler への register は launch 最早タイミングで必須。
         // bootstrap (.task) では遅すぎる (View 描画後なので、launch 時 BGTask 通知を取りこぼす)。
         BackgroundExtractionScheduler.shared.registerHandler()
@@ -153,6 +156,8 @@ struct KnowledgeBaseApp: App {
             .textSelection(.enabled)
             // 墨スタイル: タブバー・ナビゲーション・ボタンのアクセントカラーを sumiInk (黒/白) に統一
             .tint(DS.Color.sumiInk)
+            .toolbarBackground(DS.Color.washiBackground, for: .tabBar)
+            .toolbarBackground(.visible, for: .tabBar)
             .task {
                 await bootstrap()
             }

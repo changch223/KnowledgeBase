@@ -38,8 +38,6 @@ struct ArticleDetailView: View {
     @State private var showConfirmSheet: Bool = false
     /// spec 096: カスタマイズ抽出 (抽出の方向性を指定) のシート。
     @State private var showCustomizeSheet: Bool = false
-    /// spec 016: 本文 DisclosureGroup の展開状態。初期 collapsed、毎回 sheet 起動時にリセット。
-    @State private var isBodyExpanded: Bool = false
 
     /// 1秒 Timer ポーリング: 5 つの通知経路がすべて穴になる場合の最終保険。
     /// completion (knowledge succeeded + body succeeded) になったら止まる条件で
@@ -227,15 +225,18 @@ struct ArticleDetailView: View {
                 // spec 008: タグセクション (手動 + 自動提案)
                 tagsSection
 
-                // knowledge / body セクションだけ refreshTick で rebuild する。
-                // 完了状態 (本文・知識サマリ) を確実に live update するため。
-                Group {
-                    if shouldShowKnowledgeSection {
-                        knowledgeSection
-                    }
-                    bodySection
+                // knowledgeSection だけ refreshTick で rebuild する。
+                // 完了状態 (知識サマリ) を確実に live update するため。
+                // bodySection は .id(refreshTick) の外に置く:
+                // pollTimer が 1 秒ごとに refreshTick を変えると SwiftUI が Group を丸ごと
+                // 破棄・再生成し DisclosureGroup の展開アニメーションが毎秒リセットされ
+                // 永遠に開かない問題を防ぐ (headerSection と同じ対策)。
+                if shouldShowKnowledgeSection {
+                    knowledgeSection
+                        .id(refreshTick)
                 }
-                .id(refreshTick)
+
+                bodySection
 
                 // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
                 RelatedArticlesSection(article: article) { related in
@@ -259,13 +260,27 @@ struct ArticleDetailView: View {
 
     // MARK: - Sections
 
+    /// 太細縦線 + serif 見出し（ConceptPageDetailView と同パターン、外側 padding 込みのため横 padding なし）
+    private func sectionHeader(_ titleKey: LocalizedStringKey) -> some View {
+        HStack(alignment: .center, spacing: DS.Spacing.sm) {
+            HStack(spacing: 2) {
+                Rectangle().frame(width: 3, height: 14).foregroundStyle(DS.Color.sumiInk)
+                Rectangle().frame(width: 1, height: 14).foregroundStyle(DS.Color.sumiMid)
+            }
+            Text(titleKey)
+                .font(.subheadline.weight(.semibold))
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+            Spacer()
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+
     /// spec 008: タグセクション (既存タグ chips + 自動提案 chips + 入力欄)
     @ViewBuilder
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            Text("detail.tags.heading")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            sectionHeader("detail.tags.heading")
 
             // 既存タグ
             if !(article.tags ?? []).isEmpty {
@@ -332,29 +347,48 @@ struct ArticleDetailView: View {
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.xl) {
-            if let urlString = article.enrichment?.ogImageURL,
-               let url = URL(string: urlString) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    DS.Color.overlaySubtle
-                }
-                .frame(height: 200)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip))
-            }
-
+        VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+            // japanese-ui-redesign: タイトル大型明朝が先（新聞スタイル）
             Text(displayTitle)
-                .font(.title2.bold())
-                .lineSpacing(2)
+                .font(.title2)
+                .fontWeight(.bold)
+                .fontDesign(.serif)
+                .foregroundStyle(DS.Color.sumiInk)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("articleDetailTitle")
 
-            Text(article.url)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            // ソース + 日付を一行で (sumiLight)
+            HStack(spacing: DS.Spacing.xs) {
+                if let host = URL(string: article.url)?.host {
+                    Text(host.replacingOccurrences(of: "www.", with: ""))
+                        .lineLimit(1)
+                }
+                Text("·")
+                Text(SavedAtFormatter.format(article.savedAt))
+            }
+            .font(.caption)
+            .foregroundStyle(DS.Color.sumiLight)
+
+            // 写真 — タイトル下に配置 (ある程度欲しい・コンパクトに 160px)
+            if let urlString = article.enrichment?.ogImageURL,
+               let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                            .frame(height: 160)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
+                                    .stroke(DS.Color.sumiRule, lineWidth: 0.5)
+                            )
+                    default:
+                        EmptyView()
+                    }
+                }
+            }
 
             // spec 007: マルチページ追跡の取得状況
             if let enrichment = article.enrichment, enrichment.pageCountFetched > 1 {
@@ -402,8 +436,7 @@ struct ArticleDetailView: View {
             }
             .foregroundStyle(.secondary)
 
-            Text("detail.section.knowledge")
-                .font(DS.Typography.sectionTitle)
+            sectionHeader("detail.section.knowledge")
 
             HStack(spacing: DS.Spacing.md) {
                 if status == .extracting || status == .pending || status == nil || isRetryingKnowledge {
@@ -478,26 +511,18 @@ struct ArticleDetailView: View {
     @ViewBuilder
     private var bodySection: some View {
         if !paragraphs.isEmpty {
-            DisclosureGroup(
-                isExpanded: $isBodyExpanded,
-                content: {
-                    VStack(alignment: .leading, spacing: DS.Spacing.xl) {
-                        ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
-                            Text(p)
-                                .font(.body)
-                                .lineSpacing(DS.Typography.bodyLineSpacing)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                sectionHeader("reader.bodyDisclosureLabel")
+                VStack(alignment: .leading, spacing: DS.Spacing.xl) {
+                    ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
+                        Text(p)
+                            .font(.body)
+                            .lineSpacing(DS.Typography.bodyLineSpacing)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.top, DS.Spacing.md)
-                },
-                label: {
-                    Text("reader.bodyDisclosureLabel")
-                        .font(DS.Typography.sectionTitle)
                 }
-            )
+            }
             .accessibilityIdentifier("reader.bodyDisclosure")
-            .accessibilityHint(Text("タップして本文を展開"))
         } else if let body = article.body, body.status == .failed || body.status == .permanentlyFailed {
             Text("detail.body.failed")
                 .font(.callout)
@@ -522,21 +547,17 @@ struct ArticleDetailView: View {
         let derived = fetchDerivedConceptPages()
         if !derived.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                Text("ConceptPage.detail.derivedSectionTitle")
-                    .font(.title3.bold())
+                sectionHeader("ConceptPage.detail.derivedSectionTitle")
                 FlowingTagsLayout(spacing: DS.Spacing.sm) {
                     ForEach(derived, id: \.id) { page in
                         NavigationLink(value: ConceptPageDetailDestination(id: page.id)) {
-                            HStack(spacing: DS.Spacing.xs) {
-                                Image(systemName: "lightbulb.fill")
-                                    .font(.caption2)
-                                Text(page.name)
-                                    .font(.caption)
-                            }
-                            .padding(.horizontal, DS.Spacing.md)
-                            .padding(.vertical, DS.Spacing.xs)
-                            .background(DS.Color.tagFill, in: Capsule())
-                            .foregroundStyle(.primary)
+                            Text(page.name)
+                                .font(.caption)
+                                .padding(.horizontal, DS.Spacing.md)
+                                .padding(.vertical, DS.Spacing.xs)
+                                .background(DS.Color.washiCard, in: Capsule())
+                                .overlay(Capsule().stroke(DS.Color.sumiRule, lineWidth: 0.8))
+                                .foregroundStyle(DS.Color.sumiInk)
                         }
                         .buttonStyle(.plain)
                     }

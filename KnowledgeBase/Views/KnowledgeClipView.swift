@@ -87,7 +87,7 @@ struct KnowledgeClipView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                LazyVStack(spacing: DS.Spacing.xxl) {
+                LazyVStack(spacing: 26) {
                     // spec 075: 上部「新着」棚 — まだ概念化されていない新着記事 (概念化で消える)。
                     if !newShelfArticles.isEmpty {
                         newArticleShelf
@@ -119,6 +119,8 @@ struct KnowledgeClipView: View {
             .scrollContentBackground(.hidden)
             .navigationTitle("clip.nav.title")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             // 既存 navigationDestination (V2.5 から継承、機能維持)
             .navigationDestination(for: CategoryDigestDetailDestination.self) { dest in
                 CategoryKnowledgeDetailView(category: dest.category)
@@ -232,20 +234,9 @@ struct KnowledgeClipView: View {
         .accessibilityIdentifier("clip.newShelf")
     }
 
-    /// spec 066: フィードが空のときの穏やかな空状態。
+    /// 空状態 — 青海波 + 「知」
     private var feedEmptyState: some View {
-        VStack(spacing: DS.Spacing.md) {
-            Image(systemName: "tray")
-                .font(.system(size: 44))
-                .foregroundStyle(.secondary)
-            Text("clip.recent.empty")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Spacing.section)
-        .padding(.horizontal, DS.Spacing.xxl)
+        SeigaihaEmptyState(message: "clip.recent.empty")
     }
 
     /// spec 056 polish: V3 migration tooltip の表示判定 (初回起動 1 回限り)。
