@@ -148,6 +148,9 @@ struct ConceptPageDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
+        // 他画面 (KnowledgeClipView 等) と背景色を統一: 既定の白 → 和紙背景色
+        .background(DS.Color.washiBackground)
+        .scrollContentBackground(.hidden)
         .navigationTitle(conceptPage.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
