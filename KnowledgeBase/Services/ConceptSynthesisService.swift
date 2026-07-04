@@ -513,10 +513,16 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             trimmed = Self.sanitizeConceptLinks(in: trimmed, validIDs: validIDs)
             // spec 079: AI が「関連ページ候補」指示ブロックを本文へ丸写しした漏れ (生 concept-id 等) を除去
             trimmed = WikiBodySanitizer.sanitize(trimmed)
-            if !trimmed.isEmpty {
+            // LLM Best Practices P1-3: plain string 生成の品質下限を担保。
+            // sanitize 後の本文が妥当なら採用、不合格 (短すぎ/スキャフォールド残り) なら
+            // summary から fallback (既存本文が空のときのみ上書き、良い既存本文は保持)。
+            if WikiBodySanitizer.isValid(trimmed) {
                 conceptPage.bodyMarkdown = trimmed
+            } else if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
+                logger.notice("wiki body invalid for \(conceptPage.name, privacy: .public) → summary fallback")
+                conceptPage.bodyMarkdown = conceptPage.summary
             }
-            // 空出力 → 既存 bodyMarkdown を保持 (防御)
+            // 不合格 & 既存本文あり → 既存を保持 (防御)
         } catch {
             logger.error("wiki body generation failed for \(conceptPage.name, privacy: .public): \(String(describing: error), privacy: .public)")
             if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
@@ -705,9 +711,11 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         }
     }
 
-    /// exceededContextWindowSize 系エラーか (型 import 不要で頑健に文字列判定)。
+    /// 窓超過エラーか (実 overflow `exceededContextWindowSize` + P2-1 preflight
+    /// `wouldExceedContextWindowSize` の両方を検出)。型 import 不要で頑健に文字列判定。
     static func isContextOverflow(_ error: Error) -> Bool {
-        String(describing: error).contains("exceededContextWindowSize")
+        let s = String(describing: error)
+        return s.contains("exceededContextWindowSize") || s.contains("wouldExceedContextWindowSize")
     }
 
     /// decodingFailure エラーのテキストから部分的に有効な ConceptSynthesisOutput を抽出する。

@@ -72,6 +72,10 @@ final class ChatService: ChatServiceProtocol {
     /// 早期 return 用の最低 similarity 閾値。これ未満は「該当する情報が見つからない」と判定。
     private let minSimilarity: Float = 0.3
 
+    /// P2-2 (ハイブリッド検索): キーワードが強く一致した記事を cosine が低くても救済する閾値。
+    /// keywordScore は「質問語のうち一致した割合」= 0〜1。0.5 = 質問語の半分以上が本文/タイトルに出現。
+    private let keywordRescueThreshold: Float = 0.5
+
     /// spec 081: 回答文脈に使う Wiki/概念ページの retrieval 件数 (引用はしない、文脈のみ)。
     private let conceptTopK: Int = 2
 
@@ -617,7 +621,7 @@ final class ChatService: ChatServiceProtocol {
         let allArticles = (try? context.fetch(descriptor)) ?? []
 
         if chatMode == .think, embeddingService.isAvailable, let queryVector = embeddingService.embed(question) {
-            // Embedding 経路
+            // Embedding 経路 + P2-2 ハイブリッド検索 (RRF)。
             // メインスレッドで external-storage embedding を取り出し (faulting)、
             // spec 086: cosine + sort はメインスレッド外で実行 (全記事スキャンは維持 = recall 不変)。
             let corpus: [(id: String, embedding: [Float])] = allArticles.compactMap { article in
@@ -625,10 +629,28 @@ final class ChatService: ChatServiceProtocol {
                 return (id: article.id.uuidString, embedding: data.asFloatArray)
             }
             let byID = Dictionary(allArticles.map { ($0.id.uuidString, $0) }, uniquingKeysWith: { a, _ in a })
-            let ranked = await Self.rankByCosine(query: queryVector, corpus: corpus, k: topK)
-            let topResults: [(article: Article, similarity: Float)] = ranked.compactMap { entry in
-                guard let article = byID[entry.id] else { return nil }
-                return (article: article, similarity: entry.similarity)
+
+            // 1. セマンティック: 全 corpus を cosine ランク (recall 不変)。
+            let cosineRanked = await Self.rankByCosine(query: queryVector, corpus: corpus, k: corpus.count)
+            let cosineSimByID = Dictionary(cosineRanked.map { ($0.id, $0.similarity) }, uniquingKeysWith: { a, _ in a })
+
+            // 2. キーワード: 全記事の語一致スコア (embedding に埋もれる完全一致を拾う)。
+            let keywordScored = Self.keywordScore(question: question, articles: allArticles).filter { $0.similarity > 0 }
+            let keywordSimByID = Dictionary(
+                keywordScored.map { ($0.article.id.uuidString, $0.similarity) },
+                uniquingKeysWith: { max($0, $1) }
+            )
+            let keywordRanking = keywordScored.sorted { $0.similarity > $1.similarity }.map { $0.article.id.uuidString }
+
+            // 3. RRF 融合で top-K の membership を決定 (順位ベースで頑健、スケール差に強い)。
+            let fused = SearchService.reciprocalRankFusion(rankings: [cosineRanked.map(\.id), keywordRanking])
+            let topResults: [(article: Article, similarity: Float)] = fused.prefix(topK).compactMap { id in
+                guard let article = byID[id] else { return nil }
+                let cosineSim = cosineSimByID[id] ?? 0
+                let kwSim = keywordSimByID[id] ?? 0
+                // キーワードが強く一致した記事は cosine が低くても閾値を通す (embedding に埋もれない)。
+                let similarity: Float = kwSim >= keywordRescueThreshold ? max(cosineSim, minSimilarity) : cosineSim
+                return (article: article, similarity: similarity)
             }
             // spec 081: 同じ query vector で Wiki/概念ページも検索 (文脈 + 引用候補の補完用)
             let topConcepts = await retrieveConcepts(queryVector: queryVector)

@@ -17,8 +17,10 @@ struct Chunk: Equatable, Sendable {
 
 enum ChunkSplitter {
     /// 本文を最大 maxChars 文字、最大 maxChunks 個の chunk に分割する。
-    /// 境界判定: 各 chunk の冒頭 maxChars 文字以内で最後の `。` または `\n` を境界とする。
-    /// 句点・改行が範囲内に無ければ maxChars 文字で hard cut。maxChunks 到達後は残り (skipped tail) を捨てる。
+    /// 境界判定 (LLM Best Practices P2-3、セマンティック境界優先): 各 chunk の冒頭 maxChars 文字以内で
+    ///   1. 段落境界 (`\n\n`) → 2. 句点 (`。`) → 3. 改行 (`\n`) の順に、最後に出現する境界で切る。
+    /// いずれも範囲内に無ければ maxChars 文字で hard cut。maxChunks 到達後は残り (skipped tail) を捨てる。
+    /// maxChars は不変 (=chunk 数・LLM 呼び出し数は据え置き)。より自然な意味単位で区切ることだけを狙う。
     static func split(
         text: String,
         maxChars: Int = 1000,
@@ -42,11 +44,11 @@ enum ChunkSplitter {
                 break
             }
 
-            // 残り > maxChars: 冒頭 maxChars 内で最後の `。` または `\n` を探す
+            // 残り > maxChars: 冒頭 maxChars 内で最も自然な境界を探す (段落 > 句点 > 改行)。
             let headEnd = remaining.index(remaining.startIndex, offsetBy: maxChars)
             let head = remaining[..<headEnd]
-            if let cutIndex = head.lastIndex(where: { $0 == "。" || $0 == "\n" }) {
-                let inclusiveEnd = remaining.index(after: cutIndex)
+            if let boundary = lastSemanticBoundary(in: head) {
+                let inclusiveEnd = remaining.index(after: boundary)
                 rawChunks.append(String(remaining[..<inclusiveEnd]))
                 remaining = remaining[inclusiveEnd...]
             } else {
@@ -63,5 +65,20 @@ enum ChunkSplitter {
             Chunk(index: i, total: total, text: raw)
         }
         return (chunks, skippedTail)
+    }
+
+    /// head 内で最も自然な区切り位置 (含める最後の文字の index) を返す。
+    /// 優先度: 段落境界 (`\n\n` の 2 つ目の `\n`) > 句点 `。` > 改行 `\n`。いずれも無ければ nil (→ hard cut)。
+    /// 段落を単一改行/句点より優先することで、chunk が段落の途中で割れないようにする (抽出品質向上)。
+    private static func lastSemanticBoundary(in head: Substring) -> Substring.Index? {
+        // 1. 段落境界: 最後の "\n\n" の 2 つ目の \n を境界に (空行の直後で切る)。
+        if let range = head.range(of: "\n\n", options: .backwards) {
+            return head.index(before: range.upperBound)
+        }
+        // 2. 句点
+        if let idx = head.lastIndex(of: "。") { return idx }
+        // 3. 改行
+        if let idx = head.lastIndex(of: "\n") { return idx }
+        return nil
     }
 }

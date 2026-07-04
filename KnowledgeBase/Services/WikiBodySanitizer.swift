@@ -36,6 +36,31 @@ enum WikiBodySanitizer {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// LLM Best Practices P1-3: sanitize 後の本文が Wiki 本文として妥当かを判定。
+    /// plain string 生成 (spec 063) は @Generable の形式制約が無いため、稀に
+    /// 「短すぎる」「見出しが無い」「候補スキャフォールドの漏れが残る」出力が起きる。
+    /// 不合格なら caller は summary から fallback 本文を合成する (品質下限を担保)。
+    ///
+    /// 合格条件 (すべて満たす):
+    ///   - 本文が最低 minChars 字ある (空/空白/単語だけの断片でない。正当な短い本文は通す)
+    ///   - 生の concept-id:// / 「関連ページ候補」スキャフォールドが残っていない
+    static func isValid(_ markdown: String, minChars: Int = 20) -> Bool {
+        let trimmed = markdown.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= minChars else { return false }
+        // sanitize を通っていれば消えているはずだが、二重防御で禁止パターンを再チェック。
+        if trimmed.contains("関連ページ候補") { return false }
+        // 正しいインラインリンク "](concept-id" 以外の生 concept-id が残っていれば不合格。
+        if trimmed.localizedCaseInsensitiveContains("concept-id") {
+            let hasRawConceptID = trimmed
+                .components(separatedBy: "\n")
+                .contains { line in
+                    line.localizedCaseInsensitiveContains("concept-id") && !line.contains("](concept-id")
+                }
+            if hasRawConceptID { return false }
+        }
+        return true
+    }
+
     /// 連続する空行を 1 行に圧縮 (候補セクション除去後の穴埋め)。
     private static func collapseBlankLines(_ lines: [String]) -> [String] {
         var out: [String] = []

@@ -56,4 +56,29 @@ struct WikiBodySanitizerTests {
         #expect(out.contains("[RAG](concept-id://11111111-1111-1111-1111-111111111111)"))  // 正リンク保持
         #expect(!out.contains("22222222"))  // 生 concept-id 行は除去
     }
+
+    // MARK: - P1-3: isValid (品質下限チェック)
+
+    @Test func isValidAcceptsNormalBody() {
+        let md = "## 概要\nこれは十分な長さのある通常の Wiki 本文で、見出しと段落を持ちます。"
+        #expect(WikiBodySanitizer.isValid(md))
+    }
+
+    @Test func isValidRejectsTooShort() {
+        #expect(!WikiBodySanitizer.isValid("短い"))
+        #expect(!WikiBodySanitizer.isValid("   \n  "))
+    }
+
+    @Test func isValidRejectsLeakedScaffold() {
+        // sanitize をすり抜けた (万一の) スキャフォールド残りを二重防御で弾く。
+        let rawConceptID = String(repeating: "あ", count: 60) + "\n- 言語モデル: concept-id://33333333-3333-3333-3333-333333333333"
+        #expect(!WikiBodySanitizer.isValid(rawConceptID))
+        let candidateHeading = String(repeating: "い", count: 60) + "\n## 関連ページ候補"
+        #expect(!WikiBodySanitizer.isValid(candidateHeading))
+    }
+
+    @Test func isValidAcceptsBodyWithValidInlineLink() {
+        let md = "AIは [言語モデル](concept-id://590277D9-EF67-4255-B383-08FB617B1720) を用いる技術の総称で、幅広い応用がある。"
+        #expect(WikiBodySanitizer.isValid(md))  // 正しいインラインリンクは concept-id を含んでも合格
+    }
 }

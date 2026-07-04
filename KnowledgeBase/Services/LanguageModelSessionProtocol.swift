@@ -12,9 +12,7 @@
 import Foundation
 import FoundationModels
 import Translation
-#if DEBUG
 import os
-#endif
 
 // MARK: - Generable Output Types (transient、生成スキーマ)
 
@@ -381,6 +379,23 @@ enum FoundationModelGate {
     }
 }
 
+// MARK: - 送信前 preflight (LLM Best Practices P2-1)
+
+/// respond を呼ぶ前に token 見積もりで窓超過が確実と判明したときに throw するエラー。
+/// 呼び出し側 (概念合成の adaptive retry) はこれを overflow と同一視して compact に切替え、
+/// 無駄な full respond を 1 回省く。`String(describing:)` に "wouldExceedContextWindowSize"
+/// を含めることで、既存の文字列ベース overflow 検出器が追加変更なしで認識できる。
+enum FoundationModelPreflightError: Error, CustomStringConvertible {
+    case wouldExceedContextWindowSize(promptTokens: Int, schemaTokens: Int, contextSize: Int)
+
+    var description: String {
+        switch self {
+        case let .wouldExceedContextWindowSize(p, s, c):
+            return "wouldExceedContextWindowSize(prompt: \(p), schema: \(s), context: \(c))"
+        }
+    }
+}
+
 // MARK: - Apple Foundation Models 本番実装
 
 @MainActor
@@ -402,24 +417,80 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     }
     #endif
 
+    // MARK: - 本番 overflow 計測 (LLM Best Practices P1-1)
+
+    /// 本番でも記録する overflow 専用 logger。happy path はゼロコスト、窓超過時のみ計測する。
+    private static let overflowLogger = Logger(subsystem: "app.KnowledgeTree", category: "token-overflow")
+
+    /// エラーが窓超過 (実 overflow or preflight overflow) か。文字列判定で頑健 (型 import 不要)。
+    static func isOverflowError(_ error: Error) -> Bool {
+        let s = String(describing: error)
+        return s.contains("exceededContextWindowSize") || s.contains("wouldExceedContextWindowSize")
+    }
+
+    /// overflow 発生時に prompt / schema の実トークンを本番ログに残す (発生条件を可視化)。
+    private static func logOverflow(_ label: String, prompt: String, schema: GenerationSchema?) async {
+        let model = SystemLanguageModel.default
+        guard model.isAvailable else {
+            overflowLogger.error("[overflow] \(label, privacy: .public): FM unavailable で計測不可")
+            return
+        }
+        let pTok = (try? await model.tokenCount(for: prompt)) ?? -1
+        var sTok = -1
+        if let schema { sTok = (try? await model.tokenCount(for: schema)) ?? -1 }
+        overflowLogger.error("[overflow] \(label, privacy: .public): prompt \(prompt.count, privacy: .public)字=\(pTok, privacy: .public)tok + schema=\(sTok, privacy: .public)tok | 窓\(model.contextSize, privacy: .public) — 窓超過")
+    }
+
     /// 全 @Generable 生成の共通経路。DEBUG で token を計測してから respond。
+    /// - Parameter preflightOutputReserve: LLM Best Practices P2-1。非 nil なら respond の前に
+    ///   `tokenCount(for:)` で prompt + schema を実測し、`prompt + schema + reserve > contextSize`
+    ///   なら早期に `FoundationModelPreflightError` を throw する (無駄な full respond を省き compact へ)。
+    ///   nil = preflight なし (既定、チャット等の低レイテンシ経路)。
     private func generateStructured<T: Generable>(
         _ label: String,
         _ type: T.Type,
         prompt: String,
-        maxResponseTokens: Int? = nil
+        maxResponseTokens: Int? = nil,
+        preflightOutputReserve: Int? = nil
     ) async throws -> T {
         #if DEBUG
         await Self.probe(label, prompt: prompt, schema: T.generationSchema)
         #endif
+
+        // LLM Best Practices P2-1: 送信前スキーマ選択。
+        // 大きな概念合成では prompt + schema が窓を超え得る。respond を呼ぶ前に見積もり、
+        // 超過が確実なら早期 throw → 呼び出し側 (adaptive retry) が compact に即切替 (1 呼び出し節約)。
+        if let reserve = preflightOutputReserve {
+            let model = SystemLanguageModel.default
+            if model.isAvailable,
+               let pTok = try? await model.tokenCount(for: prompt),
+               let sTok = try? await model.tokenCount(for: T.generationSchema) {
+                let ctx = model.contextSize
+                if pTok + sTok + reserve > ctx {
+                    Self.overflowLogger.notice("[preflight] \(label, privacy: .public): prompt=\(pTok, privacy: .public)tok + schema=\(sTok, privacy: .public)tok + reserve=\(reserve, privacy: .public) > 窓\(ctx, privacy: .public) → compact へ")
+                    throw FoundationModelPreflightError.wouldExceedContextWindowSize(
+                        promptTokens: pTok, schemaTokens: sTok, contextSize: ctx
+                    )
+                }
+            }
+        }
+
         // spec 096 (perf): 出力トークンの上限。@Guide で短く指定していても LM が暴走出力すると
         // prompt + 生成中トークンが窓 4096 を超えて overflow する。ハード上限で生成を止める。
         // nil = 既定 (上限なし)。
         let options = GenerationOptions(maximumResponseTokens: maxResponseTokens)
-        return try await FoundationModelGate.run {
-            let session = LanguageModelSession()
-            let response = try await session.respond(generating: type, options: options) { prompt }
-            return response.content
+        do {
+            return try await FoundationModelGate.run {
+                let session = LanguageModelSession()
+                let response = try await session.respond(generating: type, options: options) { prompt }
+                return response.content
+            }
+        } catch {
+            // LLM Best Practices P1-1: 本番でも overflow の実態を可視化 (窓超過時のみ計測)。
+            if Self.isOverflowError(error) {
+                await Self.logOverflow(label, prompt: prompt, schema: T.generationSchema)
+            }
+            throw error
         }
     }
 
@@ -481,8 +552,9 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
     /// spec 096: 出力上限で overflow を抑える (summary≤280 + 要点5×60 ≈ 500tok 程度 → 余裕込み 800)。
     func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
+        // P2-1: preflight で窓超過が確実なら respond せず compact に回す (reserve は maxResponseTokens と揃える)。
         try await generateStructured("generateConceptSynthesis (概念合成)", ConceptSynthesisOutput.self,
-                                     prompt: prompt, maxResponseTokens: 800)
+                                     prompt: prompt, maxResponseTokens: 800, preflightOutputReserve: 800)
     }
 
     /// spec 080拡張: overflow 時の小型再試行 (出力予約を絞る)。

@@ -31,9 +31,6 @@
     "「%@」を統合" : {
 
     },
-    "#%@" : {
-
-    },
     "%@ ↔ %@" : {
       "localizations" : {
         "ja" : {
@@ -3280,6 +3277,7 @@
 
     },
     "feed.badge.article" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3290,6 +3288,7 @@
       }
     },
     "feed.badge.category" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3300,6 +3299,7 @@
       }
     },
     "feed.badge.tag" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3320,6 +3320,7 @@
       }
     },
     "feed.category.counts" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3352,6 +3353,7 @@
       }
     },
     "feed.digest.count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3362,6 +3364,7 @@
       }
     },
     "feed.digest.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3372,6 +3375,7 @@
       }
     },
     "feed.highlight.recent" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3403,6 +3407,7 @@
       }
     },
     "feed.tag.total" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3413,6 +3418,7 @@
       }
     },
     "feed.wiki.updated" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -4429,7 +4435,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "複数の記事をまたいで「概念ページ（Wiki）」を自動生成・更新。iKnow タブを開けば、テーマごとの要点まとめが常に最新の状態で育っています。"
+            "value" : "複数の記事をまたいで「概念ページ（Wiki）」を自動生成・更新。ナレッジタブを開けば、テーマごとの要点まとめが常に最新の状態で育っています。"
           }
         }
       }
@@ -6324,9 +6330,6 @@
           }
         }
       }
-    },
-    "タップして本文を展開" : {
-
     },
     "タップで該当記事一覧へ遷移" : {
 

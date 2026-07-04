@@ -113,6 +113,30 @@ struct ChunkSplitterTests {
         #expect(result.chunks[0].text.hasSuffix("\n"))
     }
 
+    @Test("段落境界 \\n\\n を句点より優先して split (P2-3)")
+    func prefersParagraphBoundary() {
+        // 400文字目に段落境界 (\n\n)、900文字目に句点。
+        // 旧実装は最も後ろの句点(900)で切ったが、新実装は段落境界(400直後)を優先する。
+        var text = String(repeating: "あ", count: 400) + "\n\n"
+        text += String(repeating: "い", count: 499) + "。"
+        text += String(repeating: "う", count: 600)
+        let result = ChunkSplitter.split(text: text, maxChars: 1000)
+        #expect(result.chunks.count >= 2)
+        // chunk[0] は段落境界 (\n\n の 2 つ目の \n) で終わる = 402 文字。
+        #expect(result.chunks[0].text.hasSuffix("\n"))
+        #expect(result.chunks[0].text.count == 402)
+    }
+
+    @Test("段落境界が無ければ従来通り句点で split (後方互換)")
+    func fallsBackToFullStopWithoutParagraph() {
+        var text = String(repeating: "あ", count: 849) + "。"
+        text += String(repeating: "い", count: 650)
+        let result = ChunkSplitter.split(text: text, maxChars: 1000)
+        #expect(result.chunks.count == 2)
+        #expect(result.chunks[0].text.hasSuffix("。"))
+        #expect(result.chunks[0].text.count == 850)
+    }
+
     @Test("句点なし改行なしは hard cut")
     func hardCutFallback() {
         let text = String(repeating: "a", count: 1500)

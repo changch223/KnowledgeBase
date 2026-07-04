@@ -148,7 +148,12 @@ struct ConceptPageDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
-        .navigationTitle(conceptPage.name)
+        // 他画面 (KnowledgeClipView 等) と背景色を統一: 既定の白 → 和紙背景色
+        .background(DS.Color.washiBackground)
+        .scrollContentBackground(.hidden)
+        // ナビバーのタイトルは非表示: 本文の大見出し (heroTitleSection) と重複するため。
+        // back ボタン / pin / メニューは維持。
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

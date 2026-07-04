@@ -471,6 +471,20 @@ struct ConceptSynthesisServiceTests {
         #expect(session.conceptSynthesisCompactCallCount == 1)  // compact が 1 回呼ばれた
     }
 
+    // P1-2 / P2-1: isContextOverflow は実 overflow と preflight overflow の両方を検出する。
+    @Test func testIsContextOverflowRecognizesPreflightError() {
+        struct RealOverflow: Error, CustomStringConvertible {
+            var description: String { "exceededContextWindowSize(4091 tokens)" }
+        }
+        let preflight = FoundationModelPreflightError.wouldExceedContextWindowSize(
+            promptTokens: 3500, schemaTokens: 400, contextSize: 4096
+        )
+        #expect(FoundationModelsConceptSynthesisService.isContextOverflow(RealOverflow()))
+        #expect(FoundationModelsConceptSynthesisService.isContextOverflow(preflight))
+        struct Unrelated: Error {}
+        #expect(!FoundationModelsConceptSynthesisService.isContextOverflow(Unrelated()))
+    }
+
     // spec 089: 要点 → 元記事 出典照合 (keyword 経路、embeddingService nil)。
     @Test func testMatchInsightSourcesKeyword() throws {
         let container = try makeContainer()
