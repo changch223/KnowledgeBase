@@ -125,6 +125,40 @@ enum SearchService {
         }
     }
 
+    // MARK: - LLM Best Practices P2-2: ハイブリッド検索 (Reciprocal Rank Fusion)
+
+    /// 複数のランキング (各 = id を順位順に並べた配列) を Reciprocal Rank Fusion で融合し、
+    /// 融合スコア降順の id 配列を返す。
+    ///
+    /// セマンティック検索 (cosine 0〜1) とキーワード検索 (別スケール) のように、スコアの尺度が
+    /// 異なるランカー同士を **順位ベース** で頑健に統合できる (スコア直接加算より安定)。
+    /// 同一 id が複数ランキングで上位なら融合スコアが加算され上位化する。
+    ///
+    /// - Parameters:
+    ///   - rankings: 各ランカーの結果 (0 番目 = 最上位)。空配列や重複 id を含んでも安全。
+    ///   - k: 高順位の影響を平滑化する定数 (RRF 慣例値 60)。小さいほど 1 位重視。
+    /// - Returns: 融合スコア降順の id。同点は「最初に出現した順」で決定的に tiebreak。
+    static func reciprocalRankFusion(rankings: [[String]], k: Int = 60) -> [String] {
+        var scores: [String: Double] = [:]
+        var firstSeen: [String: Int] = [:]
+        var counter = 0
+        for ranking in rankings {
+            for (rank, id) in ranking.enumerated() {
+                scores[id, default: 0] += 1.0 / Double(k + rank)
+                if firstSeen[id] == nil {
+                    firstSeen[id] = counter
+                    counter += 1
+                }
+            }
+        }
+        return scores.keys.sorted { a, b in
+            let sa = scores[a] ?? 0
+            let sb = scores[b] ?? 0
+            if sa != sb { return sa > sb }
+            return (firstSeen[a] ?? 0) < (firstSeen[b] ?? 0)
+        }
+    }
+
     // MARK: - spec 042: ConceptPage hit (P3)
 
     /// ConceptPage 検索結果 (score 降順 + updatedAt 降順)。

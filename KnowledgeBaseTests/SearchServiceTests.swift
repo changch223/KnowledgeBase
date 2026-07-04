@@ -138,4 +138,42 @@ struct SearchServiceTests {
         #expect(results.count == 2)
         #expect(results.first?.article.title == "新しい記事 keyword")
     }
+
+    // MARK: - P2-2: Reciprocal Rank Fusion (ハイブリッド検索)
+
+    @Test("RRF: 両ランキングで上位の id が最上位になる")
+    func testRRFBoostsItemsRankedHighInBoth() {
+        // A: 意味検索1位/キーワード1位、B: 意味2位/キーワード3位、C: 意味3位/キーワード2位
+        let semantic = ["A", "B", "C"]
+        let keyword  = ["A", "C", "B"]
+        let fused = SearchService.reciprocalRankFusion(rankings: [semantic, keyword])
+        #expect(fused.first == "A")
+        #expect(Set(fused) == ["A", "B", "C"])
+    }
+
+    @Test("RRF: 片方だけ上位より、両方に出る id を優先する")
+    func testRRFPrefersItemsAppearingInBothRankings() {
+        // X は意味検索のみ 1 位、Y は両方に登場 (意味 2 位 + キーワード 1 位)。
+        // Y は 2 ランキングからスコアを得るため X を上回る。
+        let semantic = ["X", "Y"]
+        let keyword  = ["Y"]
+        let fused = SearchService.reciprocalRankFusion(rankings: [semantic, keyword])
+        #expect(fused.first == "Y")
+    }
+
+    @Test("RRF: 空ランキング / 全空は安全")
+    func testRRFHandlesEmptyRankings() {
+        #expect(SearchService.reciprocalRankFusion(rankings: []).isEmpty)
+        #expect(SearchService.reciprocalRankFusion(rankings: [[], []]).isEmpty)
+        #expect(SearchService.reciprocalRankFusion(rankings: [["only"]]) == ["only"])
+    }
+
+    @Test("RRF: 同点は最初に出現した順で決定的")
+    func testRRFDeterministicTiebreak() {
+        // P と Q はどちらも 1 ランキングの 1 位のみ = 同スコア。先に現れた P が先。
+        let r1 = ["P"]
+        let r2 = ["Q"]
+        let fused = SearchService.reciprocalRankFusion(rankings: [r1, r2])
+        #expect(fused == ["P", "Q"])
+    }
 }
