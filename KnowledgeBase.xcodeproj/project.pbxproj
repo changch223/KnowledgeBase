@@ -706,6 +706,9 @@
 			knownRegions = (
 				en,
 				Base,
+				ja,
+				"zh-Hans",
+				"zh-Hant",
 			);
 			mainGroup = 577ED59C2FA8118400EB3FE6;
 			minimizedProjectReferenceProxies = 1;
@@ -1037,7 +1040,6 @@
 				INFOPLIST_FILE = KnowledgeBase/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Knowledge Base";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "音声ファイルを文字に書き起こすために音声認識を使用します。処理は端末内で行われ、外部に送信されません。";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1086,7 +1088,6 @@
 				INFOPLIST_FILE = KnowledgeBase/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Knowledge Base";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "音声ファイルを文字に書き起こすために音声認識を使用します。処理は端末内で行われ、外部に送信されません。";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

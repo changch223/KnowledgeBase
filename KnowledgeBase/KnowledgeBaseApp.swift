@@ -230,6 +230,10 @@ struct KnowledgeBaseApp: App {
         // 二重 bootstrap 抑止: scene 復帰時の .task 再実行で backfill が重複しないように。
         guard serviceContainer.knowledgeService == nil else { return }
 
+        // 多言語対応 Phase A: pipeline 言語 (PipelineLanguage) を初回起動時に端末言語からロック。
+        // 既に保存済みなら no-op (既存ユーザーは今まで通り ja のまま)。
+        UserDefaultsLanguageSettingsStore().lockIfFirstLaunch()
+
         // spec 071: token 実測診断 (デバッグ専用、生成は呼ばない)。入力 truncate 緩和の数値根拠用。
         #if DEBUG
         await TokenBudgetProbe.runDiagnostics()

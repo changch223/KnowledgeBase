@@ -26,8 +26,8 @@ struct iKnowWidget: Widget {
             LearningCardsWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("今日の学習")
-        .description("AI が選んだ「今深めるべき」カードを ambient 表示します。")
+        .configurationDisplayName("widget.today.title")
+        .description("widget.description")
         .supportedFamilies([.accessoryRectangular, .systemSmall, .systemMedium])
     }
 }

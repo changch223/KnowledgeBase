@@ -1,0 +1,29 @@
+{
+  "sourceLanguage" : "ja",
+  "strings" : {
+    "NSSpeechRecognitionUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声ファイルを文字に書き起こすために音声認識を使用します。処理は端末内で行われ、外部に送信されません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为了将语音文件转录为文字，将使用语音识别功能。处理均在设备本机进行，不会发送至外部。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "為了將語音檔案轉錄為文字，將使用語音辨識功能。處理均在裝置本機進行，不會傳送至外部。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

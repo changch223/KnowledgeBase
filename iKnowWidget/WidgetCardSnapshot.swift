@@ -31,7 +31,7 @@ struct WidgetCardSnapshot: Identifiable, Hashable {
     static let placeholder = WidgetCardSnapshot(
         id: UUID(),
         title: "Apple Vision Pro",
-        labelText: "新しい知識",
+        labelText: String(localized: "widget.label.newKnowledge"),
         labelColor: .green,
         symbolName: "lightbulb.fill",
         iconColor: .blue,
@@ -89,11 +89,11 @@ extension WidgetCardSnapshot {
 
     private static func labelInfo(for label: UnderstandingCardLabel) -> (String, Color) {
         switch label {
-        case .newKnowledge: return ("新しい知識", .green)
-        case .needsUpdate:  return ("更新が必要", .orange)
-        case .shallow:      return ("理解が浅い", .yellow)
-        case .deepDive:     return ("深掘り余地あり", .blue)
-        case .review:       return ("復習", .gray)
+        case .newKnowledge: return (String(localized: "widget.label.newKnowledge"), .green)
+        case .needsUpdate:  return (String(localized: "widget.label.needsUpdate"), .orange)
+        case .shallow:      return (String(localized: "widget.label.shallow"), .yellow)
+        case .deepDive:     return (String(localized: "widget.label.deepDive"), .blue)
+        case .review:       return (String(localized: "widget.label.review"), .gray)
         }
     }
 

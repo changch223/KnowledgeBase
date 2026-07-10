@@ -17,19 +17,19 @@ import AppIntents
 import Foundation
 
 struct SaveURLToKnowledgeBaseIntent: AppIntent {
-    static var title: LocalizedStringResource = "Knowledge Base に保存"
+    static var title: LocalizedStringResource = "appIntent.save.title"
 
     static var description: IntentDescription = IntentDescription(
-        "URL を Knowledge Base に保存します",
-        categoryName: "コンテンツ"
+        "appIntent.save.description",
+        categoryName: "appIntent.save.categoryName"
     )
 
     static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "URL")
+    @Parameter(title: "appIntent.save.param.url")
     var url: URL
 
-    @Parameter(title: "タイトル", default: nil)
+    @Parameter(title: "appIntent.save.param.title", default: nil)
     var title: String?
 
     func perform() async throws -> some IntentResult {
@@ -53,7 +53,7 @@ struct KnowledgeTreeShortcuts: AppShortcutsProvider {
                 "URL を \(.applicationName) に保存",
                 "Save to \(.applicationName)",
             ],
-            shortTitle: "保存",
+            shortTitle: "appIntent.save.shortTitle",
             systemImageName: "square.and.arrow.down"
         )
     }

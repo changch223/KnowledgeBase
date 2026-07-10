@@ -1,10 +1,10 @@
 {
     "extension_name": {
-        "message": "KnowledgeTreeSafariExtension",
+        "message": "Knowledge Base",
         "description": "The display name for the extension."
     },
     "extension_description": {
-        "message": "This is KnowledgeTreeSafariExtension. You should tell us what your extension does here.",
+        "message": "Automatically save pages opened in Safari to Knowledge Base",
         "description": "Description of what the extension does."
     }
 }
