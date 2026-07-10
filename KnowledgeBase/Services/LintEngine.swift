@@ -183,6 +183,9 @@ final class DefaultLintEngine: LintEngineProtocol {
             result.deletedConceptPageCount = await stepDeleteOrphanedConceptPages()
             result.deletedTagCount = await stepDeleteOrphanedTags()
             result.linkedCount = await stepLinkOrphanedConceptPages()
+            // i18n Phase B: 言語切替で CategoryRegistry に残った foreign シード名の categoryRaw を
+            // 現在言語へ heal (「テクノロジー」と「科技」が別分野として並ぶバグの修正)。
+            await stepHealCategoryLanguage()
             // spec 077: その他 概念の凝集クラスタを 1 つ新カテゴリに昇格 (週1 + 整理ボタンの新周回で 1 回)
             await stepPromoteCategories()
         }
@@ -401,6 +404,67 @@ final class DefaultLintEngine: LintEngineProtocol {
         }
         try? context.save()
         return linkCount
+    }
+
+    // MARK: - i18n Phase B: 言語混在バグの heal (「テクノロジー」/「科技」が別分野に割れる問題の修正)
+
+    /// foreign シード名 (`CategorySeed.foreignSeedNames(excluding:)`) → 現在言語の対応シード名。
+    /// `CategorySeed.allSeeds(for:)` は全言語で同数 (10)・同順 (index == order) の前提で、
+    /// index 対応で張り替え先を決める。マッチしない名前は含まれない。純関数、テスト容易。
+    static func categoryLanguageHealMapping(currentLanguage: PipelineLanguage) -> [String: String] {
+        let foreignNames = CategorySeed.foreignSeedNames(excluding: currentLanguage)
+        guard !foreignNames.isEmpty else { return [:] }
+        let localSeeds = CategorySeed.allSeeds(for: currentLanguage)
+        var mapping: [String: String] = [:]
+        for language in PipelineLanguage.allCases where language != currentLanguage {
+            let seeds = CategorySeed.allSeeds(for: language)
+            for (index, seed) in seeds.enumerated() where foreignNames.contains(seed.name) {
+                guard index < localSeeds.count else { continue }
+                mapping[seed.name] = localSeeds[index].name
+            }
+        }
+        return mapping
+    }
+
+    /// 端末の言語切替 (ja ⇔ zh) で Tag.categoryRaw / ConceptPage.categoryRaw に前の言語の seed 名が
+    /// 残った状態 (例: 「テクノロジー」と「科技」が別分野として並ぶ) を修復する。
+    /// 対象の Tag / ConceptPage の categoryRaw を index 対応で現在言語の名前に張り替える。
+    ///
+    /// CategoryDefinition (レジストリ側の定義行) は一切変更しない。`CategoryRegistry.activeCategories()`
+    /// が現在言語に対して foreign な **seed** 定義を読み出し時に動的除外するため、レジストリ側の非表示化は
+    /// 不要 (かつ言語を再度切り替えても un-hide する経路が無く、候補が言語往復のたびに欠落していくバグの
+    /// 原因だった)。ユーザーの手動非表示 (spec 075) と衝突する非可逆な副作用も避けられる。
+    private func stepHealCategoryLanguage() async {
+        let mapping = Self.categoryLanguageHealMapping(currentLanguage: .current)
+        guard !mapping.isEmpty else { return }
+
+        // spec heal-fix Minor 2: foreign シード名を持つ CategoryDefinition が registry に
+        // 1 件も無ければ heal 対象は存在しない → Tag/ConceptPage の全件 fetch を回避する
+        // (純 ja 端末で言語切替を経験していない場合、定義 fetch 1 回だけで終わる)。
+        let defs = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+        guard defs.contains(where: { mapping.keys.contains($0.name) }) else { return }
+
+        var healedCount = 0
+
+        let tags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        for tag in tags {
+            guard let raw = tag.categoryRaw, let localized = mapping[raw] else { continue }
+            logLintAction(.healCategoryLanguage, targetName: tag.name, before: raw, after: localized)
+            tag.categoryRaw = localized
+            healedCount += 1
+        }
+
+        let pages = (try? context.fetch(FetchDescriptor<ConceptPage>())) ?? []
+        for page in pages {
+            guard let localized = mapping[page.categoryRaw] else { continue }
+            logLintAction(.healCategoryLanguage, targetName: page.name, before: page.categoryRaw, after: localized)
+            page.categoryRaw = localized
+            healedCount += 1
+        }
+
+        guard healedCount > 0 else { return }
+        try? context.save()
+        logger.notice("LintEngine: healed \(healedCount, privacy: .public) category-language mismatches")
     }
 
     // MARK: - Step 5: Tag/Category 再分類

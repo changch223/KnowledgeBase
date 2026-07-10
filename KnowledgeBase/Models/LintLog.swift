@@ -53,5 +53,6 @@ enum LintAction: String, CaseIterable {
     case reclassifyTag
     case refreshSavedAnswer
     case promoteCategory  // spec 077: その他 クラスタ → 新カテゴリ自動昇格
+    case healCategoryLanguage  // i18n Phase B: 言語切替で残った foreign シード名の categoryRaw を現在言語へ張り替え
     case unknown
 }

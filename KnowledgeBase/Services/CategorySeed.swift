@@ -107,6 +107,21 @@ enum CategorySeed {
         }
     }
 
+    /// i18n Phase B (言語混在バグ修正): 全言語のシード名 union から、指定言語自身のシード名を
+    /// 除いた集合。端末の言語切替後に CategoryRegistry へ残る「前の言語のシード」名を検出するために使う
+    /// (例: zh 切替後に残る ja の「テクノロジー」)。
+    /// 複数言語で同一表記のシード名 (例: 「健康」は ja/zh-Hans/zh-Hant で共通、「其他」は
+    /// zh-Hans/zh-Hant で共通) は、指定言語にも属するので foreign から除外されない (= 含まれない)。
+    /// 純関数、テスト容易。
+    static func foreignSeedNames(excluding language: PipelineLanguage) -> Set<String> {
+        let currentNames = Set(allSeeds(for: language).map(\.name))
+        var union = Set<String>()
+        for candidate in PipelineLanguage.allCases {
+            union.formUnion(allSeeds(for: candidate).map(\.name))
+        }
+        return union.subtracting(currentNames)
+    }
+
     // MARK: - ja (既定、Phase A 以前と完全同一の値)
 
     private static let jaSeeds: [Category] = [
