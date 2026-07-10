@@ -32,6 +32,11 @@ struct KnowledgeBaseApp: App {
     @State private var processingMonitor = ProcessingMonitor()
     @State private var refreshTrigger = RefreshTrigger()
     @State private var serviceContainer = ServiceContainer()
+    /// Apple Intelligence が使えない状態をユーザーに気づかせるための monitor。
+    /// 「AI が数日間 unavailable なのに気づけなかった」実機事故の再発防止。
+    @State private var aiAvailabilityMonitor = AIAvailabilityMonitor()
+    /// scenePhase 復帰時に aiAvailabilityMonitor.refresh() を呼ぶための監視。
+    @Environment(\.scenePhase) private var scenePhase
     /// spec 056: 起動 default は知識 Clip (Today タブ)、毎回起動で強制 `.knowledgeClip`
     /// (LastOpenedStore.lastTab は無視、新習慣定着のため)。
     @State private var selectedTab: AppTab = .knowledgeClip
@@ -133,8 +138,10 @@ struct KnowledgeBaseApp: App {
             .environment(processingMonitor)
             .environment(refreshTrigger)
             .environment(serviceContainer)
+            .environment(aiAvailabilityMonitor)
             // spec 061 (P1-6): in-memory fallback 起動時に上部へ軽い警告 banner。
             // spec 096: 見直し完了の通知バナー (どのタブ/画面に居ても出る)。
+            // Apple Intelligence 利用不可バナー (どのタブ/画面に居ても出る)。
             .safeAreaInset(edge: .top) {
                 VStack(spacing: 0) {
                     if storeLoadFailed {
@@ -145,6 +152,8 @@ struct KnowledgeBaseApp: App {
                     ReviewCompletionBannerHost(services: serviceContainer) { article in
                         reviewConfirmArticle = article
                     }
+                    // 同様に独立 View にして aiAvailabilityMonitor の変化を確実に observe する。
+                    AIAvailabilityBannerHost(monitor: aiAvailabilityMonitor)
                 }
             }
             // spec 096: 見直し完了バナーから確認画面 (レポート + 編集 + 確定) を開く。
@@ -165,6 +174,12 @@ struct KnowledgeBaseApp: App {
             .onChange(of: serviceContainer.pendingRegenerateRequest) { _, new in
                 if new != nil {
                     selectedTab = .chat
+                }
+            }
+            // アプリ復帰時に Apple Intelligence の利用可否を再チェック (解消/再発を取りこぼさない)。
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    aiAvailabilityMonitor.refresh()
                 }
             }
             // spec 049: 初回起動 onboarding (fullScreenCover)
