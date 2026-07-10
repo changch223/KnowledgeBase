@@ -235,7 +235,10 @@ final class ChatService: ChatServiceProtocol {
 
     /// Agent loop で使う prompt 生成。
     /// - Parameter forceFinalAnswer: true なら「もう聞き返し不可、必ず answer を返す」 instruction を追加。
-    static func buildAgentPrompt(question: String, contextMessages: [ChatMessage], forceFinalAnswer: Bool = false) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    /// immediate の answer / askClarification の question・suggestions / finalAnswer の text が
+    /// ユーザーに生表示されるため出力言語ヘッダを明示する。
+    static func buildAgentPrompt(question: String, contextMessages: [ChatMessage], forceFinalAnswer: Bool = false, language: PipelineLanguage = .current) -> String {
         let recent = contextMessages.suffix(4)
         let contextLines = recent.map { msg in
             let role = msg.role == ChatMessageRole.user.rawValue ? "ユーザー" : "アシスタント"
@@ -243,16 +246,18 @@ final class ChatService: ChatServiceProtocol {
             return "\(role): \(snippet)"
         }.joined(separator: "\n")
 
+        let hedgeExamples = language.hedgePhraseExamples.map { "「\($0)」" }.joined()
         let forceClause = forceFinalAnswer ? """
 
         ## 最重要 (forceFinalAnswer)
         既に 3 回 clarification を行いました。**askClarification は使わない**でください。
         現時点の情報で最善努力答えを生成してください (immediate or finalAnswer)。
-        情報不足なら「私の理解では」「あくまで概要として」等の hedge を使って、それでも何かしらの答えを返してください。
+        情報不足なら\(hedgeExamples)等の hedge を使って、それでも何かしらの答えを返してください。
         """ : ""
 
         return """
         あなたは Knowledge Base の AI アシスタント。基本動作は「ユーザーが保存した記事 (ナレッジベース) から答える」こと。
+        出力言語: \(language.endonym)。immediate の answer、askClarification の question と suggestions、finalAnswer の text は必ず \(language.endonym) で書くこと。
         質問に対して、4 つの行動から 1 つを選ぶ:
 
         - searchArticles(query): 保存記事を検索する。**情報・知識・トピック・人物・出来事・技術・用語などを問う質問は、原則これを選ぶ (既定動作)**。
@@ -268,7 +273,7 @@ final class ChatService: ChatServiceProtocol {
           例: 「最近のAI関連の記事について教えて」→ query は「AI」。
         - 「テクノロジー」「経済」等の分野名や「最近」「今週」のキーワードがあれば、それも query に含めてよい (必須ではない)。
         - immediate は本当に保存記事と無関係な雑談だけ。情報を問う質問を一般知識で即答してはいけない。
-        - 「分かりません」「答えられません」「情報がありません」「知りません」は絶対に出力しない。
+        - \(language.bannedPhraseExamples.map { "「\($0)」" }.joined())は絶対に出力しない。
         - askClarification の suggestions は厳密に 3 つ、各 30 字以内 (ユーザーはこの 3 つに加え自由入力もできる)。
         \(forceClause)
         \(contextLines.isEmpty ? "" : "## 直前の会話\n\(contextLines)\n")
@@ -403,14 +408,24 @@ final class ChatService: ChatServiceProtocol {
 
     /// Apple Intelligence で hedge 付き一般知識答えを生成 (search 結果ゼロ時の最善努力)。
     private func tryGenerateFallbackAnswer(question: String) async -> String? {
-        let prompt = """
+        let prompt = Self.buildFallbackPrompt(question: question)
+        return try? await session.generateTutorReply(prompt: prompt)
+    }
+
+    /// spec 081 の一般知識回答 fallback 用 prompt。
+    /// i18n Phase B: 出力言語 + 禁止句/hedge 句の例示は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildFallbackPrompt(question: String, language: PipelineLanguage = .current) -> String {
+        let banned = language.bannedPhraseExamples.map { "「\($0)」" }.joined()
+        let hedges = language.hedgePhraseExamples.map { "「\($0)」" }.joined()
+        return """
         以下の質問に対して、あなたの一般知識で答えてください。
-        「分かりません」「答えられません」「情報がありません」は絶対に出力しないこと。
-        情報不足なら「私の理解では」「一般的には」「あくまで概要として」の hedge を使うこと。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
+        \(banned)は絶対に出力しないこと。
+        情報不足なら\(hedges)の hedge を使うこと。
+        \(language.outputInstruction)
 
         質問: \(question)
         """
-        return try? await session.generateTutorReply(prompt: prompt)
     }
 
     /// spec 058 polish: 質問内に Category 名キーワード (テクノロジー / 経済 等) が含まれていれば返す。
@@ -735,7 +750,8 @@ final class ChatService: ChatServiceProtocol {
     /// spec 033: contextMessages で multi-turn 対応。
     /// spec 040: relatedEntities が非空なら「## 関連エンティティ」セクションを記事一覧の後に挿入。
     /// spec 081: 番号引用契約 (本文に裸マーカー `(article-id://UUID)`) + Wiki まとめを文脈に注入 (引用不可)。
-    static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = [], chatMode: ChatMode = .think) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = [], chatMode: ChatMode = .think, language: PipelineLanguage = .current) -> String {
         let quickConstraint = chatMode == .quick ? """
 
         ## Quick モード制約
@@ -744,6 +760,7 @@ final class ChatService: ChatServiceProtocol {
 
         var prompt = """
         あなたは Knowledge Base の AI アシスタントです。ユーザーが保存した記事を元に質問に答えます。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## ルール
         1. 必ず以下の【参考記事】の内容のみに基づいて回答してください。一般知識から推測してはいけません。
@@ -751,7 +768,7 @@ final class ChatService: ChatServiceProtocol {
         3. 回答に使った記事の ID は citedArticleIDs フィールドにも列挙してください (Article.id の UUID 文字列)。
         4. 【補足文脈】の Wiki まとめは理解の助けに使ってよいですが、引用 (マーカー / citedArticleIDs) には含めないでください。引用できるのは【参考記事】だけです。
         5. 参考記事に答えがない場合は answer を空文字にし、citedArticleIDs を空配列にしてください。
-        6. 簡潔に、3 段落以内で日本語で回答してください。
+        6. 簡潔に、3 段落以内で\(language.endonym)で回答してください。
         7. 直近の会話があれば、文脈を踏まえて回答してください。「詳しく教えて」のような短い質問は直前の話題の深掘りとして扱ってください。
         \(quickConstraint)
         """

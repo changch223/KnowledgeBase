@@ -98,7 +98,7 @@ struct DigestOutput: Codable {
 
 @Generable
 struct DigestCardOutput: Codable {
-    @Guide(description: "このカードの要点を 150 字以内で日本語で要約")
+    @Guide(description: "このカードの要点を 150 字以内で要約")
     let summary: String
 
     @Guide(description: "重要なキーファクト 3 個 (各 30 字程度)")
@@ -117,7 +117,7 @@ struct DigestCardOutput: Codable {
 struct RecentDigestOutput: Codable {
     /// V3.0 polish: 「3 段落 80-150 字」→「ヘッドライン 1 文 + テーマ 3 個」に変更。
     /// paragraphs[0] = 60-100 字のヘッドライン、paragraphs[1..3] = 各 10-20 字のテーマ名詞句。
-    @Guide(description: "4 件の文字列を順に入れる。[0]=60-100 字の見出し (テーマを統合した日本語 1 文、断定調)、[1][2][3]=各 10-20 字の主要テーマ名詞句。読み手は『最近何を学んだか』を一目で把握できるように。")
+    @Guide(description: "4 件の文字列を順に入れる。[0]=60-100 字の見出し (テーマを統合した 1 文、断定調)、[1][2][3]=各 10-20 字の主要テーマ名詞句。読み手は『最近何を学んだか』を一目で把握できるように。")
     let paragraphs: [String]
 }
 
@@ -134,7 +134,7 @@ struct GraphTripleItem: Codable {
     @Guide(description: "主語となる entity (人物・場所・モノ・概念)。記事に明示されているものに限る、30 字以内。例: 『Apple』『Tim Cook』『Swift 6』")
     let subject: String
 
-    @Guide(description: "関係性を表す短い動詞句 (release / lead / succeed / criticize / create / belong to 等)、30 字以内。日本語可。記事の文脈から確実に読み取れるものに限る。")
+    @Guide(description: "関係性を表す短い動詞句 (release / lead / succeed / criticize / create / belong to 等)、30 字以内。記事の文脈から確実に読み取れるものに限る。")
     let predicate: String
 
     @Guide(description: "目的語となる entity (人物・場所・モノ・概念)、30 字以内。記事に明示されているもの。")
@@ -148,7 +148,7 @@ struct GraphTripleItem: Codable {
 
 @Generable
 struct TopicNameOutput: Codable {
-    @Guide(description: "クラスタの記事群の共通テーマを 5-20 字の自然な日本語で命名。技術用語を避け、ユーザーが直感的に理解できる名前。例: 『AI と Product Management』『SwiftUI 状態管理』『日本企業 DX 動向』。")
+    @Guide(description: "クラスタの記事群の共通テーマを 5-20 字の短い自然な語で命名。技術用語を避け、ユーザーが直感的に理解できる名前。例: 『AI と Product Management』『SwiftUI 状態管理』『日本企業 DX 動向』。")
     let name: String
 }
 
@@ -159,7 +159,7 @@ struct ConflictDetectionOutput: Codable {
     @Guide(description: "2 つの記事の間で同じ entity (人物・場所・モノ等) について書かれた事実が矛盾しているか。例: 『開店』vs『閉店』、『就任』vs『退任』、『リリース』vs『廃止』など、明らかに片方が古い情報になっている場合のみ true。"  )
     let hasConflict: Bool
 
-    @Guide(description: "矛盾の内容説明。20-50 字の自然な日本語。例: 『前回は開店、今回は閉店』。hasConflict=false なら空文字。")
+    @Guide(description: "矛盾の内容説明。20-50 字の自然な文。例: 『前回は開店、今回は閉店』。hasConflict=false なら空文字。")
     let conflictDescription: String
 
     @Guide(description: "新しい記事側の事実 (1 文、50 字以内)。hasConflict=false なら空文字。")
@@ -177,12 +177,12 @@ struct ConceptSynthesisOutput: Codable {
     // 旧 summary 400 字 + insights 7×150 字 = 出力予約だけで窓の半分超 → exceededContextWindowSize 多発。
     // spec 077: broad/specific 両経路の境界 overflow (4089-4091) 余裕確保のため summary 280→180・insights 4→2 に縮小。
     // 控えめ (240/3) でも境界ケースが残ったため もっと短く (180/2) に再調整 (Apple 固定オーバーヘッドが支配的)。
-    @Guide(description: "120〜180 字の日本語、断定調、原文にあることのみ。")
+    @Guide(description: "120〜180 字、断定調、原文にあることのみ。")
     let summary: String
 
     // spec 080: 「答え先出し」の要点レイヤー。最大 2→5 に拡張、各 90→60 字に短縮 (token 予約は微増)。
     // iKnow カードの主役 + 概念詳細の最上段に表示。結論・要点を重要度順で。
-    @Guide(description: "最大 5 件、各 60 字以内の日本語、この概念で最も大事な要点・結論を重要度順に。断定調、原文にあることのみ。")
+    @Guide(description: "最大 5 件、各 60 字以内、この概念で最も大事な要点・結論を重要度順に。断定調、原文にあることのみ。")
     let crossSourceInsights: [String]
 }
 
@@ -191,17 +191,17 @@ struct ConceptSynthesisOutput: Codable {
 /// 窓を超える場合の 1 回再試行に使う。summary 短め + 要点 2 件で予約を縮め窓内に収める。
 @Generable
 struct ConceptSynthesisCompactOutput: Codable {
-    @Guide(description: "100 字以内の日本語、断定調、原文にあることのみ。")
+    @Guide(description: "100 字以内、断定調、原文にあることのみ。")
     let summary: String
 
-    @Guide(description: "最大 2 件、各 40 字以内の日本語、この概念で最も大事な要点を重要度順に。")
+    @Guide(description: "最大 2 件、各 40 字以内、この概念で最も大事な要点を重要度順に。")
     let crossSourceInsights: [String]
 }
 
 /// hierarchical chunked パスで使う中間 chunk 要約 (3+ 関連記事時)。
 @Generable
 struct ConceptSummaryChunk: Codable {
-    @Guide(description: "80-140 字日本語、断定調、原文のみ。")
+    @Guide(description: "80-140 字、断定調、原文のみ。")
     let chunkSummary: String
 }
 
@@ -220,7 +220,7 @@ struct ConceptHierarchyOutput: Codable {
 
 @Generable
 struct ChatAnswerOutput: Codable {
-    @Guide(description: "ユーザーの質問への回答。日本語で 3 段落以内。根拠にした記事は、その根拠となる文の直後に `(article-id://UUID)` というマーカーだけを置く (記事タイトルや番号は本文に書かない)。参考記事に答えがない場合は空文字を返す。")
+    @Guide(description: "ユーザーの質問への回答。3 段落以内。根拠にした記事は、その根拠となる文の直後に `(article-id://UUID)` というマーカーだけを置く (記事タイトルや番号は本文に書かない)。参考記事に答えがない場合は空文字を返す。")
     let answer: String
 
     @Guide(description: "回答の根拠に使った記事の ID 配列 (Article.id の UUID 文字列)。参考記事に答えがない場合は空配列。一般知識から推測した内容には ID を載せてはいけない。")
@@ -585,9 +585,10 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
 
     /// spec 093: 任意の source 言語 → 日本語。Apple Translation framework (offline)。
     /// `installedSource:` の言語ペアが未インストールなら throws → caller が raw fallback。
+    /// i18n Phase B: 翻訳先は固定の日本語ではなく `PipelineLanguage.current` (パイプライン言語) に追従する。
     func translate(text: String, source: String) async throws -> String {
         let sourceLang = Locale.Language(identifier: source)
-        let target = Locale.Language(identifier: "ja")
+        let target = Locale.Language(identifier: PipelineLanguage.current.translationTargetBCP47)
         let session = TranslationSession(installedSource: sourceLang, target: target)
         let response = try await session.translate(text)
         return response.targetText

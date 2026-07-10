@@ -271,17 +271,19 @@ final class GraphExtractionService: GraphExtractionServiceProtocol {
 
     // MARK: - Prompt
 
-    static func buildPrompt(article: Article) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildPrompt(article: Article, language: PipelineLanguage = .current) -> String {
         let essence = article.extractedKnowledge?.essence ?? ""
         let keyFacts = article.extractedKnowledge?.keyFacts?.prefix(5).map { $0.statement }.joined(separator: " / ") ?? ""
         let entityNames = article.extractedKnowledge?.entities?.prefix(8).map { $0.name }.joined(separator: ", ") ?? ""
 
         return """
         以下の記事から、主要な事実関係を triple 形式 (subject, predicate, object) で抽出してください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## ルール
         1. subject / object は entity (人物・場所・モノ・概念) で、記事に明示されているものに限る (30 字以内)
-        2. predicate は短い動詞句 (release / lead / succeed / criticize / create / belong to 等、日本語可、30 字以内)
+        2. predicate は短い動詞句 (release / lead / succeed / criticize / create / belong to 等、\(language.endonym)可、30 字以内)
         3. confidence は 0.0-1.0:
            - 記事に明確に書かれている → 0.8 以上
            - 推測が必要 → 0.5-0.7

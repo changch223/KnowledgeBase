@@ -10,6 +10,9 @@ import Testing
 import Foundation
 @testable import KnowledgeBase
 
+// i18n Phase B: withPipelineLanguage は PipelineLanguage.current の実プロセス状態
+// (UserDefaults + static cache) を書き換える。他 suite との並列実行で読み書きが競合しないよう直列化する。
+@Suite(.serialized)
 @MainActor
 struct KnowledgeExtractorTests {
 
@@ -260,6 +263,71 @@ struct KnowledgeExtractorTests {
         _ = try await extractor.extract(extractedText: english + " Additional English sentence to extract.")
         #expect(session.translationCallCount == 1)
     }
+
+    // MARK: - i18n Phase B: zh パイプラインでの prepareForExtraction 一般化
+
+    /// zh パイプラインでは日本語記事もパイプライン言語 (zh) と一致しないため翻訳経路に入る。
+    @Test func extractInvokesTranslationForJapaneseWhenPipelineIsChinese() async throws {
+        try await withPipelineLanguage(.zhHans) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            session.nextTranslationResult = .success(
+                "苹果在 WWDC 上宣布了新的 Foundation Models 框架，公开了设备端语言模型的结构化输出能力。"
+            )
+            let extractor = KnowledgeExtractor(session: session)
+
+            let japaneseText = """
+            Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
+            既存の async/await モデルをさらに堅牢化しました。開発者は migration mode を使って
+            段階的に対応できます。
+            """
+            _ = try await extractor.extract(extractedText: japaneseText)
+
+            #expect(session.translationCallCount == 1)
+            // 抽出 prompt は翻訳後の中国語テキストを含む
+            #expect(session.lastPrompt?.contains("苹果在 WWDC") == true)
+            // 元の日本語本文は抽出 prompt に流れない
+            #expect(session.lastPrompt?.contains("Swift 6 のリリースについて") == false)
+        }
+    }
+
+    /// zh パイプラインでは中国語記事はパイプライン言語と一致するため翻訳をスキップする。
+    @Test func extractSkipsTranslationForChineseWhenPipelineIsChinese() async throws {
+        try await withPipelineLanguage(.zhHans) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            let extractor = KnowledgeExtractor(session: session)
+
+            let chineseText = """
+            苹果在全球开发者大会上发布了一个名为基础模型的全新框架。这个设备端的语言模型
+            通过宏公开了结构化输出，使开发者无需依赖外部服务器即可为应用程序添加检索增强生成功能。
+            """
+            _ = try await extractor.extract(extractedText: chineseText)
+
+            #expect(session.translationCallCount == 0)
+            #expect(session.callCount == 1)
+            #expect(session.lastPrompt?.contains("苹果在全球开发者大会") == true)
+        }
+    }
+}
+
+/// i18n Phase B: `PipelineLanguage.current` が参照する実 UserDefaults (App Group or .standard) を
+/// テスト中だけ書き換え、終了後に元の値へ厳密に復元するヘルパ (実ストレージを汚染しない)。
+@MainActor
+func withPipelineLanguage<T>(_ language: PipelineLanguage, _ body: () async throws -> T) async rethrows -> T {
+    let defaults = UserDefaults(suiteName: AppGroup.identifier) ?? .standard
+    let originalRaw = defaults.string(forKey: PipelineLanguage.userDefaultsKey)
+    defaults.set(language.rawValue, forKey: PipelineLanguage.userDefaultsKey)
+    PipelineLanguage._resetForTesting()
+    defer {
+        if let originalRaw {
+            defaults.set(originalRaw, forKey: PipelineLanguage.userDefaultsKey)
+        } else {
+            defaults.removeObject(forKey: PipelineLanguage.userDefaultsKey)
+        }
+        PipelineLanguage._resetForTesting()
+    }
+    return try await body()
 }
 
 /// spec 101: String(describing:) に "notInstalled" を含む擬似翻訳エラー。

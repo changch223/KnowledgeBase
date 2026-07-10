@@ -71,7 +71,8 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
             return []
         }
 
-        let prompt = buildPrompt(articles: articles, categoryName: category.name)
+        let graphSection = buildGraphSection(categoryName: category.name)
+        let prompt = Self.buildPrompt(articles: articles, categoryName: category.name, graphSection: graphSection)
         do {
             let output = try await session.generateDigest(prompt: prompt)
             return try persistDigests(output: output, for: category, articles: articles)
@@ -140,48 +141,52 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
         return Array(Set(digests.map(\.categoryRaw)))
     }
 
-    private func buildPrompt(articles: [Article], categoryName: String) -> String {
+    /// spec 040: graph 構造を「## このカテゴリーの主要エンティティと関係性」セクションに整形する。
+    /// graphTraversal 不在 / 対象ノードなしは空文字。
+    private func buildGraphSection(categoryName: String) -> String {
+        guard let graphTraversal else { return "" }
+        let topNodes = graphTraversal.topByDegree(categoryRaw: categoryName, limit: 5, in: context)
+        guard !topNodes.isEmpty else { return "" }
+        var graphLines: [String] = []
+        for node in topNodes {
+            // 各 node の outgoing edge 上位 2 件 (label + target、ラベル付きを優先)
+            let labeledOutgoing = (node.outgoingEdges ?? [])
+                .filter { $0.label != nil && $0.target?.isActive == true }
+                .sorted { $0.weight > $1.weight }
+                .prefix(2)
+            let edgeStr = labeledOutgoing
+                .compactMap { edge -> String? in
+                    guard let label = edge.label, let target = edge.target else { return nil }
+                    return "\(label) → \(target.name)"
+                }
+                .joined(separator: " / ")
+            let line = edgeStr.isEmpty
+                ? "・\(node.name) (記事数 \(node.mentionCount))"
+                : "・\(node.name) (記事数 \(node.mentionCount)): \(edgeStr)"
+            graphLines.append(line)
+        }
+        return """
+
+        ## このカテゴリーの主要エンティティと関係性
+        \(graphLines.joined(separator: "\n"))
+
+        主要エンティティを中心に物語る文章を生成してください。
+        """
+    }
+
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    /// summary / topKeyFacts がパイプライン言語で出るよう出力言語ヘッダを明示する。
+    /// graphTraversal (self) を持ち込まない純関数化のため graphSection は呼び出し側で組み立てる。
+    static func buildPrompt(articles: [Article], categoryName: String, graphSection: String = "", language: PipelineLanguage = .current) -> String {
         let lines: [String] = articles.enumerated().compactMap { idx, article in
             guard let essence = article.extractedKnowledge?.essence,
                   !essence.isEmpty else { return nil }
             return "[\(idx + 1)] (id=\(article.id.uuidString)) \(essence)"
         }
 
-        // spec 040: graph 構造を prompt に注入 (主要 entity 中心の文章生成のため)
-        var graphSection = ""
-        if let graphTraversal {
-            let topNodes = graphTraversal.topByDegree(categoryRaw: categoryName, limit: 5, in: context)
-            if !topNodes.isEmpty {
-                var graphLines: [String] = []
-                for node in topNodes {
-                    // 各 node の outgoing edge 上位 2 件 (label + target、ラベル付きを優先)
-                    let labeledOutgoing = (node.outgoingEdges ?? [])
-                        .filter { $0.label != nil && $0.target?.isActive == true }
-                        .sorted { $0.weight > $1.weight }
-                        .prefix(2)
-                    let edgeStr = labeledOutgoing
-                        .compactMap { edge -> String? in
-                            guard let label = edge.label, let target = edge.target else { return nil }
-                            return "\(label) → \(target.name)"
-                        }
-                        .joined(separator: " / ")
-                    let line = edgeStr.isEmpty
-                        ? "・\(node.name) (記事数 \(node.mentionCount))"
-                        : "・\(node.name) (記事数 \(node.mentionCount)): \(edgeStr)"
-                    graphLines.append(line)
-                }
-                graphSection = """
-
-                ## このカテゴリーの主要エンティティと関係性
-                \(graphLines.joined(separator: "\n"))
-
-                主要エンティティを中心に物語る文章を生成してください。
-                """
-            }
-        }
-
         return """
             あなたは「\(categoryName)」カテゴリの \(lines.count) 件の記事要約を統合する AI です。
+            出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
             各記事の要点:
             \(lines.joined(separator: "\n"))
@@ -192,6 +197,7 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
             sourceArticleIDs (該当記事の UUID) を含みます。
 
             1 つのトピックで完結するなら 1 カード、トピックが分散しているなら 2-3 カードに分割してください。
+            \(language.outputInstruction)
             """
     }
 

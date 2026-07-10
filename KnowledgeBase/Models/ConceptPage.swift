@@ -62,7 +62,8 @@ final class ConceptPage {
     /// 新記事 ingest で関連 ConceptPage は true に戻る。
     var isStale: Bool = false
 
-    /// summary の embedding (NLEmbedding.sentenceEmbedding(for: .japanese) 経由、L2 正規化済 [Float])。
+    /// summary の embedding (NLEmbedding.sentenceEmbedding(for:) 経由、L2 正規化済 [Float])。
+    /// i18n Phase B: 埋め込み言語は `PipelineLanguage.nlEmbeddingLanguage` に追従 (既定 `.japanese`、zh は簡体字モデル)。
     /// 検索拡張 (spec 044) で使う。`@Attribute(.externalStorage)` で SQLite から外出し。
     /// nil = 未生成 (Apple Intelligence 不可端末 / 初期 / 失敗)。
     @Attribute(.externalStorage)

@@ -64,6 +64,18 @@ struct EmbeddingServiceTests {
         #expect(result.count == 2)
     }
 
+    // MARK: - i18n Phase B: normalizedEmbedInput (zh-Hant → 簡体字正規化)
+
+    @Test func testNormalizedEmbedInputConvertsTraditionalChineseForZhHant() {
+        let result = EmbeddingService.normalizedEmbedInput("資訊科技", language: .zhHant)
+        #expect(result == "资讯科技")
+    }
+
+    @Test func testNormalizedEmbedInputLeavesOtherLanguagesUnchanged() {
+        #expect(EmbeddingService.normalizedEmbedInput("資訊科技", language: .zhHans) == "資訊科技")
+        #expect(EmbeddingService.normalizedEmbedInput("日本語のテキスト", language: .ja) == "日本語のテキスト")
+    }
+
     // MARK: - Float ↔ Data round-trip (Article.essenceEmbedding 永続化検証)
 
     @Test func testFloatArrayDataRoundTrip() {

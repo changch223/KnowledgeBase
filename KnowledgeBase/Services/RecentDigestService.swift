@@ -200,12 +200,14 @@ final class RecentDigestService: RecentDigestServiceProtocol {
     /// Foundation Models の 4096 token 上限を確実に下回るマージン。
     static let promptCharBudget = 3000
 
-    static func buildPrompt(articles: [Article]) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildPrompt(articles: [Article], language: PipelineLanguage = .current) -> String {
         var prompt = """
         あなたは Knowledge Base の AI アシスタントです。ユーザーが最近保存した記事から、何を学んだかを「1 文の見出し + 主要テーマ 3 個」で伝えてください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## ルール
-        1. ヘッドラインは 60〜100 字、自然な日本語、テーマを統合した断定調。
+        1. ヘッドラインは 60〜100 字、自然な\(language.endonym)、テーマを統合した断定調。
            例: 「最近は AI エージェント設計と Claude Skills について 4 件読みました。」
         2. テーマは各 10〜20 字の短い名詞句。記事横断で見える共通テーマを 3 個まで。
            例: 「AI エージェント」「Claude Skills」「PM 効率化」。

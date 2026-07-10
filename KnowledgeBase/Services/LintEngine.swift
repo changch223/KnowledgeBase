@@ -542,11 +542,21 @@ final class DefaultLintEngine: LintEngineProtocol {
         guard best.count >= promoteMinClusterSize else { return }
 
         // AI 命名 (generateTopicName 流用、小出力 = token 安全)
+        // i18n Phase B: 出力言語 + 既存カテゴリー一覧・例語は PipelineLanguage.current に追従する。
+        let language = PipelineLanguage.current
+        let existingCategoryNames = (categoryRegistry.activeCategories()?.map(\.name) ?? CategorySeed.allSeeds.map(\.name))
+            .joined(separator: " / ")
+        let domainExampleHint: String
+        switch language {
+        case .ja: domainExampleHint = "不動産, 法律, 料理"
+        case .zhHans: domainExampleHint = "房地产, 法律, 烹饪"
+        case .zhHant: domainExampleHint = "不動產, 法律, 烹飪"
+        }
         let memberNames = best.map { $0.page.name }
         let prompt = """
-            次の概念グループに共通する「分野・カテゴリー名」を 1 つ、2〜6 字の短い日本語で命名してください。
-            具体的すぎず、分野レベルの名詞にすること (例: 不動産, 法律, 料理)。
-            既存カテゴリー (テクノロジー / 経済 / 健康 / デザイン / 学術 / アート / ニュース / スポーツ / エンタメ / その他) と同じものは避けてください。
+            次の概念グループに共通する「分野・カテゴリー名」を 1 つ、2〜6 字の短い\(language.endonym)で命名してください。
+            具体的すぎず、分野レベルの名詞にすること (例: \(domainExampleHint))。
+            既存カテゴリー (\(existingCategoryNames)) と同じものは避けてください。
 
             # 概念グループ
             \(memberNames.prefix(12).joined(separator: "、"))

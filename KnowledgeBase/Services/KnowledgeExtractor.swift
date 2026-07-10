@@ -82,7 +82,8 @@ struct KnowledgeExtractor {
         }
     }
 
-    /// spec 042: 言語判定 + 英語なら翻訳して日本語化、それ以外はそのまま返す。
+    /// spec 042 / i18n Phase B: 言語判定 + パイプライン言語 (PipelineLanguage.current) と異なる
+    /// 言語なら翻訳してパイプライン言語化、一致 (または判定不能) ならそのまま返す。
     /// 翻訳失敗 / 空 / 極端に短い結果は raw text を返して silent fallback (constitution V)。
     /// Console.app (subsystem: app.KnowledgeTree, category: extractor) で挙動を追跡可能。
     /// spec 101: override に記事単位で判定した言語を渡すと、chunk ごとの再判定をスキップする
@@ -91,16 +92,22 @@ struct KnowledgeExtractor {
     func prepareForExtraction(_ text: String, override: DetectedLanguage? = nil) async -> String {
         let detected = override ?? LanguageDetector.detect(text)
         Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count) override=\(override != nil)")
-        // spec 093: 日本語以外 (英語 / 中国語 / 韓国語 等) は全て日本語へ翻訳。
-        // .japanese / .unknown (短文・判定不能) はそのまま返す (誤翻訳を避ける)。
+        // i18n Phase B: 「パイプライン言語 (PipelineLanguage.current) 以外」を全て翻訳対象に一般化。
+        // .unknown (短文・判定不能) はそのまま返す (誤翻訳を避ける)。既定 ja パイプラインでは
+        // `matches(detected:)` が .japanese のときのみ true になるため、spec 093 までの挙動と完全一致する。
         let source: String
         switch detected {
-        case .japanese, .unknown:
-            return text
+        case .japanese:
+            source = "ja"
         case .english:
             source = "en"
         case .other(let raw):
             source = raw
+        case .unknown:
+            return text
+        }
+        if PipelineLanguage.current.matches(detected: detected) {
+            return text
         }
         // spec 101: この言語が notInstalled で失敗済みなら以後スキップ (raw を使う、再試行しない)。
         if translationCache?.isUnavailable(source: source) == true {
@@ -168,11 +175,13 @@ struct KnowledgeExtractor {
         return String(prefix)
     }
 
-    /// research.md / R3 のハルシネーション抑止 strict instructions を含む日本語 prompt。
+    /// research.md / R3 のハルシネーション抑止 strict instructions を含む prompt。
     /// FR-020 (元記事に明示されている内容のみ + 推測禁止 + 整合性) を必ず含める。
-    static func buildPrompt(text: String, guidance: String? = nil) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildPrompt(text: String, guidance: String? = nil, language: PipelineLanguage = .current) -> String {
         """
         以下の記事本文から構造化された知識を抽出してください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
         \(guidanceClause(guidance))
         # 抽出ルール (厳守)
         - 元記事に明示されている内容のみを抽出してください
@@ -182,7 +191,7 @@ struct KnowledgeExtractor {
         - key facts は重要度が高い順に最大 10 件まで返してください
         - コード片・関数呼び出し・コマンド出力は key facts に含めないでください (自然言語の事実のみ)
         - entities は主題に関わる固有名詞 (人物・組織・製品・具体的な技術/概念) のみ。一般語・代名詞・地名・日付 (男性/ユーザー/企業/東京駅 等) は除外し、表記を統一 (クロード→Claude)
-        - すべて日本語で出力してください (固有名詞の原語表記は維持可)
+        - \(language.outputInstruction) (固有名詞の原語表記は維持可)
 
         # 元記事本文
         \(text)
@@ -205,15 +214,17 @@ struct KnowledgeExtractor {
 
     /// 案A: chunked 抽出用の簡潔な prompt (小型スキーマ ChunkKnowledgeOutput とペア)。
     /// 定型部を短くして chunk 本文に枠を回す + 出力 ≤4 件を明示。
-    static func buildChunkPrompt(text: String, guidance: String? = nil) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildChunkPrompt(text: String, guidance: String? = nil, language: PipelineLanguage = .current) -> String {
         """
         以下は記事の一部です。この部分から構造化された知識を抽出してください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
         \(guidanceClause(guidance))
         # ルール (厳守)
         - 元記事に明示されている内容のみ。推測・補完は禁止
         - keyFacts は重要な事実を最大 4 件 (自然言語の事実のみ、コード片は除く)
         - entities は主題に関わる固有名詞 (人物・組織・製品・具体的な技術/概念) を最大 4 件。一般語・代名詞・地名・日付は除外
-        - すべて日本語で出力 (固有名詞の原語表記は維持可)
+        - \(language.outputInstruction) (固有名詞の原語表記は維持可)
 
         # 本文の一部
         \(text)
@@ -271,19 +282,21 @@ struct KnowledgeExtractor {
     }
 
     /// spec 006: meta-summary 専用 prompt。本文ではなく chunk 別 essence を入力に取る。
-    static func buildMetaSummaryPrompt(chunkEssences: [String], guidance: String? = nil) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    static func buildMetaSummaryPrompt(chunkEssences: [String], guidance: String? = nil, language: PipelineLanguage = .current) -> String {
         let numbered = chunkEssences.enumerated()
             .map { "\($0.offset + 1). \($0.element)" }
             .joined(separator: "\n")
         return """
         以下は記事の各部分から抽出した要点です。これらを統合して、記事全体の essence と summary を作ってください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
         \(guidanceClause(guidance))
         # 統合ルール (厳守)
         - 各部分の要点に明示されている内容のみを使ってください
         - 推測・補完・常識による情報の追加は行わないでください
         - essence と summary は互いに矛盾しないでください
         - keyFacts と entities は空配列で返してください (本 prompt では生成しません)
-        - すべて日本語で出力してください
+        - \(language.outputInstruction)
 
         # 各部分の要点
         \(numbered)

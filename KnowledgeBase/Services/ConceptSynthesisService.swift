@@ -318,7 +318,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
     /// spec 074: 概念階層抽出 prompt。出力が小さい (broad + ≤4 specific) ので入力に余裕がある
     /// (essence 300 字まで許容、token 安全)。広い概念候補シード + schema ルールを embed。
-    private func buildConceptHierarchyPrompt(article: Article) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    private func buildConceptHierarchyPrompt(article: Article, language: PipelineLanguage = .current) -> String {
         let title = Self.truncate(article.title, max: 80)
         let essence = Self.truncate(article.extractedKnowledge?.essence ?? "", max: 300)
         let keyFacts = (article.extractedKnowledge?.keyFacts ?? [])
@@ -336,6 +337,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         return """
         次の記事を 2 階層の概念に整理してください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
         - 広い概念 (broadConcept): この記事が属する最も広い概念を 1 つ。分野の代表概念。
         - 具体概念 (specificConcepts): その広い概念の下で、この記事が実際に論じている具体トピックを 2〜4 個。
 
@@ -551,13 +553,15 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// Wiki 本文生成 prompt。summary + 圧縮した記事 essence + schema.md ルールを連結。
     /// plain string 出力 (schema コストゼロ) で token 内に収める。
     /// spec 064: linkCandidates があれば相互リンク候補を埋める (本文生成 AI 呼び出し回数は不変)。
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     static func buildWikiBodyPrompt(
         conceptPage: ConceptPage,
         articles: [Article],
-        linkCandidates: [(name: String, id: UUID)] = []
+        linkCandidates: [(name: String, id: UUID)] = [],
+        language: PipelineLanguage = .current
     ) -> String {
         let rule = SchemaLoader.shared.section(named: "Wiki 本文生成ルール") ?? """
-        ## 概要 → ## 詳細 (箇条書き中心) の構成。300-800 字。推測禁止。日本語。
+        ## 概要 → ## 詳細 (箇条書き中心) の構成。300-800 字。推測禁止。
         """
         let essences = articles.prefix(5).compactMap { article -> String? in
             guard let e = article.extractedKnowledge?.essence, !e.isEmpty else { return nil }
@@ -584,6 +588,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         return """
         「\(conceptPage.name)」についての Wiki ページ本文を Markdown で書いてください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         # ルール
         \(rule)
@@ -812,10 +817,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         return try await runSynthesis(prompt: prompt, compact: compact)
     }
 
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     private func buildBroadConceptPrompt(
         conceptPage: ConceptPage,
         childNames: [String],
-        articles: [Article]
+        articles: [Article],
+        language: PipelineLanguage = .current
     ) -> String {
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
         let childText = childNames.isEmpty ? "(まだなし)" : childNames.prefix(12).joined(separator: "、")
@@ -827,6 +834,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         return """
         あなたは「\(conceptPage.name)」という広い分野概念について「今わかっていること」を統合する役割です。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## 概念 (広い概念)
         名前: \(conceptPage.name)
@@ -846,7 +854,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
     // MARK: - Prompt builders
 
-    private func buildOneShotPrompt(conceptPage: ConceptPage, articles: [Article]) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    private func buildOneShotPrompt(conceptPage: ConceptPage, articles: [Article], language: PipelineLanguage = .current) -> String {
         let aliasesText = conceptPage.nameAliases.isEmpty ? "(なし)" : conceptPage.nameAliases.joined(separator: "、")
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
         let lines = articles.enumerated().map { idx, article -> String in
@@ -867,6 +876,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         return """
         あなたは複数の保存記事から「\(conceptPage.name)」について「今わかっていること」を統合する役割です。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## 概念
         名前: \(conceptPage.name)
@@ -877,17 +887,19 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         \(lines)
         \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw))
         ## 出力要件
-        - summary: 120〜180 字、原文に明示された内容のみ統合、断定調 (である / する / だ)
+        - summary: 120〜180 字、原文に明示された内容のみ統合、断定調
         - crossSourceInsights (要点): 最大 5 件、各 60 字以内、この概念で最も大事な要点・結論を重要度順
         - 推測 / 一般知識からの補強禁止
         """
     }
 
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     private func buildChunkPrompt(
         conceptPage: ConceptPage,
         articles: [Article],
         chunkIndex: Int,
-        totalChunks: Int
+        totalChunks: Int,
+        language: PipelineLanguage = .current
     ) -> String {
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
         let lines = articles.enumerated().map { idx, article -> String in
@@ -908,6 +920,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         return """
         あなたは保存記事のチャンクを要約する役割です。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## 概念
         名前: \(conceptPage.name)
@@ -921,10 +934,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         """
     }
 
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     private func buildMetaPrompt(
         conceptPage: ConceptPage,
         chunkSummaries: [String],
-        totalArticles: Int
+        totalArticles: Int,
+        language: PipelineLanguage = .current
     ) -> String {
         let aliasesText = conceptPage.nameAliases.isEmpty ? "(なし)" : conceptPage.nameAliases.joined(separator: "、")
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
@@ -938,6 +953,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         return """
         あなたは複数の記事チャンク要約を統合して「\(conceptPage.name)」について「今わかっていること」を書く役割です。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## 概念
         名前: \(conceptPage.name)

@@ -82,6 +82,29 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         }
     }
 
+    /// i18n Phase B: 一般知識で答える際に使う hedge phrase の例 (言語別)。
+    /// `ChatService.buildFallbackPrompt` / `buildAgentPrompt` の
+    /// 「情報不足ならこれらの言い回しを使うこと」指示に埋め込む。
+    /// (post-process の `HedgePhraseFilter` は日本語専用、こちらは prompt 指示側)。
+    var hedgePhraseExamples: [String] {
+        switch self {
+        case .ja: return ["私の理解では", "一般的には", "あくまで概要として"]
+        case .zhHans: return ["据我理解", "一般来说", "仅供参考"]
+        case .zhHant: return ["據我理解", "一般來說", "僅供參考"]
+        }
+    }
+
+    /// i18n Phase B: 出力してはいけない禁止句の例 (言語別)。
+    /// `ChatService.buildFallbackPrompt` / `buildAgentPrompt` の
+    /// 「これらの言い回しは絶対に出力しないこと」指示に埋め込む。
+    var bannedPhraseExamples: [String] {
+        switch self {
+        case .ja: return ["分かりません", "答えられません", "情報がありません", "知りません"]
+        case .zhHans: return ["不知道", "无法回答", "没有相关信息", "不清楚"]
+        case .zhHant: return ["不知道", "無法回答", "沒有相關資訊", "不清楚"]
+        }
+    }
+
     /// Translation framework (`TranslationSession`) に渡す BCP-47 ターゲット言語コード。
     var translationTargetBCP47: String {
         rawValue

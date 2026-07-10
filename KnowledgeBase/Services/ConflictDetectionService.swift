@@ -227,7 +227,9 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
 
     // MARK: - Prompt
 
-    static func buildPrompt(newArticle: Article, oldArticle: Article, entityName: String) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    /// conflictDescription / newFact / oldFact が生表示されるため出力言語ヘッダを明示する。
+    static func buildPrompt(newArticle: Article, oldArticle: Article, entityName: String, language: PipelineLanguage = .current) -> String {
         let newEssence = newArticle.extractedKnowledge?.essence ?? ""
         let oldEssence = oldArticle.extractedKnowledge?.essence ?? ""
         let newKeyFacts = newArticle.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
@@ -236,12 +238,14 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
         return """
         以下の 2 記事は同じ entity「\(entityName)」について書かれています。
         新記事と旧記事の事実 (open/閉店、就任/退任、リリース/廃止 等) に矛盾があるか判定してください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         ## ルール
         1. 矛盾とは「明らかに片方の事実が古い情報になっている」状態 (例: 開店 → 閉店)。
         2. 単に新しい情報を補足しているだけの場合は矛盾なし (false)。
         3. トピックが微妙に違う場合 (例: 経営方針の話 vs 商品紹介) も矛盾なし。
         4. 矛盾がある場合のみ hasConflict=true、説明文を出力。
+        5. \(language.outputInstruction)
 
         ## 新記事 (保存日: \(newArticle.savedAt.iso8601))
         タイトル: \(newArticle.title)

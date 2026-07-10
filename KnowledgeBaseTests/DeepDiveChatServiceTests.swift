@@ -11,6 +11,10 @@ import Foundation
 import SwiftData
 @testable import KnowledgeBase
 
+// i18n Phase B: 1 ケース (test_tutorPromptSwitchesOutputLanguage) が withPipelineLanguage で
+// PipelineLanguage.current の実プロセス状態を書き換える。他 suite との並列実行で読み書きが
+// 競合しないよう直列化する。
+@Suite(.serialized)
 @MainActor
 struct DeepDiveChatServiceTests {
 
@@ -228,6 +232,33 @@ struct DeepDiveChatServiceTests {
 
         await #expect(throws: DeepDiveChatError.self) {
             _ = try await service.sendUserMessage("   ", in: session, card: card)
+        }
+    }
+
+    // MARK: - 8. i18n Phase B: tutor prompt が出力言語ヘッダを含み、パイプライン言語に追従する (qa Major #5)
+
+    @Test func test_tutorPromptSwitchesOutputLanguage() async throws {
+        try await withPipelineLanguage(.zhHant) {
+            let container = try makeContainer()
+            let context = container.mainContext
+            let page = ConceptPage(name: "Foundation Models", categoryRaw: "テクノロジー", isStale: false)
+            context.insert(page)
+            try context.save()
+
+            let mockLM = MockLanguageModelSession()
+            mockLM.nextTutorReplyResult = .success("你最想知道哪个部分?")
+            let service = DefaultDeepDiveChatService(
+                context: context,
+                session: mockLM,
+                availability: FixedAvailability(isAvailable: true)
+            )
+
+            let card = UnderstandingCard.fromConceptPage(page)
+            _ = try await service.startTutorSession(for: card)
+
+            let prompt = mockLM.lastTutorReplyPrompt ?? ""
+            #expect(prompt.contains("出力言語: 繁體中文"))
+            #expect(!prompt.contains("出力言語: 日本語"))
         }
     }
 }
