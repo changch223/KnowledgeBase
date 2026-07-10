@@ -99,6 +99,26 @@ struct SettingsView: View {
             // spec 041: ナレッジグラフ表示 toggle
             // spec 090: ユーザー要望でグラフ機能を一旦 UI から外すため非表示 (トグル + 分野詳細グラフ)。
 
+            // 多言語対応 Phase A: AI が生成する知識の言語 (PipelineLanguage)
+            Section {
+                NavigationLink(value: LanguageSettingsDestination()) {
+                    HStack(spacing: DS.Spacing.lg) {
+                        Image(systemName: "globe")
+                            .foregroundStyle(DS.Color.sumiInk)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("settings.languageSettings.entry")
+                            Text(PipelineLanguage.current.endonym)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .accessibilityIdentifier("settings.languageSettings.entry")
+            } header: {
+                Text("settings.section.language")
+            }
+
             Section("settings.section.externalIntegration") {
                 // Safari (spec 020)
                 NavigationLink(value: SafariSetupDestination()) {
@@ -275,6 +295,9 @@ struct SettingsView: View {
         }
         .navigationDestination(for: TranslationSetupDestination.self) { _ in
             TranslationSetupView()
+        }
+        .navigationDestination(for: LanguageSettingsDestination.self) { _ in
+            LanguageSettingsView()
         }
         .navigationDestination(for: SavedAnswerHistoryDestination.self) { _ in
             SavedAnswerHistoryView()

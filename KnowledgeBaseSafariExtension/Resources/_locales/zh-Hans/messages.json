@@ -4,7 +4,7 @@
         "description": "The display name for the extension."
     },
     "extension_description": {
-        "message": "Safari で開いたページを Knowledge Base に自動保存",
+        "message": "将在 Safari 中打开的网页自动保存到 Knowledge Base",
         "description": "Description of what the extension does."
     }
 }

@@ -26,3 +26,7 @@ ScreenShot/*.MP4
 ScreenShot/appstore/output/
 ScreenShot/appstore/output-1242x2688/
 KnowledgeBase_Icons/
+
+# Python bytecode (scripts/)
+__pycache__/
+*.pyc

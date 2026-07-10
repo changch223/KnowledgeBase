@@ -19,6 +19,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>音声ファイルを文字に書き起こすために音声認識を使用します。処理は端末内で行われ、外部に送信されません。</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
