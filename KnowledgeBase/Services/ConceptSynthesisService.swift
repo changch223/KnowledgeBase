@@ -395,13 +395,17 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             // spec 080拡張: overflow なら 1 回だけ小型スキーマで再試行 (essence-list fallback より良い)。
             let output = try await synthesizeWithAdaptiveRetry(conceptPage: conceptPage, articles: articles)
 
-            // post-process: 500 chars 超 trim、insights 7 件超 truncate
-            let trimmedSummary: String
+            // post-process: 500 chars 超 trim → 文境界トリムで「文の途中で切れた表示」を根絶。insights 5 件超 truncate。
+            let lengthTrimmed: String
             if output.summary.count > 500 {
-                trimmedSummary = String(output.summary.prefix(497)) + "…"
+                lengthTrimmed = String(output.summary.prefix(497)) + "…"
             } else {
-                trimmedSummary = output.summary
+                lengthTrimmed = output.summary
             }
+            // 実機 (繁体字) で顕在化: token 上限超過 / repair 経路など原因を問わず文の途中で
+            // summary が切れて表示されることがある。表示直前の最終防衛として、終端句読点で
+            // 終わっていなければ最後の終端句読点までで切り詰める (無ければ現状維持)。
+            let trimmedSummary = Self.trimToSentenceBoundary(lengthTrimmed)
             // 防御: AI が空 summary を返した時、既存 summary を保持 (再合成失敗で見える内容を消さない)
             let preserveExisting = trimmedSummary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && !conceptPage.summary.isEmpty
@@ -755,25 +759,49 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     static func extractPartialOutput(from error: Error) -> ConceptSynthesisOutput? {
         let desc = String(describing: error)
         guard desc.contains("decodingFailure") else { return nil }
-        guard let textRange = desc.range(of: "Text: ") else {
-            // "Text: " が見つからない = Apple がエラー format を変更した可能性。
-            // 修復を試みず rethrow させる。フォーマット変更の検出ログを残す。
+        // 実機で観測された decodingFailure は "Text: " prefix を含まない format だった
+        // (repair が一度も走らないデッドコード状態だった)。prefix が見つかった場合はその後続だけを、
+        // 見つからない場合は desc 全体を候補として repairAndDecode に渡す (どちらも { ... } を
+        // 自前で探索するので誤検出しにくい)。
+        let jsonCandidate: String
+        if let textRange = desc.range(of: "Text: ") {
+            jsonCandidate = String(desc[textRange.upperBound...])
+        } else {
             Logger(subsystem: "app.KnowledgeTree", category: "concept")
-                .warning("concept synthesis decodingFailure: 'Text: ' prefix not found in error description — Apple may have changed the format")
-            return nil
+                .notice("concept synthesis decodingFailure: 'Text: ' prefix not found in error description — 全文で修復試行")
+            jsonCandidate = desc
         }
-        let jsonCandidate = String(desc[textRange.upperBound...])
         return repairAndDecode(jsonCandidate)
     }
 
+    /// summary / crossSourceInsights の値終端として許容する文字集合。
+    /// JSON の正しい終端は実 `"` だが、LM が日本語の閉じ引用符 (」』” 等) で代用して
+    /// 実 `"` を書き忘れることがある。この場合、実 `"` だけを終端とみなす素朴な正規表現は
+    /// 次フィールドの実 `"` まで貪欲にマッチしてしまい、summary が次フィールドの構造ごと
+    /// 飲み込まれる (over-capture)。ここに挙げた文字のいずれかで打ち切ることで安全側に倒す。
+    static let quotedValueTerminators: Set<Character> = ["\"", "”", "」", "』"]
+
     /// 不完全 JSON を修復してデコードを試みる。
     /// 戦略: JSON オブジェクトの開始 `{` を探し、最後に出現する `}` で切り取る。
-    /// それでも失敗したら summary だけ取り出す。
+    /// それでも失敗したら summary (+ 可能なら crossSourceInsights) だけ正規表現で取り出す。
     static func repairAndDecode(_ text: String) -> ConceptSynthesisOutput? {
+        // GenerationError.Context の説明文には underlyingErrors / errorDescriptionOverride 以降に
+        // エラーメタデータ (DecodingError の debugDescription 等) が続き、そこにも JSON 風の "}" が
+        // 紛れ込むことがある。素朴な lastIndex(of: "}") がそちらを拾うと slice が常に無効 JSON に
+        // なってしまうため、メタデータの開始位置より前で text を切り落としてから探索する。
+        var cutIndex: String.Index?
+        for marker in [", underlyingErrors:", ", errorDescriptionOverride:"] {
+            if let range = text.range(of: marker), cutIndex == nil || range.lowerBound < cutIndex! {
+                cutIndex = range.lowerBound
+            }
+        }
+        let body = cutIndex.map { String(text[text.startIndex..<$0]) } ?? text
+
         // まず `{` から最後の `}` までを試す
-        guard let start = text.firstIndex(of: "{"),
-              let end   = text.lastIndex(of: "}") else { return nil }
-        let slice = String(text[start...end])
+        guard let start = body.firstIndex(of: "{"),
+              let end   = body.lastIndex(of: "}"),
+              start < end else { return nil }
+        let slice = String(body[start...end])
 
         if let data = slice.data(using: .utf8),
            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -782,17 +810,46 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             if !summary.isEmpty { return ConceptSynthesisOutput(summary: summary, crossSourceInsights: insights) }
         }
 
-        // `}` 切り取りでも失敗 → summary フィールドだけ正規表現で取り出す
-        if let match = slice.range(of: "\"summary\"\\s*:\\s*\"([^\"]+)\"", options: .regularExpression) {
-            let raw = String(slice[match])
-            if let valStart = raw.firstIndex(of: ":"),
-               let q1 = raw[raw.index(after: valStart)...].firstIndex(of: "\""),
-               let q2 = raw[raw.index(after: q1)...].firstIndex(of: "\"") {
-                let summary = String(raw[raw.index(after: q1)..<q2])
-                if !summary.isEmpty { return ConceptSynthesisOutput(summary: summary, crossSourceInsights: []) }
-            }
+        // `}` 切り取りでも失敗 → summary フィールドだけ正規表現で救済 (全角閉じ引用符も終端として許容)。
+        if let summary = extractQuotedSummary(from: slice), !summary.isEmpty {
+            let insights = extractQuotedInsights(from: slice)
+            return ConceptSynthesisOutput(summary: summary, crossSourceInsights: insights)
         }
         return nil
+    }
+
+    /// `"summary": "値"` の値を、実 `"` または全角閉じ引用符 (`quotedValueTerminators`) の
+    /// いずれか最初に現れたところまでで取り出す。終端文字自体は結果に含めない。
+    static func extractQuotedSummary(from slice: String) -> String? {
+        let pattern = "\"summary\"\\s*:\\s*\"([^\"”」』]+)[\"”」』]"
+        guard let match = slice.range(of: pattern, options: .regularExpression) else { return nil }
+        let raw = String(slice[match])
+        guard let colonIdx = raw.firstIndex(of: ":"),
+              let q1 = raw[raw.index(after: colonIdx)...].firstIndex(of: "\"")
+        else { return nil }
+        let valueStart = raw.index(after: q1)
+        guard let termIdx = raw[valueStart...].firstIndex(where: { quotedValueTerminators.contains($0) }) else {
+            return nil
+        }
+        return String(raw[valueStart..<termIdx])
+    }
+
+    /// crossSourceInsights 配列の要素を best-effort で救済する (summary と同じ終端規則)。
+    /// 復元できる要素が無ければ空配列を返す (summary だけでも復元価値があるため呼び出し元は失敗にしない)。
+    static func extractQuotedInsights(from slice: String, limit: Int = 5) -> [String] {
+        guard let keyRange = slice.range(of: "\"crossSourceInsights\"") else { return [] }
+        var results: [String] = []
+        var cursor = keyRange.upperBound
+        while results.count < limit, let quoteIdx = slice[cursor...].firstIndex(of: "\"") {
+            let valueStart = slice.index(after: quoteIdx)
+            guard valueStart < slice.endIndex,
+                  let termIdx = slice[valueStart...].firstIndex(where: { quotedValueTerminators.contains($0) })
+            else { break }
+            let value = String(slice[valueStart..<termIdx])
+            if !value.isEmpty { results.append(value) }
+            cursor = slice.index(after: termIdx)
+        }
+        return results
     }
 
     /// hierarchical + meta-summary (5+ 件、chunk_size=4 で分割 → 各 chunk 要約 → meta prompt で最終合成)。
@@ -1008,6 +1065,17 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     fileprivate static func truncate(_ text: String, max: Int) -> String {
         guard text.count > max else { return text }
         return String(text.prefix(max - 1)) + "…"
+    }
+
+    /// summary の「文の途中で切れた表示」を根絶する最終防衛。終端句読点で終わっていれば無変更、
+    /// そうでなければ最後に出現する終端句読点までで切る。1 つも見つからなければ現状維持 (無変更)。
+    /// token 上限超過・repair 経路の破損など原因を問わず、表示直前で一律に効く。internal (テスト可視)。
+    static let sentenceTerminators: Set<Character> = ["。", "！", "？", "…", "!", "?", ".", "」", "』", "\"", "”"]
+
+    static func trimToSentenceBoundary(_ text: String) -> String {
+        guard let last = text.last, !sentenceTerminators.contains(last) else { return text }
+        guard let idx = text.lastIndex(where: { sentenceTerminators.contains($0) }) else { return text }
+        return String(text[...idx])
     }
 }
 

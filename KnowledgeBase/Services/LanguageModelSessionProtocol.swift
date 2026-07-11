@@ -550,11 +550,15 @@ final class FoundationModelLanguageModelSession: LanguageModelSessionProtocol {
     }
 
     /// spec 042: ConceptPage の AI 合成 (summary + crossSourceInsights を 1 prompt で生成)
-    /// spec 096: 出力上限で overflow を抑える (summary≤280 + 要点5×60 ≈ 500tok 程度 → 余裕込み 800)。
+    /// spec 096: 出力上限で overflow を抑える。
+    /// CJK 修正 (2026-07): 繁体字/簡体字は ~2-3 tok/字で summary 180 字 + 要点 5×60 字 が
+    /// 800 では不足し、途中で打ち切られて「文の途中で切れた表示」を招いていた
+    /// (summary≤180字 + insights 5×60字=300字 ≈ 480 字 × 2-3 tok ≈ 1000〜1400tok が必要)。
+    /// 800→1300 に引き上げ (実測で prompt + schema + 1300 は窓 4096 に十分収まる余裕がある)。
     func generateConceptSynthesis(prompt: String) async throws -> ConceptSynthesisOutput {
         // P2-1: preflight で窓超過が確実なら respond せず compact に回す (reserve は maxResponseTokens と揃える)。
         try await generateStructured("generateConceptSynthesis (概念合成)", ConceptSynthesisOutput.self,
-                                     prompt: prompt, maxResponseTokens: 800, preflightOutputReserve: 800)
+                                     prompt: prompt, maxResponseTokens: 1300, preflightOutputReserve: 1300)
     }
 
     /// spec 080拡張: overflow 時の小型再試行 (出力予約を絞る)。

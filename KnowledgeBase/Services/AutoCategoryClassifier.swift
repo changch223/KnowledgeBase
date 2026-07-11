@@ -122,8 +122,14 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         // spec 097 Phase 2: 過去のユーザー修正を few-shot で注入 (最大 8 件)。
         let exampleBlock = Self.buildExampleBlock(examples)
 
+        // i18n: 候補リスト (candidatesText) と其他 (other) は既に PipelineLanguage.current に
+        // 追従済みだが、指示文の骨格が日本語ハードコードのままだと zh パイプラインでもモデルが
+        // ja のカテゴリー名を出力しがちで validNames 照合に失敗 → その他落ちの一因になっていた。
+        // Phase B で確立した出力言語ヘッダのパターンをここにも適用する。
+        let language = PipelineLanguage.current
         let prompt = """
             次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
+            出力言語: \(language.endonym)。スキーマの説明文が日本語でも、カテゴリー名は必ず下記候補リストに書かれている表記のまま、翻訳・言い換えせずに返すこと。
             必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
             判断に迷う人名・組織名・一般語は「\(other)」にしてください。
             ただし下記の特例に当てはまる場合は、迷わずその分野に分類すること:
