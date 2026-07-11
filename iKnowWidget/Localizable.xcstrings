@@ -27,6 +27,24 @@
             "state" : "needs_review",
             "value" : "以環境顯示方式呈現 AI 挑選出「現在該深入了解」的卡片。"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "AI가 고른 '지금 더 알아볼' 카드를 앰비언트 화면으로 표시합니다."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muestra en pantalla ambiental la tarjeta que la IA cree que deberías explorar ahora."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Zeigt eine Ambient-Ansicht der Karte, die die KI dir jetzt zum Erkunden empfiehlt."
+          }
         }
       }
     },
@@ -55,6 +73,24 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "試著儲存文章或在 AI 聊天中提問吧"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기사를 저장하거나 AI 채팅에 질문해 보세요"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prueba a guardar un artículo o hacer una pregunta en el Chat de IA"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sichere einen Artikel oder stelle im KI-Chat eine Frage"
           }
         }
       }
@@ -85,6 +121,24 @@
             "state" : "needs_review",
             "value" : "點按開始學習"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "탭해서 학습 시작하기"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Toca para empezar a aprender"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Zum Lernstart tippen"
+          }
         }
       }
     },
@@ -113,6 +167,24 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "沒有學習卡片"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "학습 카드가 없습니다"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay tarjetas de aprendizaje"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Keine Lernkarten"
           }
         }
       }
@@ -143,6 +215,24 @@
             "state" : "needs_review",
             "value" : "還有深入了解的空間"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "더 깊이 파고들 여지 있음"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Margen para profundizar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Raum zum Vertiefen"
+          }
         }
       }
     },
@@ -171,6 +261,24 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "需要更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "업데이트 필요"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Necesita actualización"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Update erforderlich"
           }
         }
       }
@@ -201,6 +309,24 @@
             "state" : "needs_review",
             "value" : "新知識"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새로운 지식"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conocimiento nuevo"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Neues Wissen"
+          }
         }
       }
     },
@@ -229,6 +355,24 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "複習"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복습"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Repaso"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wiederholung"
           }
         }
       }
@@ -259,6 +403,24 @@
             "state" : "needs_review",
             "value" : "理解較淺"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이해가 얕음"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprensión superficial"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Oberflächliches Verständnis"
+          }
         }
       }
     },
@@ -287,6 +449,24 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今日的學習"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘의 학습"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprendizaje de hoy"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Heutiges Lernen"
           }
         }
       }

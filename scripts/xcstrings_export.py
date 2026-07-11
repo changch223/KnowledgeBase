@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.xcstrings"
 DEFAULT_OUTPUT = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.tsv"
 
-TARGET_LOCALES = ["zh-Hans", "zh-Hant", "en"]
+TARGET_LOCALES = ["zh-Hans", "zh-Hant", "en", "ko", "es", "de"]
 
 
 def escape_cell(value: str) -> str:

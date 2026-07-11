@@ -66,6 +66,40 @@ struct CategoryRegistryTests {
         #expect(definitions.allSatisfy { !$0.definition.isEmpty })
     }
 
+    @Test func testKoSeedsReturnKoreanNames() {
+        let names = CategorySeed.allSeeds(for: .ko).map(\.name)
+        #expect(names.count == 10)
+        #expect(names.contains("기술"))
+        #expect(names.contains("기타"))
+        #expect(!names.contains("テクノロジー"))
+        #expect(CategorySeed.otherCategory(for: .ko).name == "기타")
+        let definitions = CategorySeed.seedDefinitions(for: .ko)
+        #expect(definitions.count == 10)
+        #expect(definitions.allSatisfy { !$0.definition.isEmpty })
+    }
+
+    @Test func testEsSeedsReturnSpanishNames() {
+        let names = CategorySeed.allSeeds(for: .es).map(\.name)
+        #expect(names.count == 10)
+        #expect(names.contains("Tecnología"))
+        #expect(names.contains("Otros"))
+        #expect(CategorySeed.otherCategory(for: .es).name == "Otros")
+        let definitions = CategorySeed.seedDefinitions(for: .es)
+        #expect(definitions.count == 10)
+        #expect(definitions.allSatisfy { !$0.definition.isEmpty })
+    }
+
+    @Test func testDeSeedsReturnGermanNames() {
+        let names = CategorySeed.allSeeds(for: .de).map(\.name)
+        #expect(names.count == 10)
+        #expect(names.contains("Technologie"))
+        #expect(names.contains("Sonstiges"))
+        #expect(CategorySeed.otherCategory(for: .de).name == "Sonstiges")
+        let definitions = CategorySeed.seedDefinitions(for: .de)
+        #expect(definitions.count == 10)
+        #expect(definitions.allSatisfy { !$0.definition.isEmpty })
+    }
+
     @Test func testDefaultAPIFollowsCurrentPipelineLanguage() async throws {
         // 既定 (テスト環境 = .ja) では `.current` 経由の computed property が ja の値と完全一致する。
         #expect(CategorySeed.allSeeds.map(\.name) == CategorySeed.allSeeds(for: .ja).map(\.name))
@@ -170,6 +204,26 @@ struct CategoryRegistryTests {
             // promptCandidatesWithDefinitions / validNames もレジストリ経由で英語名を返す
             #expect(registry.validNames().contains("Technology"))
             #expect(registry.promptCandidatesWithDefinitions().contains("Technology"))
+        }
+    }
+
+    // i18n Phase C (ko/es/de 追加): seedIfNeeded は代表 1 言語 (es) で経路検証すれば十分
+    // (経路自体は en と同一、CategorySeed 側の値は上の testEsSeedsReturnSpanishNames で検証済み)。
+    @Test func testSeedIfNeededSeedsSpanishNamesForEsPipeline() async throws {
+        try await withPipelineLanguage(.es) {
+            let container = try makeContainer()
+            let registry = CategoryRegistry(context: container.mainContext)
+            registry.seedIfNeeded()
+
+            let defs = (try? container.mainContext.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+            #expect(defs.count == 10)
+            #expect(defs.contains { $0.name == "Tecnología" })
+            #expect(defs.contains { $0.name == "Otros" })
+            #expect(!defs.contains { $0.name == "テクノロジー" })
+
+            // promptCandidatesWithDefinitions / validNames もレジストリ経由でスペイン語名を返す
+            #expect(registry.validNames().contains("Tecnología"))
+            #expect(registry.promptCandidatesWithDefinitions().contains("Tecnología"))
         }
     }
 

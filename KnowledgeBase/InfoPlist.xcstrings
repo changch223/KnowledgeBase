@@ -51,6 +51,24 @@
             "state" : "needs_review",
             "value" : "為了將語音檔案轉錄為文字，將使用語音辨識功能。處理均在裝置本機進行，不會傳送至外部。"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "음성 파일을 텍스트로 변환하기 위해 음성 인식을 사용합니다. 처리는 기기 내에서 이루어지며 외부로 전송되지 않습니다."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El reconocimiento de voz se utiliza para transcribir archivos de audio a texto. El procesamiento se realiza en tu dispositivo y nunca se envía al exterior."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Die Spracherkennung wird verwendet, um Audiodateien in Text umzuwandeln. Die Verarbeitung erfolgt auf deinem Gerät und wird niemals extern übermittelt."
+          }
         }
       }
     }

@@ -370,6 +370,55 @@ struct KnowledgeExtractorTests {
             #expect(session.lastPrompt?.contains("announced a new framework") == true)
         }
     }
+
+    // MARK: - 韓国語/スペイン語/ドイツ語対応 (i18n Phase C): es パイプラインでの prepareForExtraction
+    // (代表 1 言語で経路検証、ko/de は PipelineLanguage.matches の raw prefix 判定が共通実装のため省略)。
+
+    /// es パイプラインでは日本語記事もパイプライン言語 (es) と一致しないため翻訳経路に入る。
+    @Test func extractInvokesTranslationForJapaneseWhenPipelineIsSpanish() async throws {
+        try await withPipelineLanguage(.es) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            session.nextTranslationResult = .success(
+                "Apple presentó un nuevo framework Foundation Models en la WWDC, exponiendo salida " +
+                "estructurada desde un modelo de lenguaje en el dispositivo."
+            )
+            let extractor = KnowledgeExtractor(session: session)
+
+            let japaneseText = """
+            Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
+            既存の async/await モデルをさらに堅牢化しました。開発者は migration mode を使って
+            段階的に対応できます。
+            """
+            _ = try await extractor.extract(extractedText: japaneseText)
+
+            #expect(session.translationCallCount == 1)
+            // 抽出 prompt は翻訳後のスペイン語テキストを含む
+            #expect(session.lastPrompt?.contains("Apple presentó un nuevo framework") == true)
+            // 元の日本語本文は抽出 prompt に流れない
+            #expect(session.lastPrompt?.contains("Swift 6 のリリースについて") == false)
+        }
+    }
+
+    /// es パイプラインではスペイン語記事はパイプライン言語と一致するため翻訳をスキップする。
+    @Test func extractSkipsTranslationForSpanishWhenPipelineIsSpanish() async throws {
+        try await withPipelineLanguage(.es) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            let extractor = KnowledgeExtractor(session: session)
+
+            let spanishText = """
+            Apple presentó un nuevo framework llamado Foundation Models en la WWDC. El modelo de
+            lenguaje en el dispositivo expone salida estructurada mediante la macro @Generable,
+            permitiendo a los desarrolladores añadir funciones RAG sin servidores externos.
+            """
+            _ = try await extractor.extract(extractedText: spanishText)
+
+            #expect(session.translationCallCount == 0)
+            #expect(session.callCount == 1)
+            #expect(session.lastPrompt?.contains("presentó un nuevo framework") == true)
+        }
+    }
 }
 
 /// i18n Phase B: `PipelineLanguage.current` が参照する実 UserDefaults (App Group or .standard) を

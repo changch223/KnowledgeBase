@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "Knowledge Base",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "Safari에서 연 페이지를 Knowledge Base에 자동으로 저장합니다",
+        "description": "Description of what the extension does."
+    }
+}
