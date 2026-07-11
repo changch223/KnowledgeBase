@@ -38,8 +38,10 @@ struct PipelineLanguageTests {
 
         #expect(PipelineLanguage.resolve(defaults: defaults, preferredLanguages: ["ja-JP"]) == .ja)
         #expect(PipelineLanguage.resolve(defaults: defaults, preferredLanguages: ["zh-Hans-CN"]) == .zhHans)
-        // Phase A は日中 2 言語のみ対応。それ以外 (英語等) は ja にフォールバック。
-        #expect(PipelineLanguage.resolve(defaults: defaults, preferredLanguages: ["en-US"]) == .ja)
+        // i18n Phase B: en は .en に解決する (Phase A では ja にフォールバックしていたが英語対応を追加)。
+        #expect(PipelineLanguage.resolve(defaults: defaults, preferredLanguages: ["en-US"]) == .en)
+        // ja / zh / en 以外は ja にフォールバック。
+        #expect(PipelineLanguage.resolve(defaults: defaults, preferredLanguages: ["fr-FR"]) == .ja)
         // 優先言語が空リストのときも安全に ja へ。
         #expect(PipelineLanguage.resolve(defaults: defaults, preferredLanguages: []) == .ja)
     }
@@ -60,12 +62,23 @@ struct PipelineLanguageTests {
         #expect(PipelineLanguage.fromPreferredLanguages(["zh"]) == .zhHans)
     }
 
+    // MARK: - fromPreferredLanguages: en 系
+
+    @Test func testFromPreferredLanguagesMapsEnglishVariants() {
+        #expect(PipelineLanguage.fromPreferredLanguages(["en-US"]) == .en)
+        #expect(PipelineLanguage.fromPreferredLanguages(["en-GB"]) == .en)
+        #expect(PipelineLanguage.fromPreferredLanguages(["en"]) == .en)
+        // zh / en 以外 (例: フランス語) は ja にフォールバック。
+        #expect(PipelineLanguage.fromPreferredLanguages(["fr-FR"]) == .ja)
+    }
+
     // MARK: - endonym
 
     @Test func testEndonym() {
         #expect(PipelineLanguage.ja.endonym == "日本語")
         #expect(PipelineLanguage.zhHans.endonym == "简体中文")
         #expect(PipelineLanguage.zhHant.endonym == "繁體中文")
+        #expect(PipelineLanguage.en.endonym == "English")
     }
 
     // MARK: - outputInstruction
@@ -74,6 +87,7 @@ struct PipelineLanguageTests {
         #expect(PipelineLanguage.ja.outputInstruction.contains("日本語"))
         #expect(PipelineLanguage.zhHans.outputInstruction.contains("简体中文"))
         #expect(PipelineLanguage.zhHant.outputInstruction.contains("繁體中文"))
+        #expect(PipelineLanguage.en.outputInstruction.contains("English"))
     }
 
     // MARK: - translationTargetBCP47
@@ -82,6 +96,7 @@ struct PipelineLanguageTests {
         #expect(PipelineLanguage.ja.translationTargetBCP47 == "ja")
         #expect(PipelineLanguage.zhHans.translationTargetBCP47 == "zh-Hans")
         #expect(PipelineLanguage.zhHant.translationTargetBCP47 == "zh-Hant")
+        #expect(PipelineLanguage.en.translationTargetBCP47 == "en")
     }
 
     // MARK: - matches(detected:)
@@ -103,5 +118,12 @@ struct PipelineLanguageTests {
         #expect(!PipelineLanguage.zhHans.matches(detected: .japanese))
         #expect(!PipelineLanguage.zhHans.matches(detected: .english))
         #expect(!PipelineLanguage.zhHant.matches(detected: .other("en")))
+    }
+
+    @Test func testMatchesEnglish() {
+        #expect(PipelineLanguage.en.matches(detected: .english))
+        #expect(!PipelineLanguage.en.matches(detected: .japanese))
+        #expect(!PipelineLanguage.en.matches(detected: .other("zh-Hans")))
+        #expect(!PipelineLanguage.en.matches(detected: .unknown))
     }
 }

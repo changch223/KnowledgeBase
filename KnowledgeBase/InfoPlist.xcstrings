@@ -28,6 +28,12 @@
     "NSSpeechRecognitionUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Speech recognition is used to transcribe audio files into text. Processing happens on your device and is never sent externally."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",

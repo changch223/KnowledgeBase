@@ -36,6 +36,17 @@ struct PipelinePromptLanguageTests {
         #expect(prompt.contains("日本語"))
     }
 
+    // i18n Phase B (英語対応): 代表 builder 1 つで .en の出力言語ヘッダが入り、
+    // ja 向けの出力指示文 (「すべて日本語で出力してください」) が入らないことを確認する
+    // (prompt 本文の定型句自体は日本語で書かれている＝「日本語」という語自体は他言語 prompt にも
+    //  含まれる。zh 系の既存テストと同じ検証対象=「日本語での出力指示」の有無で判定する)。
+    @Test func testKnowledgeExtractorBuildPromptSwitchesToEnglish() {
+        let enPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .en)
+        #expect(enPrompt.contains("出力言語: English"))
+        #expect(enPrompt.contains("Write all output in English."))
+        #expect(!enPrompt.contains("すべて日本語で出力してください"))
+    }
+
     // MARK: - ChatService.buildPrompt
 
     @Test func testChatServiceBuildPromptSwitchesOutputLanguage() {

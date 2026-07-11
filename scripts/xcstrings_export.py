@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""xcstrings_export.py — Localizable.xcstrings を TSV (key / ja / zh-Hans / zh-Hant) に書き出す。
+"""xcstrings_export.py — Localizable.xcstrings を TSV (key / ja / zh-Hans / zh-Hant / en) に書き出す。
 
-多言語対応 Phase A の翻訳注入 (別タスク) 用の器。翻訳者・翻訳 API に渡す TSV を作り、
-`xcstrings_import.py` で zh-Hans / zh-Hant 列を xcstrings へ書き戻す想定。
+多言語対応 Phase A/B の翻訳注入 (別タスク) 用の器。翻訳者・翻訳 API に渡す TSV を作り、
+`xcstrings_import.py` で zh-Hans / zh-Hant / en 列を xcstrings へ書き戻す想定。
 
 - ja 列: `localizations.ja.stringUnit.value` があればそれ、無ければ key 自体
   (xcstrings の慣習: 「空 {} キー」は key 自体が ja の原文であることを意味する)。
-- zh-Hans / zh-Hant 列: 既存の翻訳があれば入れる (再エクスポート時に既訳を確認できるように)、
+- zh-Hans / zh-Hant / en 列: 既存の翻訳があれば入れる (再エクスポート時に既訳を確認できるように)、
   無ければ空文字列。
 - タブ / 改行を含む値は `\\t` / `\\n` / `\\r` にエスケープする (TSV の 1 行 1 キーを保つため)。
   `xcstrings_import.py` が対で unescape する。
@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.xcstrings"
 DEFAULT_OUTPUT = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.tsv"
 
-TARGET_LOCALES = ["zh-Hans", "zh-Hant"]
+TARGET_LOCALES = ["zh-Hans", "zh-Hant", "en"]
 
 
 def escape_cell(value: str) -> str:
