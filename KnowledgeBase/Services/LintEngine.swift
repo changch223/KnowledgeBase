@@ -615,6 +615,7 @@ final class DefaultLintEngine: LintEngineProtocol {
         case .ja: domainExampleHint = "不動産, 法律, 料理"
         case .zhHans: domainExampleHint = "房地产, 法律, 烹饪"
         case .zhHant: domainExampleHint = "不動產, 法律, 烹飪"
+        case .en: domainExampleHint = "Real Estate, Law, Cooking"
         }
         let memberNames = best.map { $0.page.name }
         let prompt = """

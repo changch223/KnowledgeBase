@@ -54,6 +54,18 @@ struct CategoryRegistryTests {
         #expect(CategorySeed.otherCategory(for: .zhHant).name == "其他")
     }
 
+    @Test func testEnSeedsReturnEnglishNames() {
+        let names = CategorySeed.allSeeds(for: .en).map(\.name)
+        #expect(names.count == 10)
+        #expect(names.contains("Technology"))
+        #expect(names.contains("Other"))
+        #expect(CategorySeed.otherCategory(for: .en).name == "Other")
+        // 定義も英語で用意されている
+        let definitions = CategorySeed.seedDefinitions(for: .en)
+        #expect(definitions.count == 10)
+        #expect(definitions.allSatisfy { !$0.definition.isEmpty })
+    }
+
     @Test func testDefaultAPIFollowsCurrentPipelineLanguage() async throws {
         // 既定 (テスト環境 = .ja) では `.current` 経由の computed property が ja の値と完全一致する。
         #expect(CategorySeed.allSeeds.map(\.name) == CategorySeed.allSeeds(for: .ja).map(\.name))
@@ -140,6 +152,24 @@ struct CategoryRegistryTests {
             // promptCandidatesWithDefinitions / validNames もレジストリ経由で中文名を返す
             #expect(registry.validNames().contains("科技"))
             #expect(registry.promptCandidatesWithDefinitions().contains("科技"))
+        }
+    }
+
+    @Test func testSeedIfNeededSeedsEnglishNamesForEnPipeline() async throws {
+        try await withPipelineLanguage(.en) {
+            let container = try makeContainer()
+            let registry = CategoryRegistry(context: container.mainContext)
+            registry.seedIfNeeded()
+
+            let defs = (try? container.mainContext.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+            #expect(defs.count == 10)
+            #expect(defs.contains { $0.name == "Technology" })
+            #expect(defs.contains { $0.name == "Other" })
+            #expect(!defs.contains { $0.name == "テクノロジー" })
+
+            // promptCandidatesWithDefinitions / validNames もレジストリ経由で英語名を返す
+            #expect(registry.validNames().contains("Technology"))
+            #expect(registry.promptCandidatesWithDefinitions().contains("Technology"))
         }
     }
 

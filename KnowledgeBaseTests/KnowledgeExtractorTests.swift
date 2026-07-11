@@ -309,6 +309,54 @@ struct KnowledgeExtractorTests {
             #expect(session.lastPrompt?.contains("苹果在全球开发者大会") == true)
         }
     }
+
+    // MARK: - 英語対応 (i18n Phase B): en パイプラインでの prepareForExtraction
+
+    /// en パイプラインでは日本語記事もパイプライン言語 (en) と一致しないため翻訳経路に入る。
+    @Test func extractInvokesTranslationForJapaneseWhenPipelineIsEnglish() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            session.nextTranslationResult = .success(
+                "Apple announced a new Foundation Models framework at WWDC, exposing structured " +
+                "output from an on-device language model."
+            )
+            let extractor = KnowledgeExtractor(session: session)
+
+            let japaneseText = """
+            Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
+            既存の async/await モデルをさらに堅牢化しました。開発者は migration mode を使って
+            段階的に対応できます。
+            """
+            _ = try await extractor.extract(extractedText: japaneseText)
+
+            #expect(session.translationCallCount == 1)
+            // 抽出 prompt は翻訳後の英語テキストを含む
+            #expect(session.lastPrompt?.contains("Apple announced a new Foundation Models framework") == true)
+            // 元の日本語本文は抽出 prompt に流れない
+            #expect(session.lastPrompt?.contains("Swift 6 のリリースについて") == false)
+        }
+    }
+
+    /// en パイプラインでは英語記事はパイプライン言語と一致するため翻訳をスキップする。
+    @Test func extractSkipsTranslationForEnglishWhenPipelineIsEnglish() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            let extractor = KnowledgeExtractor(session: session)
+
+            let englishText = """
+            Apple announced a new framework called Foundation Models at WWDC. The on-device
+            language model exposes structured output via the @Generable macro, enabling
+            developers to add RAG features without external servers.
+            """
+            _ = try await extractor.extract(extractedText: englishText)
+
+            #expect(session.translationCallCount == 0)
+            #expect(session.callCount == 1)
+            #expect(session.lastPrompt?.contains("announced a new framework") == true)
+        }
+    }
 }
 
 /// i18n Phase B: `PipelineLanguage.current` が参照する実 UserDefaults (App Group or .standard) を

@@ -6,7 +6,7 @@
 //  UI 表示言語 (端末の Localizable.xcstrings 解決) とは独立した概念で、
 //  ユーザーごとに 1 つに固定される (docs/HANDOFF.md §2-2 の設計判断)。
 //
-//  - 保存値は App Group UserDefaults (`userDefaultsKey`) に "ja" / "zh-Hans" / "zh-Hant" で永続化。
+//  - 保存値は App Group UserDefaults (`userDefaultsKey`) に "ja" / "zh-Hans" / "zh-Hant" / "en" で永続化。
 //  - 未設定 (初回起動、既存ユーザー含む) は端末の優先言語から解決する (`fromPreferredLanguages`)。
 //  - `current` はプロセス内キャッシュ付き (毎回 UserDefaults / Locale を読まない)。
 //  - 実際の read/write は `LanguageSettingsStore` (protocol + UserDefaults/InMemory 実装) が担う。
@@ -20,6 +20,7 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
     case ja
     case zhHans = "zh-Hans"
     case zhHant = "zh-Hant"
+    case en
 
     /// App Group UserDefaults に保存する際のキー。`LanguageSettingsStore` も同じキーを使う (DRY)。
     static let userDefaultsKey = "settings.pipelineLanguage"
@@ -46,14 +47,17 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
 
     /// 端末の優先言語リスト (`Locale.preferredLanguages` 形式) から解決する純関数。
     /// 先頭言語コードのみ見る。zh 系は繁体字判定 (Hant / TW / HK / MO) 以外を簡体字扱いにする。
-    /// ja / zh 以外は全て ja にフォールバックする (Phase A は日中 2 言語のみ対応)。
+    /// ja / zh / en 以外は全て ja にフォールバックする (Phase A/B は日中英 3 言語のみ対応)。
     static func fromPreferredLanguages(_ preferredLanguages: [String]) -> PipelineLanguage {
         guard let first = preferredLanguages.first?.lowercased() else { return .ja }
-        guard first.hasPrefix("zh") else { return .ja }
-        if first.contains("hant") || first.contains("-tw") || first.contains("-hk") || first.contains("-mo") {
-            return .zhHant
+        if first.hasPrefix("zh") {
+            if first.contains("hant") || first.contains("-tw") || first.contains("-hk") || first.contains("-mo") {
+                return .zhHant
+            }
+            return .zhHans
         }
-        return .zhHans
+        if first.hasPrefix("en") { return .en }
+        return .ja
     }
 
     /// テスト / 設定変更後にプロセスキャッシュを無効化する。
@@ -70,6 +74,7 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         case .ja: return "日本語"
         case .zhHans: return "简体中文"
         case .zhHant: return "繁體中文"
+        case .en: return "English"
         }
     }
 
@@ -79,6 +84,7 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         case .ja: return "すべて日本語で出力してください。"
         case .zhHans: return "请全部使用简体中文输出。"
         case .zhHant: return "請全部使用繁體中文輸出。"
+        case .en: return "Write all output in English."
         }
     }
 
@@ -91,6 +97,7 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         case .ja: return ["私の理解では", "一般的には", "あくまで概要として"]
         case .zhHans: return ["据我理解", "一般来说", "仅供参考"]
         case .zhHant: return ["據我理解", "一般來說", "僅供參考"]
+        case .en: return ["As far as I understand", "Generally speaking", "For reference only"]
         }
     }
 
@@ -102,6 +109,7 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         case .ja: return ["分かりません", "答えられません", "情報がありません", "知りません"]
         case .zhHans: return ["不知道", "无法回答", "没有相关信息", "不清楚"]
         case .zhHant: return ["不知道", "無法回答", "沒有相關資訊", "不清楚"]
+        case .en: return ["I don't know", "I cannot answer", "No information available", "I'm not sure"]
         }
     }
 
@@ -116,18 +124,22 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         switch self {
         case .ja: return .japanese
         case .zhHans, .zhHant: return .simplifiedChinese
+        case .en: return .english
         }
     }
 
     /// 検知された入力言語 (`LanguageDetector.detect` の戻り値) が、この pipeline 言語と
     /// 「翻訳不要」とみなせるほど一致するか。ja パイプラインは `.japanese` のみ一致、
     /// zh パイプライン (Hans/Hant どちらでも) は検知が zh-Hans/zh-Hant いずれでも一致する。
+    /// en パイプラインは `.english` のみ一致する。
     func matches(detected: DetectedLanguage) -> Bool {
         switch (self, detected) {
         case (.ja, .japanese):
             return true
         case (.zhHans, .other(let raw)), (.zhHant, .other(let raw)):
             return raw.lowercased().hasPrefix("zh")
+        case (.en, .english):
+            return true
         default:
             return false
         }

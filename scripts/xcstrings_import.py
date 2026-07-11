@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""xcstrings_import.py — TSV (key / ja / zh-Hans / zh-Hant) を Localizable.xcstrings へ
+"""xcstrings_import.py — TSV (key / ja / zh-Hans / zh-Hant / en) を Localizable.xcstrings へ
 外科的に注入する (`xcstrings_export.py` の対)。
 
 設計上の制約:
@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_TSV = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.tsv"
 DEFAULT_XCSTRINGS = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.xcstrings"
 
-TARGET_LOCALES = ["zh-Hans", "zh-Hant"]
+TARGET_LOCALES = ["zh-Hans", "zh-Hant", "en"]
 
 FORMAT_SPECIFIER_RE = re.compile(r"%(?:\d+\$)?(?:@|lld|ld|d|f|u|s)")
 

@@ -5,7 +5,7 @@
 //  spec 015 — Tag より上位の階層として 10 個のシードカテゴリーを hardcoded で定義。
 //  Tag.categoryRaw に保存される値は CategorySeed.allSeeds のいずれかの name。
 //
-//  i18n Phase B: シードは PipelineLanguage 別に用意する (ja / zh-Hans / zh-Hant)。
+//  i18n Phase B: シードは PipelineLanguage 別に用意する (ja / zh-Hans / zh-Hant / en)。
 //  既定引数なしの API (`allSeeds` / `otherCategory` / `seedDefinitions` / `promptCandidatesWithDefinitions` /
 //  `promptCandidatesString` / `firstPassTieBreakers`) は `PipelineLanguage.current` を参照する computed
 //  property のままなので、既存の全呼び出し箇所は無改修で動く (既定 ja では完全に同じ値を返す)。
@@ -77,6 +77,7 @@ enum CategorySeed {
         case .ja: return jaSeeds
         case .zhHans: return zhHansSeeds
         case .zhHant: return zhHantSeeds
+        case .en: return enSeeds
         }
     }
 
@@ -86,6 +87,7 @@ enum CategorySeed {
         case .ja: return Category(name: "その他", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
         case .zhHans: return Category(name: "其他", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
         case .zhHant: return Category(name: "其他", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
+        case .en: return Category(name: "Other", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
         }
     }
 
@@ -95,6 +97,7 @@ enum CategorySeed {
         case .ja: return jaSeedDefinitions
         case .zhHans: return zhHansSeedDefinitions
         case .zhHant: return zhHantSeedDefinitions
+        case .en: return enSeedDefinitions
         }
     }
 
@@ -104,6 +107,7 @@ enum CategorySeed {
         case .ja: return jaFirstPassTieBreakers
         case .zhHans: return zhHansFirstPassTieBreakers
         case .zhHant: return zhHantFirstPassTieBreakers
+        case .en: return enFirstPassTieBreakers
         }
     }
 
@@ -228,5 +232,41 @@ enum CategorySeed {
         - 股價 / 財報 / 募資 / 行銷 / 企業經營 一律歸入經濟
         - 競技 / 選手 / 比賽 / 球隊 一律歸入體育 (反例：與體育無關的人物不歸入體育)
         - 政治 / 事件 / 災害 / 修法 一律歸入新聞
+        """
+
+    // MARK: - en (English)
+
+    private static let enSeeds: [Category] = [
+        Category(name: "Technology",    englishName: "Technology",    order: 0, symbolName: "cpu"),
+        Category(name: "Economy",       englishName: "Economy",       order: 1, symbolName: "chart.line.uptrend.xyaxis"),
+        Category(name: "Health",        englishName: "Health",        order: 2, symbolName: "heart"),
+        Category(name: "Design",        englishName: "Design",        order: 3, symbolName: "paintbrush"),
+        Category(name: "Academic",      englishName: "Academic",      order: 4, symbolName: "book"),
+        Category(name: "Art",           englishName: "Art",           order: 5, symbolName: "paintpalette"),
+        Category(name: "News",          englishName: "News",          order: 6, symbolName: "newspaper"),
+        Category(name: "Sports",        englishName: "Sports",        order: 7, symbolName: "figure.run"),
+        Category(name: "Entertainment", englishName: "Entertainment", order: 8, symbolName: "tv"),
+        Category(name: "Other",         englishName: "Other",         order: 9, symbolName: "ellipsis.circle"),
+    ]
+
+    private static let enSeedDefinitions: [(name: String, definition: String)] = [
+        ("Technology", "AI / programming / software / gadgets / IT in general. Examples: Claude, RAG, embedding, GitHub, hallucination, artificial intelligence, machine learning, LLM, generative AI. Note: AI, artificial intelligence, machine learning, and LLM always go under Technology."),
+        ("Economy", "Business / finance / markets / corporate management / marketing. Examples: stock prices, earnings reports, startup funding."),
+        ("Health", "Medicine / the body / nutrition / mental health / illness. Examples: gut microbiome, sleep, vaccines. Note: AI hallucination belongs to Technology, not Health."),
+        ("Design", "UI/UX / graphic design / product design / architectural design. Examples: Figma, typography."),
+        ("Academic", "Research / papers / academic fields / education / theory. Examples: mathematics, physics, PMBOK, academic conferences."),
+        ("Art", "Fine art / music / painting / literature / creative work. Examples: contemporary art, novels."),
+        ("News", "Current affairs / politics / incidents / society at large. Examples: elections, legal reforms, disasters."),
+        ("Sports", "Competitions / athletes / teams / matches. Examples: soccer, Shohei Ohtani. Note: people unrelated to sports should not go under Sports."),
+        ("Entertainment", "Movies / TV / games / celebrities / leisure. Examples: films, streaming services."),
+        ("Other", "Anything that does not clearly fit the categories above. Ambiguous names of people/organizations and generic terms (e.g. \"man\", \"company\", \"user\") go here."),
+    ]
+
+    private static let enFirstPassTieBreakers = """
+        - Clear technical terms (AI / artificial intelligence / machine learning / LLM / generative AI / programming / cloud computing) always go under Technology (counterexample: "AI hallucination" is Technology, not Health)
+        - Disease / nutrition / sleep / mental health / medicine always go under Health (counterexample: the AI in "medical AI" is Technology)
+        - Stock prices / earnings / funding / marketing / management always go under Economy
+        - Competitions / athletes / matches / teams always go under Sports (counterexample: people unrelated to sports should not go under Sports)
+        - Politics / incidents / disasters / legal reform always go under News
         """
 }

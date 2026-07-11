@@ -4,6 +4,12 @@
     "widget.description" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shows an ambient display of the card AI thinks you should explore now."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27,6 +33,12 @@
     "widget.empty.mediumHint" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Try saving an article or asking a question in AI Chat"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -50,6 +62,12 @@
     "widget.empty.tapToStart" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tap to start learning"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -73,6 +91,12 @@
     "widget.empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No Learning Cards"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -96,6 +120,12 @@
     "widget.label.deepDive" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Room to Go Deeper"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -119,6 +149,12 @@
     "widget.label.needsUpdate" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Needs Update"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -142,6 +178,12 @@
     "widget.label.newKnowledge" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "New Knowledge"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -165,6 +207,12 @@
     "widget.label.review" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Review"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -188,6 +236,12 @@
     "widget.label.shallow" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shallow Understanding"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -211,6 +265,12 @@
     "widget.today.title" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Today's Learning"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
