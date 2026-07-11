@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_TSV = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.tsv"
 DEFAULT_XCSTRINGS = REPO_ROOT / "KnowledgeBase" / "Localization" / "Localizable.xcstrings"
 
-TARGET_LOCALES = ["zh-Hans", "zh-Hant", "en"]
+TARGET_LOCALES = ["zh-Hans", "zh-Hant", "en", "ko", "es", "de"]
 
 FORMAT_SPECIFIER_RE = re.compile(r"%(?:\d+\$)?(?:@|lld|ld|d|f|u|s)")
 

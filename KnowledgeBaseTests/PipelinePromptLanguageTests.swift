@@ -47,6 +47,29 @@ struct PipelinePromptLanguageTests {
         #expect(!enPrompt.contains("すべて日本語で出力してください"))
     }
 
+    // i18n Phase C (韓国語/スペイン語/ドイツ語対応): 代表 builder 1 つで .ko/.es/.de の
+    // 出力言語ヘッダ切替を検証する (他 builder への波及は既存の zh/en テストと同じ経路のため省略)。
+    @Test func testKnowledgeExtractorBuildPromptSwitchesToKorean() {
+        let koPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .ko)
+        #expect(koPrompt.contains("出力言語: 한국어"))
+        #expect(koPrompt.contains("모든 출력은 한국어로 작성하세요."))
+        #expect(!koPrompt.contains("すべて日本語で出力してください"))
+    }
+
+    @Test func testKnowledgeExtractorBuildPromptSwitchesToSpanish() {
+        let esPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .es)
+        #expect(esPrompt.contains("出力言語: Español"))
+        #expect(esPrompt.contains("Escribe toda la salida en español."))
+        #expect(!esPrompt.contains("すべて日本語で出力してください"))
+    }
+
+    @Test func testKnowledgeExtractorBuildPromptSwitchesToGerman() {
+        let dePrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .de)
+        #expect(dePrompt.contains("出力言語: Deutsch"))
+        #expect(dePrompt.contains("Schreibe die gesamte Ausgabe auf Deutsch."))
+        #expect(!dePrompt.contains("すべて日本語で出力してください"))
+    }
+
     // MARK: - ChatService.buildPrompt
 
     @Test func testChatServiceBuildPromptSwitchesOutputLanguage() {

@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "Knowledge Base",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "Speichert automatisch in Safari geöffnete Seiten in Knowledge Base",
+        "description": "Description of what the extension does."
+    }
+}

@@ -56,7 +56,9 @@ enum LanguageDetector {
     /// 候補 locale) と整合させている。zh は `PipelineLanguage.matches(detected:)` と同じ
     /// `hasPrefix("zh")` 判定を別途行う (rawValue が "zh" / "zh-Hans" / "zh-Hant" のどれで
     /// 来ても弾かないため、専用チェックにしている)。
-    static let translationSupportedLanguageCodes: Set<String> = ["ja", "en", "ko"]
+    /// i18n Phase C: es/de パイプライン追加に伴い es/de も追加 (これらのパイプラインで ja/en 等の
+    /// 記事を翻訳対象にするため)。
+    static let translationSupportedLanguageCodes: Set<String> = ["ja", "en", "ko", "es", "de"]
 
     /// `.other(raw)` の raw (NLLanguage.rawValue 相当、BCP-47) が翻訳対応言語かどうかを判定する。
     static func isTranslationSupported(_ raw: String) -> Bool {

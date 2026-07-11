@@ -5,7 +5,7 @@
 //  spec 015 — Tag より上位の階層として 10 個のシードカテゴリーを hardcoded で定義。
 //  Tag.categoryRaw に保存される値は CategorySeed.allSeeds のいずれかの name。
 //
-//  i18n Phase B: シードは PipelineLanguage 別に用意する (ja / zh-Hans / zh-Hant / en)。
+//  i18n Phase B/C: シードは PipelineLanguage 別に用意する (ja / zh-Hans / zh-Hant / en / ko / es / de)。
 //  既定引数なしの API (`allSeeds` / `otherCategory` / `seedDefinitions` / `promptCandidatesWithDefinitions` /
 //  `promptCandidatesString` / `firstPassTieBreakers`) は `PipelineLanguage.current` を参照する computed
 //  property のままなので、既存の全呼び出し箇所は無改修で動く (既定 ja では完全に同じ値を返す)。
@@ -78,6 +78,9 @@ enum CategorySeed {
         case .zhHans: return zhHansSeeds
         case .zhHant: return zhHantSeeds
         case .en: return enSeeds
+        case .ko: return koSeeds
+        case .es: return esSeeds
+        case .de: return deSeeds
         }
     }
 
@@ -88,6 +91,9 @@ enum CategorySeed {
         case .zhHans: return Category(name: "其他", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
         case .zhHant: return Category(name: "其他", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
         case .en: return Category(name: "Other", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
+        case .ko: return Category(name: "기타", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
+        case .es: return Category(name: "Otros", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
+        case .de: return Category(name: "Sonstiges", englishName: "Other", order: 9, symbolName: "ellipsis.circle")
         }
     }
 
@@ -98,6 +104,9 @@ enum CategorySeed {
         case .zhHans: return zhHansSeedDefinitions
         case .zhHant: return zhHantSeedDefinitions
         case .en: return enSeedDefinitions
+        case .ko: return koSeedDefinitions
+        case .es: return esSeedDefinitions
+        case .de: return deSeedDefinitions
         }
     }
 
@@ -108,6 +117,9 @@ enum CategorySeed {
         case .zhHans: return zhHansFirstPassTieBreakers
         case .zhHant: return zhHantFirstPassTieBreakers
         case .en: return enFirstPassTieBreakers
+        case .ko: return koFirstPassTieBreakers
+        case .es: return esFirstPassTieBreakers
+        case .de: return deFirstPassTieBreakers
         }
     }
 
@@ -268,5 +280,113 @@ enum CategorySeed {
         - Stock prices / earnings / funding / marketing / management always go under Economy
         - Competitions / athletes / matches / teams always go under Sports (counterexample: people unrelated to sports should not go under Sports)
         - Politics / incidents / disasters / legal reform always go under News
+        """
+
+    // MARK: - ko (한국어)
+
+    private static let koSeeds: [Category] = [
+        Category(name: "기술",         englishName: "Technology",    order: 0, symbolName: "cpu"),
+        Category(name: "경제",         englishName: "Economy",       order: 1, symbolName: "chart.line.uptrend.xyaxis"),
+        Category(name: "건강",         englishName: "Health",        order: 2, symbolName: "heart"),
+        Category(name: "디자인",       englishName: "Design",        order: 3, symbolName: "paintbrush"),
+        Category(name: "학술",         englishName: "Academic",      order: 4, symbolName: "book"),
+        Category(name: "예술",         englishName: "Art",           order: 5, symbolName: "paintpalette"),
+        Category(name: "뉴스",         englishName: "News",          order: 6, symbolName: "newspaper"),
+        Category(name: "스포츠",       englishName: "Sports",        order: 7, symbolName: "figure.run"),
+        Category(name: "엔터테인먼트", englishName: "Entertainment", order: 8, symbolName: "tv"),
+        Category(name: "기타",         englishName: "Other",         order: 9, symbolName: "ellipsis.circle"),
+    ]
+
+    private static let koSeedDefinitions: [(name: String, definition: String)] = [
+        ("기술", "AI/프로그래밍/소프트웨어/기기/IT 전반. 예: Claude, RAG, embedding, GitHub, 할루시네이션, 인공지능, 머신러닝, LLM, 생성형 AI. ※AI・인공지능・머신러닝・LLM은 망설이지 말고 기술로 분류."),
+        ("경제", "비즈니스/금융/시장/기업 경영/마케팅. 예: 주가, 실적 발표, 스타트업 자금 조달."),
+        ("건강", "의료/신체/영양/정신 건강/질병. 예: 장내 미생물, 수면, 백신. ※AI의 할루시네이션은 건강이 아니라 기술."),
+        ("디자인", "UI/UX/그래픽/제품 디자인/건축 디자인. 예: Figma, 타이포그래피."),
+        ("학술", "연구/논문/학문 분야/교육/이론. 예: 수학, 물리학, PMBOK, 학회."),
+        ("예술", "예술/음악/회화/문학/창작. 예: 현대 미술, 소설."),
+        ("뉴스", "시사/정치/사건/사회 전반. 예: 선거, 법 개정, 재해."),
+        ("스포츠", "경기/선수/팀/시합. 예: 축구, 오타니 쇼헤이. ※스포츠 선수가 아닌 인물은 스포츠로 분류하지 않는다."),
+        ("엔터테인먼트", "영화/TV/게임/연예/오락. 예: 영화 작품, 스트리밍 서비스."),
+        ("기타", "위 어디에도 명확히 해당하지 않는 것. 판단하기 어려운 인명・조직명・일반어 (남성/기업/사용자 등) 는 여기로 분류."),
+    ]
+
+    private static let koFirstPassTieBreakers = """
+        - 명확한 기술 용어 (AI / 인공지능 / 머신러닝 / LLM / 생성형 AI / 프로그래밍 / 클라우드) 는 망설이지 말고 기술 (반례: "AI의 할루시네이션"은 건강이 아니라 기술)
+        - 질병 / 영양 / 수면 / 정신 건강 / 의료 는 망설이지 말고 건강 (반례: "의료 AI"의 AI는 기술)
+        - 주가 / 실적 / 자금 조달 / 마케팅 / 경영 은 망설이지 말고 경제
+        - 경기 / 선수 / 시합 / 팀 은 망설이지 말고 스포츠 (반례: 스포츠와 무관한 인물은 스포츠로 분류하지 않는다)
+        - 정치 / 사건 / 재해 / 법 개정 은 망설이지 말고 뉴스
+        """
+
+    // MARK: - es (Español)
+
+    private static let esSeeds: [Category] = [
+        Category(name: "Tecnología",     englishName: "Technology",    order: 0, symbolName: "cpu"),
+        Category(name: "Economía",       englishName: "Economy",       order: 1, symbolName: "chart.line.uptrend.xyaxis"),
+        Category(name: "Salud",          englishName: "Health",        order: 2, symbolName: "heart"),
+        Category(name: "Diseño",         englishName: "Design",        order: 3, symbolName: "paintbrush"),
+        Category(name: "Academia",       englishName: "Academic",      order: 4, symbolName: "book"),
+        Category(name: "Arte",           englishName: "Art",           order: 5, symbolName: "paintpalette"),
+        Category(name: "Noticias",       englishName: "News",          order: 6, symbolName: "newspaper"),
+        Category(name: "Deportes",       englishName: "Sports",        order: 7, symbolName: "figure.run"),
+        Category(name: "Entretenimiento", englishName: "Entertainment", order: 8, symbolName: "tv"),
+        Category(name: "Otros",          englishName: "Other",         order: 9, symbolName: "ellipsis.circle"),
+    ]
+
+    private static let esSeedDefinitions: [(name: String, definition: String)] = [
+        ("Tecnología", "IA/programación/software/gadgets/TI en general. Ejemplos: Claude, RAG, embedding, GitHub, alucinación, inteligencia artificial, aprendizaje automático, LLM, IA generativa. Nota: IA, inteligencia artificial, aprendizaje automático y LLM siempre van en Tecnología."),
+        ("Economía", "Negocios/finanzas/mercados/gestión empresarial/marketing. Ejemplos: precio de acciones, resultados financieros, financiación de startups."),
+        ("Salud", "Medicina/el cuerpo/nutrición/salud mental/enfermedad. Ejemplos: microbioma intestinal, sueño, vacunas. Nota: la alucinación de la IA pertenece a Tecnología, no a Salud."),
+        ("Diseño", "UI/UX/diseño gráfico/diseño de producto/diseño arquitectónico. Ejemplos: Figma, tipografía."),
+        ("Academia", "Investigación/artículos/campos académicos/educación/teoría. Ejemplos: matemáticas, física, PMBOK, congresos académicos."),
+        ("Arte", "Bellas artes/música/pintura/literatura/creación. Ejemplos: arte contemporáneo, novelas."),
+        ("Noticias", "Actualidad/política/sucesos/sociedad en general. Ejemplos: elecciones, reformas legales, desastres."),
+        ("Deportes", "Competiciones/atletas/equipos/partidos. Ejemplos: fútbol, Shohei Ohtani. Nota: las personas no relacionadas con el deporte no deben clasificarse en Deportes."),
+        ("Entretenimiento", "Películas/TV/videojuegos/famosos/ocio. Ejemplos: películas, servicios de streaming."),
+        ("Otros", "Cualquier cosa que no encaje claramente en las categorías anteriores. Los nombres ambiguos de personas/organizaciones y los términos genéricos (p. ej. \"hombre\", \"empresa\", \"usuario\") van aquí."),
+    ]
+
+    private static let esFirstPassTieBreakers = """
+        - Los términos técnicos claros (IA / inteligencia artificial / aprendizaje automático / LLM / IA generativa / programación / computación en la nube) siempre van en Tecnología (contraejemplo: "alucinación de la IA" es Tecnología, no Salud)
+        - Enfermedad / nutrición / sueño / salud mental / medicina siempre van en Salud (contraejemplo: la IA en "IA médica" es Tecnología)
+        - Precio de acciones / resultados financieros / financiación / marketing / gestión siempre van en Economía
+        - Competiciones / atletas / partidos / equipos siempre van en Deportes (contraejemplo: las personas no relacionadas con el deporte no van en Deportes)
+        - Política / sucesos / desastres / reformas legales siempre van en Noticias
+        """
+
+    // MARK: - de (Deutsch)
+
+    private static let deSeeds: [Category] = [
+        Category(name: "Technologie",  englishName: "Technology",    order: 0, symbolName: "cpu"),
+        Category(name: "Wirtschaft",   englishName: "Economy",       order: 1, symbolName: "chart.line.uptrend.xyaxis"),
+        Category(name: "Gesundheit",   englishName: "Health",        order: 2, symbolName: "heart"),
+        Category(name: "Design",       englishName: "Design",        order: 3, symbolName: "paintbrush"),
+        Category(name: "Wissenschaft", englishName: "Academic",      order: 4, symbolName: "book"),
+        Category(name: "Kunst",        englishName: "Art",           order: 5, symbolName: "paintpalette"),
+        Category(name: "Nachrichten",  englishName: "News",          order: 6, symbolName: "newspaper"),
+        Category(name: "Sport",        englishName: "Sports",        order: 7, symbolName: "figure.run"),
+        Category(name: "Unterhaltung", englishName: "Entertainment", order: 8, symbolName: "tv"),
+        Category(name: "Sonstiges",    englishName: "Other",         order: 9, symbolName: "ellipsis.circle"),
+    ]
+
+    private static let deSeedDefinitions: [(name: String, definition: String)] = [
+        ("Technologie", "KI/Programmierung/Software/Gadgets/IT im Allgemeinen. Beispiele: Claude, RAG, Embedding, GitHub, Halluzination, künstliche Intelligenz, maschinelles Lernen, LLM, generative KI. Hinweis: KI, künstliche Intelligenz, maschinelles Lernen und LLM gehören immer zu Technologie."),
+        ("Wirtschaft", "Geschäft/Finanzen/Märkte/Unternehmensführung/Marketing. Beispiele: Aktienkurse, Geschäftsberichte, Startup-Finanzierung."),
+        ("Gesundheit", "Medizin/Körper/Ernährung/psychische Gesundheit/Krankheit. Beispiele: Darmmikrobiom, Schlaf, Impfstoffe. Hinweis: KI-Halluzinationen gehören zu Technologie, nicht zu Gesundheit."),
+        ("Design", "UI/UX/Grafikdesign/Produktdesign/Architekturdesign. Beispiele: Figma, Typografie."),
+        ("Wissenschaft", "Forschung/Fachartikel/Wissenschaftsbereiche/Bildung/Theorie. Beispiele: Mathematik, Physik, PMBOK, wissenschaftliche Konferenzen."),
+        ("Kunst", "Bildende Kunst/Musik/Malerei/Literatur/kreatives Schaffen. Beispiele: zeitgenössische Kunst, Romane."),
+        ("Nachrichten", "Aktuelles/Politik/Ereignisse/Gesellschaft im Allgemeinen. Beispiele: Wahlen, Gesetzesreformen, Katastrophen."),
+        ("Sport", "Wettkämpfe/Athleten/Teams/Spiele. Beispiele: Fußball, Shohei Ohtani. Hinweis: Personen ohne Sportbezug gehören nicht zu Sport."),
+        ("Unterhaltung", "Filme/TV/Spiele/Prominente/Freizeit. Beispiele: Filme, Streaming-Dienste."),
+        ("Sonstiges", "Alles, was nicht eindeutig in die obigen Kategorien passt. Mehrdeutige Namen von Personen/Organisationen und allgemeine Begriffe (z. B. „Mann“, „Unternehmen“, „Nutzer“) gehören hierher."),
+    ]
+
+    private static let deFirstPassTieBreakers = """
+        - Eindeutige Fachbegriffe (KI / künstliche Intelligenz / maschinelles Lernen / LLM / generative KI / Programmierung / Cloud Computing) gehören immer zu Technologie (Gegenbeispiel: „KI-Halluzination“ ist Technologie, nicht Gesundheit)
+        - Krankheit / Ernährung / Schlaf / psychische Gesundheit / Medizin gehören immer zu Gesundheit (Gegenbeispiel: die KI in „medizinische KI“ ist Technologie)
+        - Aktienkurse / Geschäftsberichte / Finanzierung / Marketing / Unternehmensführung gehören immer zu Wirtschaft
+        - Wettkämpfe / Athleten / Spiele / Teams gehören immer zu Sport (Gegenbeispiel: Personen ohne Sportbezug gehören nicht zu Sport)
+        - Politik / Ereignisse / Katastrophen / Gesetzesreformen gehören immer zu Nachrichten
         """
 }
