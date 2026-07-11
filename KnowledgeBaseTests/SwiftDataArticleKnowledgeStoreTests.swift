@@ -124,6 +124,25 @@ struct SwiftDataArticleKnowledgeStoreTests {
         #expect(pending.contains(where: { $0.id == article.id }))
     }
 
+    // AI 復旧機能: skipped (Apple Intelligence 不可時に書かれた) も再試行対象に含める。
+    @Test func fetchPendingArticlesIncludesArticleWithSkippedKnowledge() throws {
+        let container = try makeContainer()
+        let store = SwiftDataArticleKnowledgeStore(context: container.mainContext)
+        let article = Article(url: "https://example.com/a", title: "A")
+        let body = ArticleBody(
+            article: article,
+            status: .succeeded,
+            extractedText: "本文..."
+        )
+        container.mainContext.insert(article)
+        container.mainContext.insert(body)
+        article.body = body
+        try store.upsertStatus(article: article, status: .skipped)
+
+        let pending = try store.fetchPendingArticles()
+        #expect(pending.contains(where: { $0.id == article.id }))
+    }
+
     @Test func cascadeDeletesKnowledgeWhenArticleDeleted() throws {
         let container = try makeContainer()
         let store = SwiftDataArticleKnowledgeStore(context: container.mainContext)

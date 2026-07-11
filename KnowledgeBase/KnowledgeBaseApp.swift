@@ -476,6 +476,20 @@ struct KnowledgeBaseApp: App {
             tracker: understandingTrackerService
         )
 
+        // AI 復旧機能: Apple Intelligence 復活検知で skip/劣化生成された知識・まとめを自動再生成する runner。
+        let aiRecoveryRunner: AIRecoveryRunnerProtocol = DefaultAIRecoveryRunner(
+            context: context,
+            knowledgeService: knowledgeService,
+            conceptSynthesisService: conceptSynthesisService,
+            availabilityChecker: availability,
+            processingMonitor: processingMonitor,
+            refreshTrigger: refreshTrigger
+        )
+        // unavailable → available 遷移を検知したら fire-and-forget で復旧を走らせる。
+        aiAvailabilityMonitor.onBecameAvailable = { [weak aiRecoveryRunner] in
+            Task { await aiRecoveryRunner?.runIfNeeded() }
+        }
+
         // ServiceContainer に登録 (再抽出ボタン等で参照)
         serviceContainer.enrichmentService = enrichmentService
         serviceContainer.bodyService = bodyService
@@ -512,6 +526,8 @@ struct KnowledgeBaseApp: App {
         serviceContainer.healthScoreService = DefaultHealthScoreService(context: context)
         // spec 095: ユーザー訂正の継続実行コーディネータ (画面を閉じても処理継続)。
         serviceContainer.correctionCoordinator = ArticleCorrectionCoordinator()
+        // AI 復旧機能: Apple Intelligence 復活検知で自動再生成する runner。
+        serviceContainer.aiRecoveryRunner = aiRecoveryRunner
 
         // 既存記事の backfill: enrichment → body → knowledge は依存 chain のため直列維持。
         await enrichmentService.backfillAll()
@@ -572,6 +588,12 @@ struct KnowledgeBaseApp: App {
         // spec 076: 起動毎に整理ループを 1 バッチ進める (resumable・軽量、NEVER STOP)。
         // fire-and-forget で起動をブロックしない。AI 呼び出しは FM ゲートで直列化される。
         Task { _ = await lintEngine.runBatch(maxTags: 15) }
+
+        // AI 復旧機能: 起動時に既に available なら一度だけ復旧を走らせる (起動をまたいだ復旧)。
+        // fire-and-forget で起動をブロックしない。
+        if availability.isAvailable {
+            Task { await aiRecoveryRunner.runIfNeeded() }
+        }
 
         // spec 071 (token 実測、DEBUG 専用): 各 @Generable スキーマの実トークンをログ出力。
         // AI 生成は呼ばない (tokenCount のみ)。overflow 真因の確定に使う。

@@ -182,9 +182,12 @@ final class SwiftDataArticleKnowledgeStore: ArticleKnowledgeStoreProtocol {
 
             // 2) 中間状態 (extracting / pending) で残骸になった ExtractedKnowledge を持つ Article
             // app crash / device lock 等で stale state に陥った場合の自動回復対象。
+            // AI 復旧機能: skipped (Apple Intelligence 不可時に書かれた) も再試行対象に含める。
+            // extract() 冒頭の availability guard が再び skipped を書くだけの安全な no-op ループになる
+            // (AI 不可のまま) か、AI 復活後は自然に再抽出される。
             var staleDescriptor = FetchDescriptor<ExtractedKnowledge>(
                 predicate: #Predicate<ExtractedKnowledge> {
-                    $0.statusRaw == "extracting" || $0.statusRaw == "pending"
+                    $0.statusRaw == "extracting" || $0.statusRaw == "pending" || $0.statusRaw == "skipped"
                 }
             )
             staleDescriptor.fetchLimit = 1000

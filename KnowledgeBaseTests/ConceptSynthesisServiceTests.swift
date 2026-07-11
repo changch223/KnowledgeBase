@@ -199,6 +199,76 @@ struct ConceptSynthesisServiceTests {
         #expect(session.conceptSynthesisCallCount == 1)
     }
 
+    // MARK: - AI 復旧機能: Foundation 経路の合成成功で synthesizedWithoutAI = false になる
+
+    @Test func testResynthesizeFoundationSuccessMarksSynthesizedWithoutAIFalse() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let articleA = makeArticle(url: "a", title: "Apple A", categoryRaw: "テクノロジー", entityNames: ["Apple"], in: context)
+        let articleB = makeArticle(url: "b", title: "Apple B", categoryRaw: "テクノロジー", entityNames: ["Apple"], in: context)
+        let page = ConceptPage(
+            name: "Apple",
+            categoryRaw: "テクノロジー",
+            relatedArticles: [articleA, articleB],
+            isStale: true,
+            synthesizedWithoutAI: true  // 過去に劣化生成された印を反転できることを検証
+        )
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextConceptSynthesisResult = .success(ConceptSynthesisOutput(
+            summary: "Apple は iPhone を販売する企業である。",
+            crossSourceInsights: []
+        ))
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(page.synthesizedWithoutAI == false)
+    }
+
+    // MARK: - AI 復旧機能: bodyMarkdown 生成中に availability が落ちると synthesizedWithoutAI = true
+
+    @Test func testResynthesizeBodyMarkdownAvailabilityDropMarksSynthesizedWithoutAITrue() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let articleA = makeArticle(url: "a", title: "Apple A", categoryRaw: "テクノロジー", entityNames: ["Apple"], in: context)
+        let articleB = makeArticle(url: "b", title: "Apple B", categoryRaw: "テクノロジー", entityNames: ["Apple"], in: context)
+        let page = ConceptPage(
+            name: "Apple",
+            categoryRaw: "テクノロジー",
+            relatedArticles: [articleA, articleB],
+            isStale: true
+        )
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextConceptSynthesisResult = .success(ConceptSynthesisOutput(
+            summary: "Apple は iPhone を販売する企業である。",
+            crossSourceInsights: []
+        ))
+        // 1 回目 (トップレベル guard) は available、2 回目 (generateBodyMarkdown 内) は unavailable に落ちる想定。
+        let checker = SequencedAvailabilityChecker([true, false])
+        let fallback = FallbackConceptSynthesisService(context: context, refreshTrigger: nil)
+        let service = FoundationModelsConceptSynthesisService(
+            session: session,
+            availability: checker,
+            fallback: fallback,
+            embeddingService: nil,
+            context: context,
+            refreshTrigger: nil
+        )
+
+        await service.resynthesize(page)
+
+        #expect(page.synthesizedWithoutAI == true)
+        #expect(page.bodyMarkdown == page.summary)  // fallback コピー
+    }
+
     // MARK: - 5. resynthesize: threshold 未満 (≤2 件) は 1-shot (chunked 呼ばれない)
     //   Fix (2026-05-23): hierarchicalThreshold を 5→3 に下げたため、2 件で 1-shot 検証
 
@@ -295,6 +365,8 @@ struct ConceptSynthesisServiceTests {
         #expect(session.conceptSynthesisCallCount == 0)  // Foundation 経路は呼ばれない
         #expect(page.isStale == false)
         #expect(page.summary.contains("essence"))  // essence が含まれる
+        // AI 復旧機能: Fallback 合成は劣化生成の印を付ける。
+        #expect(page.synthesizedWithoutAI == true)
     }
 
     // MARK: - 8. Foundation 経路エラー → Fallback service に自動委譲 (safety net)
@@ -330,6 +402,8 @@ struct ConceptSynthesisServiceTests {
         // throws しない、Fallback service が essence 並べた summary を生成
         #expect(page.isStale == false)
         #expect(page.summary.contains("essence"))
+        // AI 復旧機能: safety net で委譲した Fallback 合成も劣化生成の印を付ける。
+        #expect(page.synthesizedWithoutAI == true)
     }
 
     // MARK: - 9. backfillFromExistingArticles: UserDefaults flag で 1 度限り
@@ -508,5 +582,46 @@ struct ConceptSynthesisServiceTests {
     // spec 089: 記事ゼロ / insight ゼロは空配列。
     @Test func testMatchInsightSourcesEmpty() {
         #expect(ConceptSynthesisCommon.matchInsightSources(insights: [], articles: [], embeddingService: nil).isEmpty)
+    }
+
+    // AI 復旧機能: 孤立 ConceptPage (関連記事 0 件) を resynthesize すると synthesizedWithoutAI も
+    // クリアされる (合成対象が無いページを毎トリガ拾い続けるチャーンを止める)。
+    @Test func testOrphanPageWithNoRelatedArticlesClearsSynthesizedWithoutAIFlag() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let page = ConceptPage(
+            name: "孤立概念",
+            categoryRaw: "テクノロジー",
+            relatedArticles: [],
+            isStale: true,
+            synthesizedWithoutAI: true
+        )
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(page.isStale == false)
+        #expect(page.synthesizedWithoutAI == false)
+    }
+}
+
+// MARK: - AI 復旧機能: isAvailable を呼び出し順に切り替える Mock (mid-flight availability drop 再現用)
+// internal 可視性 (AIRecoveryRunnerTests.swift からも同パターンで流用するため)。
+
+final class SequencedAvailabilityChecker: AvailabilityChecker, @unchecked Sendable {
+    private var remaining: [Bool]
+
+    init(_ sequence: [Bool]) {
+        self.remaining = sequence
+    }
+
+    var isAvailable: Bool {
+        guard !remaining.isEmpty else { return true }
+        return remaining.removeFirst()
     }
 }

@@ -36,6 +36,11 @@ final class AIAvailabilityMonitor {
     private(set) var unavailabilityReason: AppleIntelligenceUnavailabilityReason?
     private var isDismissed: Bool = false
 
+    /// AI 復旧機能: unavailable → available に遷移した時に一度だけ呼ばれる。
+    /// monitor 自体は UI 非依存を維持するため、AIRecoveryRunner の起動は closure DI で外部に委ねる
+    /// (KnowledgeTreeApp bootstrap が配線する)。
+    var onBecameAvailable: (() -> Void)?
+
     init(
         checker: AvailabilityChecker = SystemLanguageModelAvailabilityChecker(),
         dismissStore: AIAvailabilityDismissStore = UserDefaultsAIAvailabilityDismissStore()
@@ -61,6 +66,9 @@ final class AIAvailabilityMonitor {
         applyDismissState(for: newReason)
         if newReason == nil {
             stopTimer()
+            // guard の non-change 早期 return により、ここに来た時点で直前は必ず unavailable だった
+            // (= unavailable → available への遷移が確定)。
+            onBecameAvailable?()
         } else {
             startTimerIfNeeded()
         }
