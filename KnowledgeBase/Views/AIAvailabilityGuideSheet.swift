@@ -62,19 +62,24 @@ struct AIAvailabilityGuideSheet: View {
         }
     }
 
-    // spec: 「リンクと手順の併記」— App-prefs リンクが効かない端末でも手順で迷わないように、
-    // Link と番号手順を常に両方表示する。
+    // spec: 「アイコン付き手順 + 設定 App だけを開く」— App-prefs の私用スキームは iOS 18+ で
+    // 正しいペインに飛ばせないため、リンクで正確なペインへの着地を約束することはやめ、
+    // 素の設定 App を開く導線 (openAISettings、1 行目) + アイコン付き番号手順で説明を主役にする。
     private var notEnabledSection: some View {
         Section {
-            stepRow(number: 1, textKey: "aiAvailability.guide.notEnabled.step1")
-            stepRow(number: 2, textKey: "aiAvailability.guide.notEnabled.step2")
-            stepRow(number: 3, textKey: "aiAvailability.guide.notEnabled.step3")
-            if let url = URL(string: AIAvailabilityCopy.settingsURLString) {
-                Link(destination: url) {
-                    Label("aiAvailability.guide.openSettings", systemImage: "arrow.up.forward.app")
-                }
-                .accessibilityIdentifier("aiAvailability.guideSheet.openSettingsLink")
+            Button {
+                AIAvailabilityCopy.openAISettings()
+            } label: {
+                iconStepRow(number: 1, icon: "gearshape", textKey: "aiAvailability.guide.notEnabled.step1")
             }
+            .accessibilityIdentifier("aiAvailability.guideSheet.openSettingsLink")
+
+            iconStepRow(number: 2, icon: "sparkles", textKey: "aiAvailability.guide.notEnabled.step2", emphasized: true)
+            iconStepRow(number: 3, icon: "switch.2", textKey: "aiAvailability.guide.notEnabled.step3")
+
+            Text("aiAvailability.guide.openSettings.hint")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         } header: {
             Text("aiAvailability.guide.notEnabled.header")
         }
@@ -82,8 +87,8 @@ struct AIAvailabilityGuideSheet: View {
 
     private var modelNotReadySection: some View {
         Section {
-            stepRow(number: 1, textKey: "aiAvailability.guide.modelNotReady.step1")
-            stepRow(number: 2, textKey: "aiAvailability.guide.modelNotReady.step2")
+            iconStepRow(number: 1, icon: "wifi", textKey: "aiAvailability.guide.modelNotReady.step1")
+            iconStepRow(number: 2, icon: "gearshape", textKey: "aiAvailability.guide.modelNotReady.step2")
         } header: {
             Text("aiAvailability.guide.modelNotReady.header")
         } footer: {
@@ -107,21 +112,28 @@ struct AIAvailabilityGuideSheet: View {
         }
     }
 
-    private func stepRow(number: Int, textKey: String) -> some View {
-        HStack(alignment: .top, spacing: DS.Spacing.lg) {
+    /// アイコン付き番号ステップ行。emphasized で強調 (太字) にできる (「Apple Intelligence と
+    /// Siri」を選ぶ、のように選択を誤りやすい手順を目立たせるため)。
+    private func iconStepRow(number: Int, icon: String, textKey: String, emphasized: Bool = false) -> some View {
+        HStack(alignment: .top, spacing: DS.Spacing.md) {
             Text(verbatim: "\(number).")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text(LocalizedStringKey(textKey))
+            Image(systemName: icon)
                 .font(.body)
+                .foregroundStyle(DS.Color.actionBlue)
+                .frame(width: 20)
+            Text(LocalizedStringKey(textKey))
+                .font(emphasized ? .body.weight(.semibold) : .body)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private var iconName: String {
+    /// internal (private でなく): AIAvailabilitySymbolTests から SF Symbol 実在検証で参照するため。
+    var iconName: String {
         switch reason {
         case .deviceNotEligible:           return "iphone.slash"
-        case .appleIntelligenceNotEnabled: return "sparkles.slash"
+        case .appleIntelligenceNotEnabled: return "sparkles"
         case .modelNotReady:               return "arrow.down.circle"
         case .unknown:                     return "exclamationmark.bubble"
         }

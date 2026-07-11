@@ -10,6 +10,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AIAvailabilityBanner: View {
     let reason: AppleIntelligenceUnavailabilityReason
@@ -44,10 +45,11 @@ struct AIAvailabilityBanner: View {
         .accessibilityIdentifier("aiAvailability.topBanner")
     }
 
-    private var iconName: String {
+    /// internal (private でなく): AIAvailabilitySymbolTests から SF Symbol 実在検証で参照するため。
+    var iconName: String {
         switch reason {
         case .deviceNotEligible:           return "iphone.slash"
-        case .appleIntelligenceNotEnabled: return "sparkles.slash"
+        case .appleIntelligenceNotEnabled: return "sparkles"
         case .modelNotReady:               return "arrow.down.circle"
         case .unknown:                     return "exclamationmark.bubble"
         }
@@ -91,7 +93,33 @@ enum AIAvailabilityCopy {
         }
     }
 
-    /// 設定 App の「Apple Intelligence と Siri」ペインへの private URL scheme。
-    /// 私用スキームゆえ将来 OS 更新で解決されなくなる可能性はあるが、実機検証済みの root キー。
-    static let settingsURLString = "App-prefs:root=SIRI"
+    /// 設定 App への deep link。iOS 18+ で「Apple Intelligence と Siri」ペインへの private URL
+    /// サブパス (root=SIRI 等) は軒並み解決されなくなった (Apple Developer Forums thread 759900)。
+    /// 正しいペインへ確実に飛ばせる公開 API は存在しないため、素の "App-prefs:" (パスなし) で
+    /// 設定 App のトップページへの着地だけを狙う。正しいペインへの案内は UI 側の番号手順
+    /// (aiAvailability.guide.notEnabled.step2 等) と footnote (aiAvailability.guide.openSettings.hint)
+    /// で行う。
+    static let settingsURLString = "App-prefs:"
+
+    /// 設定 App を開く。素の App-prefs が失敗 (success==false) したら openSettingsURLString
+    /// (公開 API、必ず設定 App 内には着地する) へ fallback する。
+    @MainActor
+    static func openAISettings() {
+        guard let url = URL(string: settingsURLString) else {
+            openSettingsAppRoot()
+            return
+        }
+        UIApplication.shared.open(url) { success in
+            if !success {
+                openSettingsAppRoot()
+            }
+        }
+    }
+
+    @MainActor
+    private static func openSettingsAppRoot() {
+        if let fallback = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(fallback)
+        }
+    }
 }
