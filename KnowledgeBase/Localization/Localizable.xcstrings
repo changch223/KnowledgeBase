@@ -19246,6 +19246,53 @@
         }
       }
     },
+    "langMismatch.banner.body %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Die Generierungssprache ist weiterhin auf %@ eingestellt. Ändere sie in den Einstellungen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Generation language is still set to %@. Change it in Settings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El idioma de generación sigue configurado en %@. Cámbialo en Ajustes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成言語は%@のままです。変更は設定から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "생성 언어가 아직 %@로 설정되어 있습니다. 설정에서 변경하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "生成语言目前仍为%@。可在设置中更改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "產生語言目前仍為%@。可在設定中更改。"
+          }
+        }
+      }
+    },
     "library.dateGroup.earlier" : {
       "extractionState" : "manual",
       "localizations" : {

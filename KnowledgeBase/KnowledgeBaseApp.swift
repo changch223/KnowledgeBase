@@ -47,6 +47,9 @@ struct KnowledgeBaseApp: App {
     /// spec 061 (P1-6): 永続 store 構築失敗 → in-memory fallback で起動した印。
     /// true なら「データ読み込みに問題」banner を表示する。
     @State private var storeLoadFailed: Bool = UserDefaults.standard.bool(forKey: "spec061_storeLoadFailed")
+    /// 多言語対応: 端末言語と生成言語がズレているときのバナー表示対象。nil なら非表示。
+    /// 起動時 (bootstrap) の 1 回だけ判定してセットする、表示中のリアルタイム再判定はしない。
+    @State private var languageMismatchPipeline: PipelineLanguage?
 
     @MainActor
     init() {
@@ -154,6 +157,8 @@ struct KnowledgeBaseApp: App {
                     }
                     // 同様に独立 View にして aiAvailabilityMonitor の変化を確実に observe する。
                     AIAvailabilityBannerHost(monitor: aiAvailabilityMonitor)
+                    // 多言語対応: 端末言語と生成言語のズレ通知 (AI 可用性バナーと同時成立時は下に並ぶ)。
+                    LanguageMismatchBannerHost(pipelineToNotify: $languageMismatchPipeline)
                 }
             }
             // spec 096: 見直し完了バナーから確認画面 (レポート + 編集 + 確定) を開く。
@@ -248,6 +253,18 @@ struct KnowledgeBaseApp: App {
         // 多言語対応 Phase A: pipeline 言語 (PipelineLanguage) を初回起動時に端末言語からロック。
         // 既に保存済みなら no-op (既存ユーザーは今まで通り ja のまま)。
         UserDefaultsLanguageSettingsStore().lockIfFirstLaunch()
+
+        // 多言語対応: 端末言語と生成言語がズレていたら、起動時に 1 回だけバナーで知らせる
+        // (LanguageMismatchBannerHost)。判定は起動時のみ (表示中のリアルタイム再判定は不要)。
+        // lock 直後は device == pipeline になるため、初回起動でバナーは出ない。
+        let languageMismatchStore = UserDefaultsLanguageMismatchNotificationStore()
+        if LanguageMismatchDetector.shouldShowBanner(
+            devicePreferred: Locale.preferredLanguages,
+            pipeline: PipelineLanguage.current,
+            lastNotifiedCombo: languageMismatchStore.lastNotifiedCombo
+        ) {
+            languageMismatchPipeline = PipelineLanguage.current
+        }
 
         // spec 071: token 実測診断 (デバッグ専用、生成は呼ばない)。入力 truncate 緩和の数値根拠用。
         #if DEBUG

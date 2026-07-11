@@ -11,14 +11,21 @@ import SwiftUI
 
 struct LanguageSettingsView: View {
     private let store: LanguageSettingsStore
+    /// qa 裁定 (LanguageMismatchBanner false-positive 抑止): 意図的な変更が起きたら、
+    /// 変更後の組み合わせを「案内済み」として記録し、次回起動時のバナーを抑止する。
+    private let mismatchStore: LanguageMismatchNotificationStore
 
     @State private var currentLanguage: PipelineLanguage
     @State private var pendingLanguage: PipelineLanguage?
     @State private var showConfirm: Bool = false
     @State private var showRestartBanner: Bool = false
 
-    init(store: LanguageSettingsStore = UserDefaultsLanguageSettingsStore()) {
+    init(
+        store: LanguageSettingsStore = UserDefaultsLanguageSettingsStore(),
+        mismatchStore: LanguageMismatchNotificationStore = UserDefaultsLanguageMismatchNotificationStore()
+    ) {
         self.store = store
+        self.mismatchStore = mismatchStore
         _currentLanguage = State(initialValue: store.currentLanguage())
     }
 
@@ -72,6 +79,13 @@ struct LanguageSettingsView: View {
                     store.change(to: pendingLanguage)
                     currentLanguage = pendingLanguage
                     showRestartBanner = true
+                    // qa 裁定: 意図的な変更なので、この新しい組み合わせを「案内済み」として記録し、
+                    // 次回起動時の LanguageMismatchBanner false-positive を抑止する。
+                    LanguageMismatchDetector.markResolved(
+                        devicePreferred: Locale.preferredLanguages,
+                        pipeline: pendingLanguage,
+                        store: mismatchStore
+                    )
                 }
                 self.pendingLanguage = nil
             }
