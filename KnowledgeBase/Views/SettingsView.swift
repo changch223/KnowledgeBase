@@ -20,7 +20,10 @@ struct SettingsView: View {
     /// 切替後はアプリ再起動が必要 (ModelContainer は launch 時に 1 度だけ構築)。
     @AppStorage(SharedSchema.iCloudSyncFlagKey) private var iCloudSyncEnabled: Bool = false
     @Environment(ServiceContainer.self) private var serviceContainer
+    @Environment(AIAvailabilityMonitor.self) private var aiAvailabilityMonitor
     @State private var showDeleteChatConfirm: Bool = false
+    /// Apple Intelligence ステータス行タップで開く詳細ガイド (unavailable 時のみ)。
+    @State private var showAIAvailabilityGuide: Bool = false
     /// spec 049: onboarding 再表示用
     @State private var showOnboardingReplay: Bool = false
     /// spec 051: iCloud sync ON 確認 alert
@@ -40,6 +43,52 @@ struct SettingsView: View {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
         let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
         return "\(v) (\(b))"
+    }
+
+    /// Apple Intelligence の常設ステータス行。unavailable のときのみタップでガイドシートを開く
+    /// (banner を dismiss した人の逃げ道、dismiss 状態に関係なく常に見える)。
+    @ViewBuilder
+    private var aiAvailabilityStatusRow: some View {
+        let reason = aiAvailabilityMonitor.unavailabilityReason
+        let row = HStack(spacing: DS.Spacing.lg) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(reason == nil ? Color.green : Color.orange)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("settings.aiStatus.entry")
+                Text(aiStatusValueKey(for: reason))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if reason != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        if let reason {
+            Button {
+                showAIAvailabilityGuide = true
+            } label: {
+                row
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.aiStatus.entry")
+        } else {
+            row
+                .accessibilityIdentifier("settings.aiStatus.entry")
+        }
+    }
+
+    private func aiStatusValueKey(for reason: AppleIntelligenceUnavailabilityReason?) -> LocalizedStringKey {
+        switch reason {
+        case nil:                          return "settings.aiStatus.value.available"
+        case .appleIntelligenceNotEnabled: return "settings.aiStatus.value.notEnabled"
+        case .modelNotReady:               return "settings.aiStatus.value.modelNotReady"
+        case .deviceNotEligible:           return "settings.aiStatus.value.deviceNotEligible"
+        case .unknown:                     return "settings.aiStatus.value.unknown"
+        }
     }
 
     var body: some View {
@@ -213,6 +262,13 @@ struct SettingsView: View {
             // spec 059 (P0-3): 旧「近日対応」iCloud placeholder Section を削除。
             // spec 051 で iCloud sync は実装済 (上部の動作する toggle Section が正)。
 
+            // Apple Intelligence の常設ステータス行。banner を閉じた人の逃げ道 (dismiss に関係なく常に見える)。
+            Section {
+                aiAvailabilityStatusRow
+            } header: {
+                Text("settings.section.aiStatus")
+            }
+
             // spec 050: プライバシー + サポート
             Section {
                 if let url = URL(string: "https://github.com/changch223/KnowledgeTree/blob/main/PRIVACY.md") {
@@ -280,6 +336,11 @@ struct SettingsView: View {
         }
         .fullScreenCover(isPresented: $showOnboardingReplay) {
             OnboardingView(isPresented: $showOnboardingReplay)
+        }
+        .sheet(isPresented: $showAIAvailabilityGuide) {
+            if let reason = aiAvailabilityMonitor.unavailabilityReason {
+                AIAvailabilityGuideSheet(reason: reason)
+            }
         }
         .scrollContentBackground(.hidden)
         .background(DS.Color.washiBackground)

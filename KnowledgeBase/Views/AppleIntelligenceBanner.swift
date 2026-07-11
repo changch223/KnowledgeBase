@@ -33,7 +33,7 @@ struct AppleIntelligenceBanner: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
-                if reason == .appleIntelligenceNotEnabled, let url = URL(string: "App-prefs:root=APPLE_INTELLIGENCE_AND_SIRI") {
+                if reason == .appleIntelligenceNotEnabled, let url = URL(string: AIAvailabilityCopy.settingsURLString) {
                     Link(destination: url) {
                         Text("設定 App を開く")
                             .font(.caption.weight(.medium))
