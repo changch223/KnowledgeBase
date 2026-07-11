@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<title>04-save-65</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#c9c3b6; }
+  /* 基準デザイン = 1320x2868。他サイズは .slide を transform scale して等倍出力。 */
+  .slide {
+    position:relative;
+    width:1320px; height:2868px;
+    transform:scale(0.940909,0.937238); transform-origin:0 0;
+    background:#F4EFE6;               /* 和紙 washiBackground */
+    overflow:hidden;
+    font-family:"Hiragino Sans","Noto Sans JP",sans-serif;
+  }
+  /* ===== 上帯 (キャプション) — 見出しベースラインは全 5 枚で固定 ===== */
+  .band {
+    position:absolute; top:0; left:0; right:0; height:560px;
+    padding:112px 96px 0 96px;
+  }
+  .headline {
+    font-family:"Hiragino Mincho ProN","YuMincho","Noto Serif JP",serif;
+    font-weight:700;
+    color:#1C1B19;                    /* 墨 sumiInk */
+    font-size:76px; line-height:1.30;
+    letter-spacing:0.005em;
+  }
+  .headline .accent { color:#3A4A63; }   /* 藍アクセント (キーワードのみ) */
+  .sub {
+    margin-top:30px;
+    font-weight:400;
+    color:#57524A;                    /* 墨中間 sumiMid */
+    font-size:40px; line-height:1.4;
+  }
+  .hairline {
+    position:absolute; left:96px; right:96px; bottom:0;
+    height:2px; background:#D9D2C4;    /* 墨罫 sumiRule */
+  }
+  /* ===== 青海波 (下端・低透明、端末の左右コーナーに覗く) ===== */
+  .seigaiha {
+    position:absolute; left:0; right:0; bottom:0; height:170px;
+    opacity:0.09; pointer-events:none;
+    background-image:
+      radial-gradient(circle at 44px 44px, transparent 32px, #3A4A63 33px 35px, transparent 36px),
+      radial-gradient(circle at 44px 44px, transparent 20px, #3A4A63 21px 23px, transparent 24px);
+    background-size:88px 48px;
+  }
+  /* ===== 端末 (下端ブリード = Apple 公式の定番構図) ===== */
+  .device {
+    position:absolute; top:700px; left:50%;
+    transform:translateX(-50%);
+    width:1100px;                      /* v1 928px → +18% 大型化 */
+    background:#1C1B19;
+    border-radius:88px 88px 0 0;       /* 下端は画面外 → 角丸不要 */
+    padding:12px 12px 0 12px;          /* 薄ベゼル */
+    box-shadow:0 30px 80px rgba(28,27,25,0.18), 0 8px 20px rgba(28,27,25,0.08);
+  }
+  .device .screen {
+    display:block; width:100%; height:auto;
+    border-radius:76px 76px 0 0;
+  }
+  /* ===== コールアウトチップ (1 枚に 1 つだけ) ===== */
+  .chip {
+    position:absolute; z-index:10;
+    display:flex; align-items:center; gap:16px;
+    background:#FCFAF5;
+    border:2px solid #E3DCCB;
+    border-radius:999px;
+    padding:20px 36px;
+    font-weight:600; font-size:38px; color:#1C1B19;
+    box-shadow:0 14px 38px rgba(28,27,25,0.16);
+    white-space:nowrap;
+  }
+  .chip::before {
+    content:""; width:16px; height:16px; border-radius:50%;
+    background:#3A4A63; flex:none;
+  }
+  .chip-right { right:44px; }
+  .chip-left  { left:44px; }
+</style>
+</head>
+<body>
+  <div class="slide" id="slide">
+    <div class="band">
+      <div class="headline">读到就存，<br><span class="accent">两步</span>搞定。</div>
+      <div class="sub">URL・照片・PDF・语音都行</div>
+      <div class="hairline"></div>
+    </div>
+    <div class="seigaiha"></div>
+    <div class="device">
+      <img class="screen" src="../../content%20page.PNG" alt="">
+    </div>
+    <div class="chip chip-right" style="top:1560px">分享即可保存</div>
+  </div>
+</body>
+</html>
