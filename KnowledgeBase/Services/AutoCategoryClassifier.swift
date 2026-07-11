@@ -16,7 +16,9 @@ import os
 
 @Generable
 struct CategoryClassificationOutput: Sendable {
-    @Guide(description: "テクノロジー / 経済 / 健康 / デザイン / 学術 / アート / ニュース / スポーツ / エンタメ / その他 のいずれか 1 つ。完全一致")
+    // i18n Phase B: 候補名は言語別 (CategorySeed / CategoryRegistry) に追従するため、
+    // ここでは特定言語のカテゴリー名を列挙しない。prompt 側の「# カテゴリー候補」で列挙する。
+    @Guide(description: "prompt の候補リストにあるカテゴリー名のいずれか 1 つ。完全一致")
     let categoryName: String
     @Guide(description: "確信度: High / Medium / Low のいずれか 1 つ")
     let confidence: String
@@ -123,7 +125,7 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         let prompt = """
             次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
             必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
-            判断に迷う人名・組織名・一般語は「その他」にしてください。
+            判断に迷う人名・組織名・一般語は「\(other)」にしてください。
             ただし下記の特例に当てはまる場合は、迷わずその分野に分類すること:
             \(CategorySeed.firstPassTieBreakers)
             \(exampleBlock)

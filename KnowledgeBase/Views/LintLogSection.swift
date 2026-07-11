@@ -34,7 +34,7 @@ struct LintLogSummaryLabel: View {
             case .deleteConceptPage, .deleteTag: deleteCount += 1
             case .linkConceptPage:              linkCount += 1
             case .promoteCategory:              promoteCount += 1
-            case .refreshSavedAnswer, .unknown: break
+            case .refreshSavedAnswer, .healCategoryLanguage, .unknown: break
             }
         }
 
@@ -104,6 +104,7 @@ private struct LintLogRow: View {
         case .reclassifyTag:        return "lintLog.action.reclassifyTag"
         case .refreshSavedAnswer:   return "lintLog.action.refreshSavedAnswer"
         case .promoteCategory:      return "lintLog.action.promoteCategory"
+        case .healCategoryLanguage: return "lintLog.action.healCategoryLanguage"
         case .unknown:              return "lintLog.action.unknown"
         }
     }
@@ -117,6 +118,7 @@ private struct LintLogRow: View {
         case .reclassifyTag:        return "tag.fill"
         case .refreshSavedAnswer:   return "arrow.clockwise"
         case .promoteCategory:      return "sparkles"
+        case .healCategoryLanguage: return "globe"
         case .unknown:              return "questionmark.circle"
         }
     }

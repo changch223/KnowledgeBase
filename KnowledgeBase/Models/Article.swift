@@ -39,7 +39,8 @@ final class Article {
     /// Article 削除時は Digest 側 sourceArticles から null 化、Digest 自体は残る。
     @Relationship var digests: [KnowledgeDigest]? = []
 
-    /// spec 021: 文章 embedding (NLEmbedding.sentenceEmbedding(for: .japanese) 経由、
+    /// spec 021: 文章 embedding (NLEmbedding.sentenceEmbedding(for:) 経由、
+    /// i18n Phase B: `PipelineLanguage.nlEmbeddingLanguage` に追従 (既定 `.japanese`、zh は簡体字モデル)、
     /// L2 正規化済み Float Array の byte 表現)。AI Chat retrieval で cosine similarity 計算に使う。
     /// - Data 型 + .externalStorage で SQLite から外出し (1000 articles × 512 floats ≈ 2 MB)
     /// - nil = 未生成 (Apple Intelligence 不可端末 / 旧データ)

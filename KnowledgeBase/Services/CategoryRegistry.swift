@@ -95,9 +95,17 @@ final class CategoryRegistry {
     }
 
     /// 非表示でない全カテゴリ (order 昇順)。空ならレジストリ未 seed とみなし nil。
+    ///
+    /// i18n Phase B (言語混在バグ修正): 端末の言語切替で CategoryRegistry に前の言語の seed
+    /// カテゴリ (例: zh 切替後に残る ja の「テクノロジー」) が混在すると、AutoCategoryClassifier /
+    /// LintEngine の新カテゴリ命名候補に両言語が混じり、「テクノロジー」と「科技」が別分野として
+    /// 並ぶバグになる。ここで現在言語と異なる言語の **seed** カテゴリ (`isSeed == true`) を候補から
+    /// 除外する。動的カテゴリ (`isSeed == false`、AI 昇格) は言語情報を持たないため、たとえ名前が
+    /// 他言語シードと同じでも除外しない (素通し)。
     func activeCategories() -> [CategoryDefinition]? {
         let all = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
-        let active = all.filter { !$0.isHidden }
+        let foreignSeedNames = CategorySeed.foreignSeedNames(excluding: .current)
+        let active = all.filter { !$0.isHidden && !($0.isSeed && foreignSeedNames.contains($0.name)) }
         guard !active.isEmpty else { return nil }
         return active.sorted { $0.order < $1.order }
     }

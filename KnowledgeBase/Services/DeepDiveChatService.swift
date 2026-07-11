@@ -135,10 +135,12 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     // MARK: - private: prompt builders
 
     /// 初回 AI 発話用 prompt — 「ユーザーがこれから何を学びたいか」を聞き出す質問 1 つを返す。
-    private func buildInitialPrompt(for card: UnderstandingCard) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    private func buildInitialPrompt(for card: UnderstandingCard, language: PipelineLanguage = .current) -> String {
         let context = buildContextBlock(for: card)
         return """
         あなたは温かく落ち着いた「家庭教師」です。生徒 (ユーザー) が「\(card.deepDiveTitleFormatArg)」を深く理解できるよう助けてください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         【あなたの役割】
         - 一方的に答えを述べるのではなく、生徒の疑問や知りたいことを引き出しながら少しずつ説明する
@@ -150,15 +152,18 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
         【今すぐの応答】
         生徒との初めての対話です。まず「この概念について、今いちばん気になっていること」を 1 つだけ短く問いかけてください。
         答えではなく、質問を 1 つだけ返してください。前置きや「了解しました」等の応答は不要、いきなり質問を書き始めてください。
+        \(language.outputInstruction)
         """
     }
 
     /// 継続 AI 発話用 prompt — 履歴 + 最新 user 入力に応じて家庭教師として応答。
-    private func buildContinuationPrompt(card: UnderstandingCard, history: [ChatMessage]) -> String {
+    /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
+    private func buildContinuationPrompt(card: UnderstandingCard, history: [ChatMessage], language: PipelineLanguage = .current) -> String {
         let contextBlock = buildContextBlock(for: card)
         let historyBlock = formatHistory(history)
         return """
         あなたは温かく落ち着いた「家庭教師」です。生徒 (ユーザー) が「\(card.deepDiveTitleFormatArg)」を深く理解できるよう助けてください。
+        出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
 
         【あなたの役割】
         - 答えだけでなく、生徒が腹落ちできるよう例え話や逆質問を使う
@@ -172,6 +177,7 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
 
         【今すぐの応答】
         最新の生徒発言に対し、家庭教師として返答してください。前置き不要、いきなり本文を書き始めてください。
+        \(language.outputInstruction)
         """
     }
 

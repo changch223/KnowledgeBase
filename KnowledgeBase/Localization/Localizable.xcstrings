@@ -9144,6 +9144,29 @@
         }
       }
     },
+    "lintLog.action.healCategoryLanguage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分野名の言語統一"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "统一类别语言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "統一類別語言"
+          }
+        }
+      }
+    },
     "lintLog.action.linkConceptPage" : {
       "extractionState" : "manual",
       "localizations" : {

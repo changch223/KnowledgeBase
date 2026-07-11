@@ -11,6 +11,10 @@ import Foundation
 import SwiftData
 @testable import KnowledgeBase
 
+// i18n Phase B (言語混在バグ修正): 一部テストが withPipelineLanguage 経由で
+// PipelineLanguage.current の実プロセス状態 (UserDefaults + static cache) を書き換える。
+// 他 suite との並列実行で読み書きが競合しないよう直列化する (CategoryRegistryTests 等と同パターン)。
+@Suite(.serialized)
 @MainActor
 struct LintEngineTests {
 
@@ -487,5 +491,135 @@ struct LintEngineTests {
 
         let result = await DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker()).runFullLintLoop()
         #expect(result.mergedCount == 0)  // 低 cosine → 統合しない
+    }
+
+    // MARK: - i18n Phase B (言語混在バグ修正): CategorySeed 言語 heal
+
+    @Test func testCategoryLanguageHealMappingIsIndexAligned() {
+        let mapping = DefaultLintEngine.categoryLanguageHealMapping(currentLanguage: .zhHans)
+        #expect(mapping["テクノロジー"] == "科技")
+        #expect(mapping["その他"] == "其他")
+        // 共有名 (健康) は foreign でないので mapping 対象外
+        #expect(mapping["健康"] == nil)
+    }
+
+    @Test func testHealCategoryLanguageRewritesForeignCategoryRawUnderZhHans() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        // Minor 2 の早期 return ガードは「foreign シード名を持つ CategoryDefinition が
+        // registry に無ければ heal 対象なし」と判定する。実運用では起動時に必ず seed 済のため、
+        // ここでも ja (Tag.categoryRaw の元言語) のシードを、言語切替前 (ja のまま) に先行 seed して
+        // 現実の状態を再現する。
+        CategoryRegistry(context: context).seedIfNeeded()
+
+        try await withPipelineLanguage(.zhHans) {
+            // ja のシード名 (テクノロジー) が付いた Tag。zh-Hans パイプラインでは foreign。
+            let article1 = Article(url: "https://example.com/1", title: "記事1")
+            context.insert(article1)
+            let tag = KnowledgeBase.Tag(name: "AI", categoryRaw: "テクノロジー")
+            context.insert(tag)
+            tag.articles = [article1]
+
+            // 共有名 (健康) が付いた Tag。foreign でないので no-op のはず。
+            let article2 = Article(url: "https://example.com/2", title: "記事2")
+            context.insert(article2)
+            let healthTag = KnowledgeBase.Tag(name: "睡眠", categoryRaw: "健康")
+            context.insert(healthTag)
+            healthTag.articles = [article2]
+
+            // ja のシード名 (経済) が付いた ConceptPage。foreign。
+            let page = ConceptPage(name: "半導体", categoryRaw: "経済", summary: "s", updatedAt: .now)
+            context.insert(page)
+            page.relatedArticles = [article1]
+
+            try context.save()
+
+            let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
+            _ = await engine.runFullLintLoop()
+
+            #expect(tag.categoryRaw == "科技")
+            #expect(page.categoryRaw == "经济")
+            #expect(healthTag.categoryRaw == "健康")  // 共有名は no-op
+
+            let logs = (try? context.fetch(FetchDescriptor<LintLog>())) ?? []
+            #expect(logs.contains { $0.action == .healCategoryLanguage })
+        }
+    }
+
+    @Test func testHealCategoryLanguageDoesNotHideForeignSeedCategoryDefinition() async throws {
+        // Blocker fix: heal は CategoryDefinition を非表示化しない (旧仕様は un-hide 経路が無く、
+        // ja→zh→ja のような言語往復のたびに前段の seed が隠れたまま積み上がり、最終的に共有名
+        // (「健康」) 以外の候補が全滅する崩壊バグの原因だった)。
+        // CategoryRegistry.activeCategories() の foreign フィルタが読み出し時に動的除外するので、
+        // レジストリ側の物理的な非表示化は不要。
+        let container = try makeContainer()
+        let context = container.mainContext
+        let registry = CategoryRegistry(context: context)
+        registry.seedIfNeeded()  // ja (既定パイプライン) の 10 シードを seed
+
+        try await withPipelineLanguage(.zhHans) {
+            let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
+            _ = await engine.runFullLintLoop()
+
+            let defs = (try? context.fetch(FetchDescriptor<CategoryDefinition>())) ?? []
+            let tech = defs.first { $0.name == "テクノロジー" }
+            #expect(tech?.isHidden == false)  // foreign シードでも非表示化されない
+            let health = defs.first { $0.name == "健康" }
+            #expect(health?.isHidden == false)  // 共有名は no-op
+        }
+    }
+
+    // MARK: - Blocker fix: 言語 round-trip で分類候補が崩壊しない (qa 再現手順のテスト化)
+
+    @Test func testCategoryLanguageRoundTripDoesNotCollapseValidNames() async throws {
+        // qa 再現条件: ja→zh-Hans→ja と切替えて各段で seedIfNeeded + runFullLintLoop (heal 含む) を
+        // 実行しても、最終状態の validNames が ja シード 10 件のまま (旧バグでは共有名「健康」1 件に
+        // 崩壊していた)。
+        let container = try makeContainer()
+        let context = container.mainContext
+        let registry = CategoryRegistry(context: context)
+
+        try await withPipelineLanguage(.ja) {
+            registry.seedIfNeeded()
+            let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
+            _ = await engine.runFullLintLoop()
+        }
+
+        try await withPipelineLanguage(.zhHans) {
+            registry.seedIfNeeded()
+            let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
+            _ = await engine.runFullLintLoop()
+        }
+
+        try await withPipelineLanguage(.ja) {
+            registry.seedIfNeeded()
+            let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
+            _ = await engine.runFullLintLoop()
+
+            let validNames = registry.validNames()
+            #expect(validNames.count == 10)
+            #expect(validNames == Set(CategorySeed.allSeeds(for: .ja).map(\.name)))
+        }
+    }
+
+    @Test func testHealCategoryLanguageNoOpUnderJaPipelineWithoutForeignData() async throws {
+        try await withPipelineLanguage(.ja) {
+            let container = try makeContainer()
+            let context = container.mainContext
+
+            let article = Article(url: "https://example.com/ja", title: "記事")
+            context.insert(article)
+            let tag = KnowledgeBase.Tag(name: "AI", categoryRaw: "テクノロジー")
+            context.insert(tag)
+            tag.articles = [article]
+            try context.save()
+
+            let engine = DefaultLintEngine(context: context, loopMarker: InMemoryLintLoopMarker())
+            _ = await engine.runFullLintLoop()
+
+            #expect(tag.categoryRaw == "テクノロジー")  // 変化なし (zh シード名がそもそも存在しない)
+            let logs = (try? context.fetch(FetchDescriptor<LintLog>())) ?? []
+            #expect(!logs.contains { $0.action == .healCategoryLanguage })
+        }
     }
 }
