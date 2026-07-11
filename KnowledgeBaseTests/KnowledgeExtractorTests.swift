@@ -264,6 +264,19 @@ struct KnowledgeExtractorTests {
         #expect(session.translationCallCount == 1)
     }
 
+    /// spec 1xx: コード片/記号混在等で低信頼な言語判定 (.other("pl") 等) が出ても、
+    /// 翻訳対応言語集合の外なら翻訳を試みず raw のまま抽出へ進む (誤検知で例外を浪費しない)。
+    @Test func prepareForExtractionSkipsTranslationForUnsupportedOtherLanguage() async {
+        let session = MockLanguageModelSession()
+        let extractor = KnowledgeExtractor(session: session)
+        let text = "func foo() -> Int { return 42 } // 記号混在チャンクが pl 等に誤検知されるケースを模す"
+
+        let prepared = await extractor.prepareForExtraction(text, override: .other("pl"))
+
+        #expect(prepared == text)
+        #expect(session.translationCallCount == 0)
+    }
+
     // MARK: - i18n Phase B: zh パイプラインでの prepareForExtraction 一般化
 
     /// zh パイプラインでは日本語記事もパイプライン言語 (zh) と一致しないため翻訳経路に入る。

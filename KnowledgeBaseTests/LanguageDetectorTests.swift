@@ -41,4 +41,23 @@ struct LanguageDetectorTests {
         #expect(LanguageDetector.detect("   ") == .unknown)
         #expect(LanguageDetector.detect("") == .unknown)
     }
+
+    // MARK: - 4. 翻訳対応言語の判定 (誤検知ガード)
+
+    /// ja / en / zh (Hans/Hant/bare のどの表記でも) / ko は翻訳対応言語として扱う。
+    @Test func testIsTranslationSupportedForKnownLanguages() {
+        #expect(LanguageDetector.isTranslationSupported("ja"))
+        #expect(LanguageDetector.isTranslationSupported("en"))
+        #expect(LanguageDetector.isTranslationSupported("zh-Hans"))
+        #expect(LanguageDetector.isTranslationSupported("zh-Hant"))
+        #expect(LanguageDetector.isTranslationSupported("zh"))
+        #expect(LanguageDetector.isTranslationSupported("KO"))  // 大文字小文字を無視
+    }
+
+    /// コード片/記号混在チャンク等で誤検知されがちな低信頼な言語コード (pl 等) は非対応。
+    @Test func testIsTranslationSupportedRejectsUnsupportedLanguage() {
+        #expect(!LanguageDetector.isTranslationSupported("pl"))
+        #expect(!LanguageDetector.isTranslationSupported("id"))
+        #expect(!LanguageDetector.isTranslationSupported("nl"))
+    }
 }

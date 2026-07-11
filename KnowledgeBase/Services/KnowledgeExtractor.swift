@@ -109,6 +109,14 @@ struct KnowledgeExtractor {
         if PipelineLanguage.current.matches(detected: detected) {
             return text
         }
+        // 誤検知ガード: コード片・記号混在チャンク等で .other(raw) が低信頼な言語 (pl/id/nl 等) を
+        // 返すことがある。翻訳エンジンが対応しない言語まで毎回 translate を試みると、
+        // 存在しない翻訳ペアで例外を浪費するだけでなく unsupportedLanguage 系の失敗で数十秒かかる
+        // ことがある。翻訳対応言語集合の外なら試みず raw のまま知識抽出へ進む。
+        if case .other(let raw) = detected, !LanguageDetector.isTranslationSupported(raw) {
+            Self.logger.notice("translate skip: source=\(raw, privacy: .public) unsupported language (低信頼判定の可能性) → raw")
+            return text
+        }
         // spec 101: この言語が notInstalled で失敗済みなら以後スキップ (raw を使う、再試行しない)。
         if translationCache?.isUnavailable(source: source) == true {
             Self.logger.notice("translate skip: source=\(source, privacy: .public) unavailable (notInstalled) → raw")

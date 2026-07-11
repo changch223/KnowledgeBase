@@ -608,6 +608,94 @@ struct ConceptSynthesisServiceTests {
         #expect(page.isStale == false)
         #expect(page.synthesizedWithoutAI == false)
     }
+
+    // MARK: - 14. summary の文境界トリム (A-1): 終端句読点で終わっていなければ最後の句点までで切る
+
+    @Test func testTrimToSentenceBoundaryCutsAtLastTerminatorWhenSummaryEndsMidSentence() {
+        let text = "Appleは新型iPhoneを発表した。新しいチップも搭載されており高性能だが詳細は今後発表され"
+        let trimmed = FoundationModelsConceptSynthesisService.trimToSentenceBoundary(text)
+        #expect(trimmed == "Appleは新型iPhoneを発表した。")
+    }
+
+    @Test func testTrimToSentenceBoundaryKeepsTextUnchangedWhenNoTerminatorFound() {
+        let text = "句読点が一つも無い文字列そのまま"
+        let trimmed = FoundationModelsConceptSynthesisService.trimToSentenceBoundary(text)
+        #expect(trimmed == text)
+    }
+
+    @Test func testTrimToSentenceBoundaryKeepsTextWhenAlreadyEndingInTerminator() {
+        let text = "すでに句点で終わっている文章です。"
+        let trimmed = FoundationModelsConceptSynthesisService.trimToSentenceBoundary(text)
+        #expect(trimmed == text)
+    }
+
+    // MARK: - 15. decodingFailure 復旧 (B-1/B-2/B-3): 実機ログを模したフィクスチャで repair を検証
+
+    // ①: 正常 summary + 末尾 insight が閉じ `"` を書き忘れ 。」]} で破損した直後に暴走テキストが続き、
+    // さらにエラーオブジェクトのメタデータ (underlyingErrors 内に紛れ込む "}") が続くケース。
+    // B-2 (メタデータを切り落としてから { } を探索) が無いと lastIndex(of: "}") がメタデータ側の
+    // "}" を拾ってしまい slice が無効 JSON になり、summary すら復元できない。
+    @Test func testExtractPartialOutputRepairsTruncatedInsightWithGarbageAndErrorSuffix() {
+        let json = #"{"summary":"Appleは新型iPhoneを発表した。","crossSourceInsights":["新機能が追加された。","価格は据え置き。」]}"#
+        let garbage = "以下は暴走した繰り返しテキストです、以下は暴走した繰り返しテキストです、以下は暴走した繰り返しテキストです。"
+        let errorSuffix = ", underlyingErrors: [Swift.DecodingError.dataCorrupted(Swift.DecodingError.Context(codingPath: [], debugDescription: \"Unexpected end of file}\", underlyingError: nil))], errorDescriptionOverride: nil))"
+        let desc = "decodingFailure(GenerationError.Context(debugDescription: \"Failed to parse. Text: \(json)\(garbage)\(errorSuffix)"
+        let error = FakeDecodingFailureError(description: desc)
+
+        let output = FoundationModelsConceptSynthesisService.extractPartialOutput(from: error)
+
+        #expect(output?.summary == "Appleは新型iPhoneを発表した。")
+        #expect(output?.crossSourceInsights.count == 2)
+        // 末尾 insight は閉じ `"` が無く 」 で代用されており、」 を安全側の終端とみなして
+        // 切り詰める (B-3 と同じ safe-extraction 方針。次フィールドへの over-capture より優先)。
+        #expect(output?.crossSourceInsights.last == "価格は据え置き。")
+    }
+
+    // ②: "Text: " prefix が見つからない error format でも、desc 全体を候補として repair が試みられる
+    // (旧実装は "Text: " が無いと即 nil を返し、repair が一度も走らないデッドコードだった)。
+    @Test func testExtractPartialOutputTriesFullDescriptionWhenTextPrefixMissing() {
+        let json = #"{"summary":"直接抽出できる要約です。","crossSourceInsights":["要点1。"]}"#
+        let desc = "decodingFailure(GenerationError.Context(debugDescription: \"\(json)\", underlyingErrors: [], errorDescriptionOverride: nil))"
+        let error = FakeDecodingFailureError(description: desc)
+
+        let output = FoundationModelsConceptSynthesisService.extractPartialOutput(from: error)
+
+        #expect(output?.summary == "直接抽出できる要約です。")
+    }
+
+    // ③: summary 自体が実 `"` ではなく全角の閉じカギ括弧「」」で (誤って) 閉じられ、次フィールドの
+    // 構造 (`,"crossSourceInsights"...`) まで続いてしまう壊れた JSON。旧実装は次フィールドの
+    // 実 `"` まで貪欲にマッチして summary が汚染される (over-capture)。新実装は 」 を終端とみなし、
+    // 妥当な summary だけを安全に取り出す。
+    @Test func testRepairAndDecodeSummaryClosedByJapaneseBracketDoesNotOverCapture() {
+        let malformed = #"{"summary":"これはテスト概要です。」,"crossSourceInsights":["要点1。","要点2。"]}"#
+
+        let output = FoundationModelsConceptSynthesisService.repairAndDecode(malformed)
+
+        #expect(output?.summary == "これはテスト概要です。")
+        #expect(output?.summary.contains("crossSourceInsights") == false)
+        #expect(output?.crossSourceInsights == ["要点1。", "要点2。"])
+    }
+
+    // ④: summary / insight の内容自体に日本語の「」引用符ペアが埋め込まれた、よくある正常系。
+    // JSON としては正しく実 `"` で閉じられているため JSONSerialization (主経路) がそのまま成功し、
+    // 末尾に暴走テキストが続いても { から最後の } までの slice 抽出で本文が保たれることを確認する。
+    @Test func testRepairAndDecodeHandlesEmbeddedJapaneseBracketsInWellFormedJSON() {
+        let json = #"{"summary":"「Claude Code」という名称について解説する記事。","crossSourceInsights":["「Claude Code」はAnthropic製のCLIツールである。"]}"#
+        let garbage = "この後に暴走した繰り返しテキストが続きます。"
+        let text = json + garbage
+
+        let output = FoundationModelsConceptSynthesisService.repairAndDecode(text)
+
+        #expect(output?.summary == "「Claude Code」という名称について解説する記事。")
+        #expect(output?.crossSourceInsights.first == "「Claude Code」はAnthropic製のCLIツールである。")
+    }
+}
+
+/// decodingFailure 修復テスト用の擬似エラー。`String(describing:)` が `description` をそのまま返す
+/// (CustomStringConvertible 準拠) ことを利用し、実機ログの `String(describing: error)` 出力を模す。
+private struct FakeDecodingFailureError: Error, CustomStringConvertible {
+    let description: String
 }
 
 // MARK: - AI 復旧機能: isAvailable を呼び出し順に切り替える Mock (mid-flight availability drop 再現用)

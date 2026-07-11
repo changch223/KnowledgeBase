@@ -48,4 +48,20 @@ enum LanguageDetector {
             return .other(language.rawValue)
         }
     }
+
+    /// spec 1xx: 翻訳エンジンが対応する言語コード集合 (小文字比較)。`.other(raw)` がこの集合の外
+    /// なら、コード片・記号混在チャンク等の低信頼な誤検知の可能性が高いため、翻訳を試みるべきでない。
+    /// ja/en は `DetectedLanguage` の専用 case で扱われるため通常ここには来ないが、将来 `.other`
+    /// 経由で来ても弾かれないよう含めておく。ko は既存の翻訳対応 (AudioTranscriptionService の
+    /// 候補 locale) と整合させている。zh は `PipelineLanguage.matches(detected:)` と同じ
+    /// `hasPrefix("zh")` 判定を別途行う (rawValue が "zh" / "zh-Hans" / "zh-Hant" のどれで
+    /// 来ても弾かないため、専用チェックにしている)。
+    static let translationSupportedLanguageCodes: Set<String> = ["ja", "en", "ko"]
+
+    /// `.other(raw)` の raw (NLLanguage.rawValue 相当、BCP-47) が翻訳対応言語かどうかを判定する。
+    static func isTranslationSupported(_ raw: String) -> Bool {
+        let lower = raw.lowercased()
+        if lower.hasPrefix("zh") { return true }
+        return translationSupportedLanguageCodes.contains(lower)
+    }
 }
