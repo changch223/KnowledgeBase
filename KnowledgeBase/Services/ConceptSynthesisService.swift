@@ -162,6 +162,9 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
             conceptPage.insightSourceArticleIDs = pairs.map { $0.sourceID }
         }
 
+        // AI 復旧機能: Fallback (essence 並べ簡易生成) で確定した summary は劣化生成。
+        // AI 復活検知で再合成できるよう印を付ける。
+        conceptPage.synthesizedWithoutAI = true
         conceptPage.isStale = false
         conceptPage.updatedAt = .now
         try? context.save()
@@ -378,7 +381,9 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         ConceptSynthesisCommon.healCategory(conceptPage, articles: articles)
         guard !articles.isEmpty else {
             // 関連記事 0 件 → 何もせず stale 解除 (孤立 ConceptPage、Wikilint で別 spec)
+            // AI 復旧機能: 合成対象が無いページを毎トリガ拾い続けるチャーンを止めるため劣化フラグもクリアする。
             conceptPage.isStale = false
+            conceptPage.synthesizedWithoutAI = false
             conceptPage.updatedAt = .now
             try? context.save()
             refreshTrigger?.bump()
@@ -424,6 +429,12 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             if !neighborIDs.isEmpty {
                 conceptPage.relatedConceptIDs = Array(Set(conceptPage.relatedConceptIDs + neighborIDs))
             }
+
+            // AI 復旧機能: summary は Foundation Models で合成できた (劣化なし)。
+            // bodyMarkdown 生成中に AI が本当に落ちた (availability が false になった) ケースは
+            // generateBodyMarkdown 側で改めて true に上書きする。availability が true のまま
+            // 失敗した場合 (overflow 等) は再試行しても結果が変わらないためマークしない。
+            conceptPage.synthesizedWithoutAI = false
 
             // spec 063 (LLM Wiki): kind 自動判定 + bodyMarkdown 生成
             await generateBodyMarkdown(for: conceptPage, articles: articles)
@@ -493,6 +504,8 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         // Apple Intelligence 不可 → summary を本文に流用 (fallback)
         guard availability.isAvailable else {
+            // AI 復旧機能: bodyMarkdown が劣化生成 (summary コピー) になった印を付ける。
+            conceptPage.synthesizedWithoutAI = true
             if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
                 conceptPage.bodyMarkdown = conceptPage.summary
             }
@@ -520,15 +533,29 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             // summary から fallback (既存本文が空のときのみ上書き、良い既存本文は保持)。
             if WikiBodySanitizer.isValid(trimmed) {
                 conceptPage.bodyMarkdown = trimmed
-            } else if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
-                logger.notice("wiki body invalid for \(conceptPage.name, privacy: .public) → summary fallback")
-                conceptPage.bodyMarkdown = conceptPage.summary
+            } else {
+                if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
+                    logger.notice("wiki body invalid for \(conceptPage.name, privacy: .public) → summary fallback")
+                    conceptPage.bodyMarkdown = conceptPage.summary
+                }
+                // 不合格 & 既存本文あり → 既存を保持 (防御)
+                // AI 復旧機能: call 中に AI が本当に落ちた (availability が false になった) ケースのみ
+                // 復旧対象としてマークする。availability が true のまま不合格だった場合 (overflow 等) は
+                // 再試行しても同じ結果になる futile ループを避けるためマークしない。
+                if !availability.isAvailable {
+                    conceptPage.synthesizedWithoutAI = true
+                }
             }
-            // 不合格 & 既存本文あり → 既存を保持 (防御)
         } catch {
             logger.error("wiki body generation failed for \(conceptPage.name, privacy: .public): \(String(describing: error), privacy: .public)")
             if conceptPage.bodyMarkdown.isEmpty && !conceptPage.summary.isEmpty {
                 conceptPage.bodyMarkdown = conceptPage.summary
+            }
+            // AI 復旧機能: call 中に AI が本当に落ちた (availability が false になった) ケースのみ
+            // 復旧対象としてマークする。availability が true のまま throw した場合 (overflow 等) は
+            // 再試行しても同じ結果になる futile ループを避けるためマークしない。
+            if !availability.isAvailable {
+                conceptPage.synthesizedWithoutAI = true
             }
         }
     }

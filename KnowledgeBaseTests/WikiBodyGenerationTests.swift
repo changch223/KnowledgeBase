@@ -151,4 +151,61 @@ struct WikiBodyGenerationTests {
 
         #expect(page.bodyMarkdown == "既存の本文")
     }
+
+    // MARK: - 6. AI 復旧機能: generateWikiBody が throw + call 中に AI が本当に落ちた (availability が
+    //    false になった) → synthesizedWithoutAI = true (復旧対象としてマークされる)
+
+    @Test func testCatchBranchFlagsSynthesizedWithoutAIWhenAvailabilityDropsMidCall() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let article = makeArticle(essence: "OpenAI が新モデルを発表", entityTypes: ["organization"], in: context)
+        let page = ConceptPage(name: "OpenAI", categoryRaw: "テクノロジー", summary: "OpenAI の概要", relatedArticles: [article])
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextWikiBodyResult = .failure(MockLanguageModelError.timeout)
+        // 呼び出し順: ① _resynthesize 冒頭 guard、② generateBodyMarkdown 冒頭 guard、
+        // ③ 新設の catch 内チェック。① ② は通過させ、③ で落ちている状態を再現する。
+        let availability = SequencedAvailabilityChecker([true, true, false])
+
+        let service = FoundationModelsConceptSynthesisService(
+            session: session,
+            availability: availability,
+            fallback: FallbackConceptSynthesisService(context: context),
+            context: context
+        )
+
+        await service.resynthesize(page)
+
+        #expect(page.synthesizedWithoutAI == true)
+    }
+
+    // MARK: - 7. AI 復旧機能: generateWikiBody が throw しても availability が true のまま
+    //    (overflow 等の別要因を模倣) → synthesizedWithoutAI は false のまま (futile 再試行ループ回避)
+
+    @Test func testCatchBranchDoesNotFlagWhenAvailabilityStaysTrue() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let article = makeArticle(essence: "OpenAI が新モデルを発表", entityTypes: ["organization"], in: context)
+        let page = ConceptPage(name: "OpenAI", categoryRaw: "テクノロジー", summary: "OpenAI の概要", relatedArticles: [article])
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextWikiBodyResult = .failure(MockLanguageModelError.contextExceeded)
+        let availability = MockAvailabilityChecker()
+        availability.isAvailable = true
+
+        let service = FoundationModelsConceptSynthesisService(
+            session: session,
+            availability: availability,
+            fallback: FallbackConceptSynthesisService(context: context),
+            context: context
+        )
+
+        await service.resynthesize(page)
+
+        #expect(page.synthesizedWithoutAI == false)
+    }
 }

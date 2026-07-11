@@ -119,4 +119,31 @@ struct AIAvailabilityMonitorTests {
         #expect(monitor.unavailabilityReason == .modelNotReady)
         #expect(monitor.isBannerVisible == true)
     }
+
+    // AI 復旧機能: (8) unavailable → available 遷移で onBecameAvailable が 1 回だけ呼ばれる。
+    // init 時 (最初から available) や、available → available (変化なし) では呼ばれない。
+    @Test func onBecameAvailableFiresOnlyOnUnavailableToAvailableTransition() {
+        let checker = MutableAvailabilityChecker(reason: .modelNotReady)
+        let monitor = AIAvailabilityMonitor(checker: checker, dismissStore: InMemoryAIAvailabilityDismissStore())
+        var fireCount = 0
+        monitor.onBecameAvailable = { fireCount += 1 }
+
+        // 変化なし (reason 同じ) → 発火しない
+        monitor.refresh()
+        #expect(fireCount == 0)
+
+        // unavailable → available への遷移 → 発火
+        checker.reason = nil
+        monitor.refresh()
+        #expect(fireCount == 1)
+
+        // available → available (変化なし) → 発火しない
+        monitor.refresh()
+        #expect(fireCount == 1)
+
+        // available → unavailable (再発) → 発火しない
+        checker.reason = .modelNotReady
+        monitor.refresh()
+        #expect(fireCount == 1)
+    }
 }

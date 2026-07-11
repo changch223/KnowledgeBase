@@ -105,6 +105,13 @@ final class ConceptPage {
     /// `updatedAt > lastSeenAt` (or nil) = 未読/更新あり → フィード上位に。CloudKit lightweight 安全 (default nil)。
     var lastSeenAt: Date? = nil
 
+    // MARK: - AI 復旧機能 追加フィールド
+
+    /// この概念ページの summary / bodyMarkdown が Apple Intelligence 不可時の劣化生成 (essence 並べ /
+    /// summary コピー) で書かれたか。true の間は AIRecoveryRunner が AI 復活検知で再合成の対象にする。
+    /// CloudKit lightweight migration 安全 (default false、既存ページは過去分救済 backfill が担う)。
+    var synthesizedWithoutAI: Bool = false
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -127,7 +134,8 @@ final class ConceptPage {
         conceptLevelRaw: String = "specific",
         createdAt: Date = .now,
         updatedAt: Date = Date.now,
-        lastSeenAt: Date? = nil
+        lastSeenAt: Date? = nil,
+        synthesizedWithoutAI: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -151,6 +159,7 @@ final class ConceptPage {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.lastSeenAt = lastSeenAt
+        self.synthesizedWithoutAI = synthesizedWithoutAI
     }
 }
 

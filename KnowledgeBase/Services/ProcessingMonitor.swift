@@ -19,6 +19,7 @@ final class ProcessingMonitor {
         case knowledge = 2            // 知識抽出中 (AI)
         case tagBackfilling = 3       // spec 013: 既存記事への auto-tag backfill 中
         case categoryClassifying = 4  // spec 015: 全タグの Category 自動分類中
+        case aiRecovering = 5         // AI 復旧機能: AI 復活検知で劣化生成の知識・まとめを再生成中
 
         static func < (lhs: Phase, rhs: Phase) -> Bool {
             lhs.rawValue < rhs.rawValue

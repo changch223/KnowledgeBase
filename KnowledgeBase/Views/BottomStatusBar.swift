@@ -65,6 +65,7 @@ struct BottomStatusBar: View {
         case .knowledge:           return "status.phase.knowledge"
         case .tagBackfilling:      return "status.phase.tagBackfilling"
         case .categoryClassifying: return "status.phase.categoryClassifying"
+        case .aiRecovering:        return "status.phase.aiRecovering"
         }
     }
 

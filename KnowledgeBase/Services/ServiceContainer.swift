@@ -83,6 +83,8 @@ final class ServiceContainer {
     var correctionCoordinator: ArticleCorrectionCoordinator?
     /// spec 097 Phase 2: カテゴリ分類の学習ストア (ユーザー修正の few-shot 供給 + 記録)。
     var correctionStore: CategoryCorrectionStore?
+    /// AI 復旧機能: Apple Intelligence 復活検知で skip/劣化生成された知識・まとめを自動再生成する runner。
+    var aiRecoveryRunner: AIRecoveryRunnerProtocol?
 }
 
 /// spec 045: 「再生成」trigger payload。
