@@ -15,6 +15,10 @@
 #   - 出力先は HTML: <locale>/*.html、PNG: output/<locale>/*.png (旧: 直下 *.html / output/ フラット構成
 #     から明確に移行。旧パスの互換維持はしない。詳細は README.md 参照)
 #
+# v1.1 追加ロケール (docs/app-store/RELEASE-MATERIALS.md §1-K と対応): ko / es / de の 3 ロケールを追加し、
+# 計 7 ロケール (ja / zh-Hans / zh-Hant / en / ko / es / de) を生成する。CAPTIONS にセットを追加するだけの
+# 拡張で、SLIDE_LAYOUT・出力構造・フォールバック仕様は変更していない。
+#
 # 記法: 見出しの "|" = 改行、《...》 = 藍色アクセント。
 # 生成後にヘッドレス Chrome で PNG 化する (README 参照)。
 
@@ -26,7 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SCREENSHOT_DIR = os.path.join(HERE, "..")  # ScreenShot/
 
 # 生成するロケール (App Store Connect のロケールコードに合わせる)
-LOCALES = ["ja", "zh-Hans", "zh-Hant", "en"]
+LOCALES = ["ja", "zh-Hans", "zh-Hant", "en", "ko", "es", "de"]
 
 # レイアウト共通設定 (ロケール非依存): (出力名, 既定の元画像ファイル名, チップ側 left/right, チップ top px)
 # 元画像はロケールごとに ScreenShot/<locale>/<ファイル名> を優先探索し、無ければこのファイル名で
@@ -70,6 +74,31 @@ CAPTIONS = {
         ("Answers to your knowledge,|《backed by citations》.", "Tap a citation to jump to the source", "Answers with sources"),
         ("Save the moment you read it,|in 《2 taps》.", "URL, photo, PDF, or audio", "Straight from Share Sheet"),
         ("Categories and tags,|organized 《automatically》.", "The more you save, the easier to find", "Auto-classified"),
+    ],
+    # v1.1 追加ロケール (docs/app-store/RELEASE-MATERIALS.md §1-K 対応)。用語は各言語の
+    # Localizable.xcstrings 実訳と統一 (한국어「지식/개념 페이지/수정」、español「Conocimiento/
+    # página de concepto/Corregir」、Deutsch「Wissen/Konzeptseite/Korrigieren」)。de は §1-K の
+    # 方針どおりストアコピーのみ Sie 調 (アプリ内 UI は du 調のまま)。
+    "ko": [
+        ("읽은 것이|《저절로》 정리됩니다.", "AI가 주제별로 핵심 포인트를 먼저 보여줍니다", "포인트를 한눈에"),
+        ("AI가 만드는|나만의 《백과사전》.", "여러 기사를 한 페이지로 묶습니다", "읽을수록 자랍니다"),
+        ("당신의 지식에|《근거와 함께》 답합니다.", "인용을 탭하면 원본 기사로", "출처 있는 답변"),
+        ("읽은 그 자리에서|《두 번의 탭》으로 저장.", "URL・사진・PDF・음성도", "공유에서 바로"),
+        ("분야도 태그도|AI가 《자동으로》 정리.", "저장할수록 찾기 쉬워집니다", "자동 분류"),
+    ],
+    "es": [
+        ("Lo que lees|se 《organiza solo》.", "La IA muestra los puntos clave por tema", "Puntos clave al instante"),
+        ("La IA crea tu propia|《enciclopedia》.", "Varios artículos, una sola página", "Crece con cada lectura"),
+        ("Responde a tu conocimiento|《con pruebas》.", "Toca una cita para ir a la fuente", "Respuestas con fuentes"),
+        ("Guarda en el momento,|en 《2 toques》.", "URL, foto, PDF o audio", "Directo desde Compartir"),
+        ("Categorías y etiquetas,|organizadas 《automáticamente》.", "Cuanto más guardas, más fácil de encontrar", "Clasificación automática"),
+    ],
+    "de": [
+        ("Was Sie lesen,|《ordnet sich von selbst》.", "Die KI zeigt Kernpunkte zuerst", "Kernpunkte auf einen Blick"),
+        ("Die KI baut Ihre eigene|《Enzyklopädie》.", "Mehrere Artikel, eine Seite", "Wächst mit jeder Lektüre"),
+        ("Antworten auf Ihr Wissen,|《mit Belegen》.", "Tippen Sie auf ein Zitat für die Quelle", "Antworten mit Quellen"),
+        ("Sichern Sie sofort,|in 《nur 2 Tipps》.", "URL, Foto, PDF oder Audio", "Direkt aus dem Teilen-Menü"),
+        ("Kategorien und Tags,|《automatisch》 organisiert.", "Je mehr Sie sichern, desto leichter zu finden", "Automatisch sortiert"),
     ],
 }
 
