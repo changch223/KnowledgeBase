@@ -3679,6 +3679,53 @@
         }
       }
     },
+    "aiAvailability.guide.openSettings.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開いた画面で「Apple Intelligence と Siri」を選択してください"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请在打开的画面中选择「Apple Intelligence 与 Siri」"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "請在開啟的畫面中選擇「Apple Intelligence 與 Siri」"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "On the screen that opens, select \"Apple Intelligence & Siri\""
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "열리는 화면에서 'Apple Intelligence 및 Siri'를 선택해 주세요"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En la pantalla que se abre, selecciona \"Apple Intelligence y Siri\""
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wähle auf dem sich öffnenden Bildschirm „Apple Intelligence & Siri“ aus"
+          }
+        }
+      }
+    },
     "aiAvailability.guide.reassurance" : {
       "extractionState" : "manual",
       "localizations" : {

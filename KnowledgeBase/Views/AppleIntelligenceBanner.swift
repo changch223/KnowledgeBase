@@ -33,13 +33,18 @@ struct AppleIntelligenceBanner: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
-                if reason == .appleIntelligenceNotEnabled, let url = URL(string: AIAvailabilityCopy.settingsURLString) {
-                    Link(destination: url) {
-                        Text("設定 App を開く")
+                if reason == .appleIntelligenceNotEnabled {
+                    Button {
+                        AIAvailabilityCopy.openAISettings()
+                    } label: {
+                        Text("aiAvailability.guide.openSettings")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(DS.Color.sumiInk)
                     }
                     .padding(.top, DS.Spacing.xs)
+                    Text("aiAvailability.guide.openSettings.hint")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -51,10 +56,11 @@ struct AppleIntelligenceBanner: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var iconName: String {
+    /// internal (private でなく): AIAvailabilitySymbolTests から SF Symbol 実在検証で参照するため。
+    var iconName: String {
         switch reason {
         case .deviceNotEligible:           return "iphone.slash"
-        case .appleIntelligenceNotEnabled: return "sparkles.slash"
+        case .appleIntelligenceNotEnabled: return "sparkles"
         case .modelNotReady:               return "arrow.down.circle"
         case .unknown:                     return "exclamationmark.bubble"
         }

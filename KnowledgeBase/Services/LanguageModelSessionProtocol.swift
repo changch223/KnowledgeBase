@@ -637,7 +637,7 @@ extension AvailabilityChecker {
 }
 
 /// spec 048: Apple Intelligence が使えない理由 (UI banner 表示用)。
-enum AppleIntelligenceUnavailabilityReason: Equatable {
+enum AppleIntelligenceUnavailabilityReason: Equatable, CaseIterable {
     /// 端末非対応 (iPhone 15 Pro 未満、A17 Pro / M1 以降の iPad 以外)。
     case deviceNotEligible
     /// 設定で Apple Intelligence が OFF。
