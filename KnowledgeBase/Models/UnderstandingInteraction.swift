@@ -125,25 +125,31 @@ enum UnderstandingCardLabel: String, Hashable, CaseIterable {
     case deepDive       // 「深掘り余地あり」
     case review         // 「復習」
 
-    var localizationKey: LocalizedStringKey {
+    /// VoiceOver 用 / カードバッジ表示用のローカライズ済み文字列 (`accessibilityLabel` に直接渡せる)。
+    /// このファイルは app / iKnowWidget / Share / Safari の複数 target でコンパイルされる。
+    /// `String(localized:defaultValue:)` は defaultValue に日本語原文を埋め込むため、キーが catalog に
+    /// 無い target (Share/Safari、表示に使わない) でも安全に日本語へ解決される。表示に使う app 用
+    /// `Localizable.xcstrings` と `iKnowWidget/Localizable.xcstrings` の両方にキーを追加済み。
+    var voiceOverText: String {
         switch self {
-        case .newKnowledge: return "新しい知識"
-        case .needsUpdate:  return "更新が必要"
-        case .shallow:      return "理解が浅い"
-        case .deepDive:     return "深掘り余地あり"
-        case .review:       return "復習"
+        case .newKnowledge:
+            return String(localized: "understanding.label.newKnowledge", defaultValue: "新しい知識")
+        case .needsUpdate:
+            return String(localized: "understanding.label.needsUpdate", defaultValue: "更新が必要")
+        case .shallow:
+            return String(localized: "understanding.label.shallow", defaultValue: "理解が浅い")
+        case .deepDive:
+            return String(localized: "understanding.label.deepDive", defaultValue: "深掘り余地あり")
+        case .review:
+            return String(localized: "understanding.label.review", defaultValue: "復習")
         }
     }
 
-    /// VoiceOver 用日本語文字列 (`accessibilityLabel` に直接渡せる)。
-    var voiceOverText: String {
-        switch self {
-        case .newKnowledge: return "新しい知識"
-        case .needsUpdate:  return "更新が必要"
-        case .shallow:      return "理解が浅い"
-        case .deepDive:     return "深掘り余地あり"
-        case .review:       return "復習"
-        }
+    /// カードバッジ表示用 (`Text(label.localizationKey)`)。`voiceOverText` で解決済みの文字列を
+    /// そのまま `LocalizedStringKey` に包む (catalog に一致するキーが無ければ渡した文字列をそのまま
+    /// 表示する SwiftUI の標準フォールバック挙動を利用するだけで、二重解決の問題は起きない)。
+    var localizationKey: LocalizedStringKey {
+        LocalizedStringKey(voiceOverText)
     }
 }
 

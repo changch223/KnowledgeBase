@@ -54,7 +54,9 @@ python3 build.py
 ## PNG 化 (ヘッドレス Chrome)
 
 ロケールを指定して実行する。すべてのロケールをまとめて焼く場合は下のループを 7 回(ロケール名を変えて)回すか、
-シェルの二重ループにする。
+シェルの二重ループにする。**`--window-size` は `suffix` ごとに変える**こと — `""`(6.9″)は `1320,2868`、
+`-65`(6.5″)は `1242,2688`(`build.py` の `SIZES` と一致させる)。一律 `1320,2868` のまま撮ると `-65` ファイルも
+1320×2868 で書き出されてしまい 6.5″ スロットの要件を満たさない(v1.1 提出素材作成時に発覚・修正済み)。
 
 ```bash
 cd ScreenShot/appstore
@@ -64,9 +66,10 @@ for locale in ja zh-Hans zh-Hant en ko es de; do
   for n in 01-knowledge 02-wiki 03-chat 04-save 05-library; do
     for suffix in "" "-65"; do
       f="$locale/$n$suffix.html"
+      if [ "$suffix" = "-65" ]; then size="1242,2688"; else size="1320,2868"; fi
       [ -f "$f" ] && "$CHROME" --headless=new --disable-gpu --hide-scrollbars \
         --force-device-scale-factor=1 --allow-file-access-from-files \
-        --window-size=1320,2868 --screenshot="output/$locale/$n$suffix.png" "file://$PWD/$f"
+        --window-size="$size" --screenshot="output/$locale/$n$suffix.png" "file://$PWD/$f"
     done
   done
 done
