@@ -878,7 +878,7 @@ final class ChatService: ChatServiceProtocol {
         in session: ChatSession,
         articles: [Article]
     ) throws -> ChatMessage {
-        var text = "以下の記事が参考になります。\n\n"
+        var text = String(localized: "chat.fallback.articlesIntro") + "\n\n"
         for (i, article) in articles.enumerated() {
             let essence = article.extractedKnowledge?.essence ?? article.title
             text += "\(i + 1). \(essence)\n"

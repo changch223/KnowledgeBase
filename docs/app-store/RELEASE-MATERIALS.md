@@ -12,6 +12,10 @@
 > （作成日 2026-07-11、ブランチ `rebrand-matomemo-ja`、未 commit）。他 6 ロケール（简体中文 / 繁體中文 /
 > English / 한국어 / Español / Deutsch）の名前は "Knowledge Base" 系のまま変更しない（§1-J/§1-K は有効のまま）。
 > §1-L は ja ロケールに関して **§1-B〜§1-E および §1-F の冒頭段落・§1-G を上書きする最新版**。
+> **v1.1 What's New 最終版**: §1-J・§1-K・§1-L (L-6) にはそれぞれの追加時点の What's New（3 言語表記 →
+> 6 言語表記 → まとメモ改名のみ追記、など）が段階的に書かれているが、いずれも歴史的な記録として
+> そのまま残し書き換えていない。**7 言語対応 + 言語ズレ検知バナーまで揃った実際の提出用 What's New は
+> 本ドキュメント末尾の §1-M（7 ロケール分）が最終版**であり、v1.1 を提出する際は §1-M の文面を使う。
 
 このドキュメントは以下 4 部構成:
 1. App Store Connect メタデータ（日本語 primary / 英語 secondary）
@@ -942,6 +946,121 @@ Knowledge Base のままです）。
 On Japanese-locale devices, the app display name and the share-sheet button appear as "まとメモ"
 (in all other locales it remains "Knowledge Base").
 ```
+
+---
+
+## §1-M. v1.1 What's New 最終版（7 ロケール）
+
+作成日: 2026-07-11 / 対象: PR #66〜#78（zh/en/ko/es/de 対応・AI 復旧・言語ズレ検知バナー・ja リブランド全て反映後）
+/ ベースコミット `1c780e6`
+
+**本セクションが v1.1 提出時に実際に使う What's New の最終版**。§1-J（J-4、3 言語表記の頃）・§1-K（K-1〜K-3、
+6 言語表記の頃）・§1-L（L-6、ja リブランドのみ追記した版）は、それぞれの実装が完了した時点のスナップショットを
+歴史記録として**書き換えずに残してある**。その後 §1-J〜§1-L の間に増えた次の 2 点が、旧バージョンの What's New
+本文には反映されていない:
+1. 対応言語が最終的に **7 言語**（日本語 / 简体中文 / 繁體中文 / English / 한국어 / Español / Deutsch）になったこと
+   （§1-K 時点の J-4 はまだ 3 言語表記のまま）
+2. **言語ズレ検知バナー**（端末の言語設定と AI 生成言語が一致していないとき、起動時に 1 回だけバナーで知らせ、
+   タップで生成言語の設定画面に遷移できる機能、`LanguageMismatchBanner` / PR #78）が新規追加されたこと
+
+§1-M は上記 2 点を織り込んだうえで、v1.1 の柱を次の 5 点にまとめて 7 ロケール分書き下ろす:
+1. 7 言語対応（UI + AI 生成言語）
+2. Apple Intelligence が使えない時のガイド表示（理由別バナー + 手順ガイド）
+3. AI が復活した際の自動再生成（AI 復旧）
+4. 言語ズレのお知らせバナー
+5. （ja のみ追加）アプリ名を「まとメモ」に変更
+
+ja が原稿（ソース）で、他 6 言語はその翻訳。用語・トーンは §1-J・§1-K・§1-L（zh-Hans/zh-Hant/en/ko/es/de の
+既訳語、de は Sie 調で統一）をそのまま踏襲している。文字数は上限 4000 字に対し、いずれも実測 300〜650 字程度で
+簡潔にまとめてある（実測値は各ブロック下に記載、python3 の `len()` で算出）。
+
+### M-1. ja（原稿）
+
+```
+まとメモ（旧 Knowledge Base）v1.1 をリリースしました。
+・日本語・简体中文・繁體中文・English・한국어・Español・Deutschの7言語に対応。UIもAIが生成する要約・概念ページ・チャット回答も、選んだ言語で
+・Apple Intelligenceが使えないときは、理由と対処法をバナーでお知らせ
+・端末の言語設定と生成言語がズレているときも、バナーでお知らせ
+・AIが使えるようになったら、止まっていた整理を自動で再開
+・アプリ名が「まとメモ」になりました
+ご意見・不具合はGitHub Issuesまでお寄せください。
+```
+（278 / 4000 字）
+
+- §1-L L-6 からの差分: 「簡体字・繁体字・英語」→「7 言語」表記に更新 + 「端末の言語設定と生成言語がズレている
+  ときも、バナーでお知らせ」を新規追加。アプリ名変更の一言は L-6 と同じ位置（末尾）に維持。
+
+### M-2. zh-Hans（简体中文）
+
+```
+Knowledge Base v1.1 发布了。
+・现已支持日文、简体中文、繁體中文、英文、韩文、西班牙文、德文共 7 种语言。界面与 AI 生成的摘要、概念页面、聊天回答都会使用你选择的语言
+・Apple Intelligence 无法使用时，会用提示条告知原因与解决方法
+・设备语言与生成语言不一致时，也会用提示条提醒你
+・AI 恢复可用后，被中断的整理会自动继续
+欢迎通过 GitHub Issues 提出意见与问题反馈。
+```
+（214 / 4000 字）
+
+### M-3. zh-Hant（繁體中文）
+
+```
+Knowledge Base v1.1 發布了。
+・現已支援日文、簡體中文、繁體中文、英文、韓文、西班牙文、德文共 7 種語言。介面與 AI 產生的摘要、概念頁面、聊天回答都會使用你選擇的語言
+・Apple Intelligence 無法使用時，會用提示條告知原因與解決方法
+・裝置語言與產生語言不一致時，也會用提示條提醒你
+・AI 復原可用後，被中斷的整理會自動繼續
+歡迎透過 GitHub Issues 提出意見與問題回報。
+```
+（214 / 4000 字）
+
+### M-4. en（English）
+
+```
+Knowledge Base v1.1 is here.
+・Now supports 7 languages: Japanese, Simplified Chinese, Traditional Chinese, English, Korean, Spanish, and German. Both the UI and AI-generated summaries, concept pages, and chat replies follow your chosen language
+・A banner now explains why and how to fix it when Apple Intelligence isn't available
+・A banner also lets you know if your device language and generation language don't match
+・When AI becomes available again, any paused organizing automatically resumes
+Feedback and bug reports are welcome via GitHub Issues.
+```
+（552 / 4000 字）
+
+### M-5. ko（한국어）
+
+```
+Knowledge Base v1.1을 출시했습니다.
+・일본어・简体中文・繁體中文・English・한국어・Español・Deutsch 총 7개 언어를 지원합니다. UI는 물론 AI가 생성하는 요약・개념 페이지・채팅 답변도 선택한 언어로 제공됩니다
+・Apple Intelligence를 사용할 수 없을 때는 이유와 해결 방법을 배너로 안내합니다
+・기기 언어와 생성 언어가 다를 때도 배너로 알려드립니다
+・AI를 다시 사용할 수 있게 되면, 중단되었던 정리 작업이 자동으로 재개됩니다
+의견이나 문제는 GitHub Issues로 알려주세요.
+```
+（296 / 4000 字）
+
+### M-6. es（Español・中立）
+
+```
+Knowledge Base v1.1 ya está disponible.
+・Ahora con 7 idiomas: japonés, chino simplificado, chino tradicional, inglés, coreano, español y alemán. Los resúmenes, páginas de concepto y respuestas del chat generados por IA también siguen el idioma elegido
+・Cuando Apple Intelligence no está disponible, un aviso explica el motivo y cómo solucionarlo
+・Un aviso también te avisa si el idioma del dispositivo y el idioma de generación no coinciden
+・Cuando la IA vuelve a estar disponible, el trabajo de organización pendiente se reanuda automáticamente
+Tus comentarios y reportes de errores son bienvenidos a través de GitHub Issues.
+```
+（626 / 4000 字）
+
+### M-7. de（Deutsch・Sie 調）
+
+```
+Knowledge Base v1.1 ist da.
+・Jetzt mit 7 Sprachen: Japanisch, vereinfachtes Chinesisch, traditionelles Chinesisch, Englisch, Koreanisch, Spanisch und Deutsch. Auch die von der KI erzeugten Zusammenfassungen, Konzeptseiten und Chat-Antworten folgen der gewählten Sprache
+・Wenn Apple Intelligence nicht verfügbar ist, erklärt ein Banner den Grund und die Lösung
+・Ein Banner informiert Sie auch, wenn Gerätesprache und Generierungssprache nicht übereinstimmen
+・Sobald die KI wieder verfügbar ist, wird unterbrochene Organisation automatisch fortgesetzt
+Feedback und Fehlermeldungen sind über GitHub Issues willkommen.
+```
+（614 / 4000 字）
 
 ---
 
