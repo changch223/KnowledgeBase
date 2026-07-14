@@ -47,6 +47,18 @@
           }
         }
       }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "KnowledgeBaseShareExtension"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
