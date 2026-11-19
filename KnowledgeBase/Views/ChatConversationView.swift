@@ -1,5 +1,5 @@
 //
-//  ChatTabView.swift
+//  ChatConversationView.swift
 //  KnowledgeTree
 //
 //  spec 021 — AI チャット (4 タブ目) の root view。
@@ -9,14 +9,24 @@
 //  - 擬似 token streaming (assistant 回答完了後、1 文字ずつ追加表示)
 //  - inline 引用 link は ChatMessageRow 側で AttributedString 描画
 //  - session 個別削除 (sidebar 経由) + 新規 session 作成
+//  spec 104 — AI チャットタブ廃止に伴い会話画面だけを切り出し。検索タブ (SearchTabView) の
+//  NavigationStack に push される。履歴は検索タブのトップ「最近聞いたこと」に移動。
 //
 
 import SwiftUI
 import SwiftData
 
-struct ChatTabView: View {
+struct ChatConversationView: View {
+
+    /// spec 104: 表示する session (検索タブから固定で渡される)。
+    let sessionID: UUID
+    /// spec 104: 検索欄から「AI に聞く」で来たときの初回質問 (メッセージ 0 件のときだけ 1 回送信)。
+    var initialQuestion: String? = nil
+    /// spec 104: 引用 / 関連記事の「記事を開く」を親 (検索タブの stack) に通知。
+    let onOpenArticle: (Article) -> Void
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Environment(ServiceContainer.self) private var serviceContainer
 
     /// 全 ChatSession を最新順で取得 (空なら全削除直後)
@@ -27,9 +37,10 @@ struct ChatTabView: View {
     @Query(sort: \ChatMessage.timestamp)
     private var allMessages: [ChatMessage]
 
-    /// ユーザーが特定 session を選択した時にピン留め。
-    /// nil の時は allSessions.first (最新) を使用。
-    @State private var pinnedSessionID: UUID?
+    /// spec 104: 初回質問の二重送信防止。
+    @State private var hasSentInitial: Bool = false
+    /// spec 104: session を一度でも見つけたか (全削除後の dismiss 判定用)。
+    @State private var sessionWasSeen: Bool = false
 
     @State private var inputText: String = ""
     /// spec 083: clarification「その他（自由に入力）」から入力欄にフォーカスする。
@@ -43,27 +54,13 @@ struct ChatTabView: View {
     @State private var streamingMessageID: UUID?
     @State private var streamingDisplayedText: String = ""
 
-    /// spec 033 fix (2026-05-09): NavigationSplitView は iPhone で columnVisibility が
-    /// 確実に動かない問題があったため、シンプルな sheet ベースに変更。
-    /// iPhone / iPad 両方で確実に動く UX を優先。
-    @State private var showSidebar: Bool = false
-
-    /// spec 059 (P0-4): 引用リンク tap → Article を push するための navigation path。
-    /// 既存の .navigationDestination(for: Article.self) がそのまま発火する。
-    @State private var navigationPath = NavigationPath()
-
-    /// 動的算出: pinned があればそれ、なければ最新。allSessions が空 (全削除後) なら nil。
+    /// spec 104: 渡された sessionID に固定 (最新 fallback は廃止)。消えていれば nil。
     private var currentSession: ChatSession? {
-        if let id = pinnedSessionID,
-           let pinned = allSessions.first(where: { $0.id == id }) {
-            return pinned
-        }
-        return allSessions.first
+        allSessions.first(where: { $0.id == sessionID })
     }
 
     private var currentSessionMessages: [ChatMessage] {
-        guard let sessionID = currentSession?.id else { return [] }
-        return allMessages.filter { $0.session?.id == sessionID }
+        allMessages.filter { $0.session?.id == sessionID }
     }
 
     /// spec 033/083: multi-turn context = 直前 6 message (= 3 ペア)。会話の記憶を強化。
@@ -73,7 +70,7 @@ struct ChatTabView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        Group {
             VStack(spacing: 0) {
                 // spec 048: AI 不可端末で「分かりません」連発を防ぐ説明 banner
                 if let reason = serviceContainer.availabilityChecker?.unavailabilityReason {
@@ -115,36 +112,10 @@ struct ChatTabView: View {
                 )
             }
             .background(DS.Color.washiBackground)
-            .navigationTitle("chat.tab.title")
+            .navigationTitle(sessionTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                // 履歴 sidebar (sheet) を開く button
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showSidebar = true
-                    } label: {
-                        Image(systemName: "sidebar.left")
-                    }
-                    .accessibilityIdentifier("chat.toolbar.sidebar")
-                    .accessibilityLabel(Text("chat.sidebar.title"))
-                }
-                // spec 056: 📊 Knowledge Graph 全体画面アイコン
-                // spec 090: ユーザー要望で非表示 (グラフ機能を一旦 UI から外す)。
-            }
-            .navigationDestination(for: Article.self) { article in
-                // spec 043 bug fix: 外側 NavigationStack 経由 → 内側 NavigationStack 作らない (入れ子防止)
-                ArticleDetailView(article: article, embedNavigationStack: false)
-            }
-            // spec 047: chat 答えの関連 ConceptPage chips からの遷移先
-            .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
-                ConceptPageDetailLoader(destinationID: dest.id)
-            }
-            // spec 056: AI チャット toolbar 📊 アイコン遷移先
-            .navigationDestination(for: KnowledgeGraphFullScreenDestination.self) { _ in
-                KnowledgeGraphFullScreenView()
-            }
             .alert(
                 Text("chat.message.error"),
                 isPresented: Binding(
@@ -157,28 +128,6 @@ struct ChatTabView: View {
                 Text(errorMessage ?? "")
             }
         }
-        .sheet(isPresented: $showSidebar) {
-            NavigationStack {
-                ChatHistorySidebar(
-                    pinnedSessionID: $pinnedSessionID,
-                    onCreate: {
-                        createNewSession()
-                        showSidebar = false
-                    },
-                    onSelect: { id in
-                        pinnedSessionID = id
-                        showSidebar = false
-                    }
-                )
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("OK") { showSidebar = false }
-                    }
-                }
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
         .accessibilityIdentifier("chat.tab.root")
         // spec 057: clarification chip tap → input field に auto-fill + 自動送信
         .onReceive(ChatMessageRow.clarificationTapNotificationPublisher) { tappedChip in
@@ -189,31 +138,28 @@ struct ChatTabView: View {
         .onReceive(ChatMessageRow.clarificationOtherTapNotificationPublisher) { _ in
             inputFocused = true
         }
-        // spec 045: SavedAnswer の「再生成」trigger を消費
-        // - 新 ChatSession を作る + question を pin + 自動 send
-        // - ChatService の hook 経由で captureIfWorthyOrReplaceStale が走り、新 SavedAnswer auto-save
-        .onChange(of: serviceContainer.pendingRegenerateRequest) { _, new in
-            guard let req = new, let chatService = serviceContainer.chatService else { return }
-            Task { @MainActor in
-                do {
-                    let newSession = try chatService.createSession()
-                    pinnedSessionID = newSession.id
-                    serviceContainer.pendingRegenerateRequest = nil
-                    isThinking = true
-                    let assistantMsg = try await chatService.send(
-                        question: req.question,
-                        in: newSession,
-                        contextMessages: []
-                    )
-                    isThinking = false
-                    await streamDisplayMessage(message: assistantMsg)
-                } catch {
-                    isThinking = false
-                    errorMessage = String(describing: error)
-                    serviceContainer.pendingRegenerateRequest = nil
-                }
+        // spec 104: 初回質問を 1 回だけ送信 / session 消失で dismiss
+        .task {
+            if currentSession != nil { sessionWasSeen = true }
+            guard !hasSentInitial else { return }
+            hasSentInitial = true
+            if let q = initialQuestion, !q.isEmpty, currentSessionMessages.isEmpty {
+                inputText = q
+                await sendQuestion()
             }
         }
+        .onChange(of: allSessions.map(\.id)) { _, ids in
+            if ids.contains(sessionID) {
+                sessionWasSeen = true
+            } else if sessionWasSeen {
+                dismiss()
+            }
+        }
+    }
+
+    private var sessionTitle: String {
+        if let t = currentSession?.title, !t.isEmpty { return t }
+        return String(localized: "chat.sidebar.untitled")
     }
 
     // MARK: - Subviews
@@ -244,7 +190,7 @@ struct ChatTabView: View {
                         ChatMessageRow(
                             message: msg,
                             streamingTextOverride: streamingMessageID == msg.id ? streamingDisplayedText : nil,
-                            onArticleLinkTap: { navigationPath.append($0) }
+                            onArticleLinkTap: onOpenArticle
                         )
                         .id(msg.id)
                     }
@@ -294,35 +240,14 @@ struct ChatTabView: View {
 
     // MARK: - Actions
 
-    private func createNewSession() {
-        guard let chatService = serviceContainer.chatService else { return }
-        do {
-            let s = try chatService.createSession()
-            pinnedSessionID = s.id
-        } catch {
-            errorMessage = String(describing: error)
-        }
-    }
-
     private func sendQuestion() async {
         guard let chatService = serviceContainer.chatService else { return }
 
         let question = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
 
-        // session 解決: pinned / 最新 / なければ新規 create
-        let session: ChatSession
-        if let existing = currentSession {
-            session = existing
-        } else {
-            do {
-                session = try chatService.createSession()
-                pinnedSessionID = session.id
-            } catch {
-                errorMessage = String(describing: error)
-                return
-            }
-        }
+        // spec 104: session は渡された sessionID に固定 (消えていれば何もしない)
+        guard let session = currentSession else { return }
 
         // multi-turn context: 直前 4 message (この時点では新 user message はまだ追加されていない)
         let context = contextMessages

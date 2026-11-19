@@ -56,6 +56,11 @@ final class Article {
     /// nil / 空 = 既定の抽出。再抽出時にプロンプトへ注入される。CloudKit lightweight 安全 (default nil)。
     var extractionGuidance: String?
 
+    /// spec 104: 記事詳細を最後に開いた日時。nil = 未開封 (カード/行に小さな点を出す)。
+    /// 既存記事は起動時 one-time backfill で savedAt を入れる (全記事が未開封に見えるのを防ぐ)。
+    /// CloudKit lightweight 安全 (default nil)。
+    var lastOpenedAt: Date? = nil
+
     // MARK: - spec 051 Phase A: missing inverse 追加 (CloudKit 互換)
     // 元々「片方向 @Relationship」だった 6 件に Article 側の inverse プロパティ追加。
     // CloudKit は全 @Relationship に inverse を要求する。

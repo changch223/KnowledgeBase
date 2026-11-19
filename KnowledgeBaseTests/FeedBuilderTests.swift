@@ -374,4 +374,33 @@ struct FeedBuilderTests {
         // 未読が先 (記事数降順)、既読は記事 10 でも最後
         #expect(names == ["未読大", "未読小", "既読大"])
     }
+
+    // MARK: - spec 104
+
+    @Test func isUnopenedReflectsLastOpenedAt() throws {
+        let container = try makeContainer()
+        let ctx = container.mainContext
+        let a = insertArticle(ctx, title: "A", savedAt: fixedNow)
+        #expect(FeedBuilder.isUnopened(a))
+        a.lastOpenedAt = fixedNow
+        #expect(!FeedBuilder.isUnopened(a))
+    }
+
+    @Test func shouldShowCategoryChipsRules() {
+        #expect(FeedBuilder.shouldShowCategoryChips(counts: [341, 21]) == false)
+        #expect(FeedBuilder.shouldShowCategoryChips(counts: [40, 30, 30]) == true)
+        #expect(FeedBuilder.shouldShowCategoryChips(counts: [10]) == false)
+    }
+
+    @Test func recentSavesSortsAndExcludesObsolete() throws {
+        let container = try makeContainer()
+        let ctx = container.mainContext
+        let old = insertArticle(ctx, title: "old", savedAt: fixedNow.addingTimeInterval(-300))
+        let pending = insertArticle(ctx, title: "pending", savedAt: fixedNow.addingTimeInterval(-100), status: .pending)
+        let obsolete = insertArticle(ctx, title: "obsolete", savedAt: fixedNow)
+        obsolete.isObsolete = true
+        let result = FeedBuilder.recentSaves(articles: [old, pending, obsolete], limit: 8)
+        #expect(result.map(\.title) == ["pending", "old"])
+        #expect(FeedBuilder.recentSaves(articles: [old, pending, obsolete], limit: 1).count == 1)
+    }
 }

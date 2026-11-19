@@ -2,8 +2,9 @@
 //  ArticleListView.swift
 //  KnowledgeTree
 //
-//  spec 001-005 / 008 — 一覧画面: 検索 / タグ一覧 / Detail sheet / ProcessingInlineStatus /
+//  spec 001-005 / 008 — 一覧画面: タグ一覧 / Detail sheet / ProcessingInlineStatus /
 //  live update 5 並列メカニズム
+//  spec 104 — 検索は検索タブ (SearchTabView) に一本化。＋ は右上ツールバー、未開封フィルタ追加。
 //
 
 import SwiftUI
@@ -14,38 +15,17 @@ struct ArticleListView: View {
     @Environment(ProcessingMonitor.self) private var monitor
     @Environment(RefreshTrigger.self) private var refresh
     @Environment(\.scenePhase) private var scenePhase
-    @State private var searchQuery: String = ""
     @State private var selectedArticle: Article?
     @State private var refreshTick: Int = 0
-    /// spec 056 Phase B: FAB tap で URL 入力 sheet
+    /// spec 104: 右上 ＋ tap で追加 sheet
     @State private var showAddArticle: Bool = false
     /// 分野フィルター (複数選択 OR)
     @State private var selectedCategories: Set<String> = []
     /// タグフィルター (複数選択 OR)
     @State private var selectedTags: Set<String> = []
 
-    // MARK: - 検索候補用データソース
-    @Query(sort: \Tag.name) private var allTags: [Tag]
-    @Query(filter: #Predicate<ConceptPage> { !$0.isHidden },
-           sort: \ConceptPage.name) private var allConcepts: [ConceptPage]
-    @State private var recentSearches: [String] = SearchSuggestionStore.shared.recent
-
-    /// タグを記事数の多い順に最大5件
-    private var topTags: [Tag] {
-        allTags
-            .sorted { ($0.articles?.count ?? 0) > ($1.articles?.count ?? 0) }
-            .prefix(5)
-            .map { $0 }
-    }
-
-    /// 概念ページを関連記事数の多い順に最大5件
-    private var topConcepts: [ConceptPage] {
-        allConcepts
-            .filter { !($0.relatedArticles?.isEmpty ?? true) }
-            .sorted { ($0.relatedArticles?.count ?? 0) > ($1.relatedArticles?.count ?? 0) }
-            .prefix(5)
-            .map { $0 }
-    }
+    /// spec 104: 未開封のみ表示
+    @State private var unopenedOnly: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -55,18 +35,28 @@ struct ArticleListView: View {
                     .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)
 
                 ArticleListContent(
-                    searchQuery: searchQuery,
                     refreshTick: refreshTick,
                     selectedArticle: $selectedArticle,
                     monitorIsIdle: monitor.isIdle,
                     selectedCategories: $selectedCategories,
-                    selectedTags: $selectedTags
+                    selectedTags: $selectedTags,
+                    unopenedOnly: $unopenedOnly
                 )
                 .navigationTitle("list.title")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbar {
+                    // spec 104: ナレッジ・ライブラリ共通の右上 (＋ と設定)
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showAddArticle = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityIdentifier("toolbar.addArticle")
+                        .accessibilityLabel(Text("addArticle.title"))
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         AvatarMenu()
                     }
@@ -87,63 +77,8 @@ struct ArticleListView: View {
                     ArticleDetailView(article: article)
                 }
             }
-            // spec 056 Phase B: FAB (+ 追加) を右下に配置
-            .overlay(alignment: .bottomTrailing) {
-                FABButton(icon: "plus") {
-                    showAddArticle = true
-                }
-                .accessibilityIdentifier("fab.addArticle.library")
-            }
             .sheet(isPresented: $showAddArticle) {
                 AddArticleSheet()
-            }
-            .searchable(
-                text: $searchQuery,
-                placement: .navigationBarDrawer(displayMode: .automatic),
-                prompt: Text("search.placeholder")
-            )
-            .searchSuggestions {
-                // クエリが空の時だけ候補を出す
-                if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    if !recentSearches.isEmpty {
-                        Section(header: Text("search.suggestions.recent")) {
-                            ForEach(recentSearches.prefix(5), id: \.self) { query in
-                                Label(query, systemImage: "clock")
-                                    .searchCompletion(query)
-                            }
-                        }
-                    }
-                    if !topTags.isEmpty {
-                        Section(header: Text("search.suggestions.tags")) {
-                            ForEach(topTags) { tag in
-                                Label(tag.name, systemImage: "tag")
-                                    .searchCompletion(tag.name)
-                            }
-                        }
-                    }
-                    if !topConcepts.isEmpty {
-                        Section(header: Text("search.suggestions.concepts")) {
-                            ForEach(topConcepts) { concept in
-                                Label(concept.name, systemImage: "doc.text.fill")
-                                    .searchCompletion(concept.name)
-                            }
-                        }
-                    }
-                }
-            }
-            // 検索実行 (Return キー or 候補選択) で最近の検索に記録
-            .onSubmit(of: .search) {
-                let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !q.isEmpty {
-                    SearchSuggestionStore.shared.record(q)
-                    recentSearches = SearchSuggestionStore.shared.recent
-                }
-            }
-            // 検索クリア時に最近の検索リストを再読み込み
-            .onChange(of: searchQuery) { _, new in
-                if new.isEmpty {
-                    recentSearches = SearchSuggestionStore.shared.recent
-                }
             }
             .onChange(of: refresh.version) { _, _ in
                 refreshTick &+= 1
@@ -176,35 +111,33 @@ struct ArticleListView: View {
     }
 }
 
-/// inner View: searchQuery を init で受け取って動的 @Query を構築。
+/// inner View: 動的 @Query を構築 (SwiftData の動的 Predicate は inner View pattern)。
 /// SwiftData の動的 Predicate 構築には inner View pattern が公式 recommended (research.md R4)。
 private struct ArticleListContent: View {
-    let searchQuery: String
     let refreshTick: Int
     @Binding var selectedArticle: Article?
     let monitorIsIdle: Bool
     @Binding var selectedCategories: Set<String>
     @Binding var selectedTags: Set<String>
+    @Binding var unopenedOnly: Bool
 
     @Environment(\.modelContext) private var modelContext
     @Query private var articles: [Article]
-    @Query(filter: #Predicate<ConceptPage> { !$0.isHidden },
-           sort: \ConceptPage.updatedAt, order: .reverse) private var allConcepts: [ConceptPage]
 
     init(
-        searchQuery: String,
         refreshTick: Int,
         selectedArticle: Binding<Article?>,
         monitorIsIdle: Bool,
         selectedCategories: Binding<Set<String>>,
-        selectedTags: Binding<Set<String>>
+        selectedTags: Binding<Set<String>>,
+        unopenedOnly: Binding<Bool>
     ) {
-        self.searchQuery = searchQuery
         self.refreshTick = refreshTick
         self._selectedArticle = selectedArticle
         self.monitorIsIdle = monitorIsIdle
         self._selectedCategories = selectedCategories
         self._selectedTags = selectedTags
+        self._unopenedOnly = unopenedOnly
         _articles = Query(sort: \Article.savedAt, order: .reverse)
     }
 
@@ -226,22 +159,14 @@ private struct ArticleListContent: View {
                 }
             }
         }
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return base }
-        return SearchService.search(query: q, in: base).map { $0.article }
-    }
-
-    /// 検索クエリが非空のとき Wiki ページを名前・要点・本文でフルテキスト検索 (上位 5 件)
-    private var matchingConcepts: [ConceptPage] {
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return [] }
-        return SearchService.searchConceptPages(query: q, in: allConcepts)
-            .prefix(5)
-            .map { $0.conceptPage }
+        if unopenedOnly {
+            base = base.filter { FeedBuilder.isUnopened($0) }
+        }
+        return base
     }
 
     private var hasActiveFilter: Bool {
-        !selectedCategories.isEmpty || !selectedTags.isEmpty
+        !selectedCategories.isEmpty || !selectedTags.isEmpty || unopenedOnly
     }
 
     // MARK: - Body
@@ -255,7 +180,8 @@ private struct ArticleListContent: View {
                     VStack(spacing: 0) {
                         FilterChipsBar(
                             selectedCategories: $selectedCategories,
-                            selectedTags: $selectedTags
+                            selectedTags: $selectedTags,
+                            unopenedOnly: $unopenedOnly
                         )
                         ContentUnavailableView(
                             "library.filter.empty.title",
@@ -263,13 +189,8 @@ private struct ArticleListContent: View {
                             description: Text("library.filter.empty.description")
                         )
                     }
-                } else if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    EmptyStateView()
                 } else {
-                    ContentUnavailableView(
-                        "search.empty.title",
-                        systemImage: "magnifyingglass"
-                    )
+                    EmptyStateView()
                 }
             } else {
                 let grouped = LibraryDateGrouper.group(visible)
@@ -277,27 +198,12 @@ private struct ArticleListContent: View {
                     // フィルターチップを最初の行として配置 → リストと一緒にスクロールして隠れる
                     FilterChipsBar(
                         selectedCategories: $selectedCategories,
-                        selectedTags: $selectedTags
+                        selectedTags: $selectedTags,
+                        unopenedOnly: $unopenedOnly
                     )
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color(.systemBackground))
-
-                    // Wiki ページ検索結果 (検索クエリが非空かつ hits あり)
-                    if !matchingConcepts.isEmpty {
-                        Section {
-                            ForEach(matchingConcepts) { concept in
-                                NavigationLink(value: ConceptPageDetailDestination(id: concept.id)) {
-                                    ConceptSearchRow(concept: concept)
-                                }
-                            }
-                        } header: {
-                            Text("search.concepts.header")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .textCase(nil)
-                        }
-                    }
 
                     // 日付別グループ
                     ForEach(grouped, id: \.0) { (group, articlesInGroup) in
@@ -308,8 +214,7 @@ private struct ArticleListContent: View {
                                 } label: {
                                     ArticleRow(
                                         article: article,
-                                        refreshTick: refreshTick,
-                                        searchQuery: searchQuery
+                                        refreshTick: refreshTick
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -366,9 +271,15 @@ private struct FilterChipsBar: View {
 
     @Binding var selectedCategories: Set<String>
     @Binding var selectedTags: Set<String>
+    @Binding var unopenedOnly: Bool
 
     private var hasSelections: Bool {
-        !selectedCategories.isEmpty || !selectedTags.isEmpty
+        !selectedCategories.isEmpty || !selectedTags.isEmpty || unopenedOnly
+    }
+
+    /// spec 104: 最多分野が 7 割以上を占める等、絞り込みとして機能しないときは分野チップ行を隠す。
+    private var visibleCategoryChips: [(name: String, count: Int)] {
+        FeedBuilder.shouldShowCategoryChips(counts: categoryChips.map(\.count)) ? categoryChips : []
     }
 
     /// 分野チップ: categoryRaw 集計、記事数降順
@@ -391,12 +302,13 @@ private struct FilterChipsBar: View {
     }
 
     var body: some View {
-        if !categoryChips.isEmpty || !tagChips.isEmpty {
+        Group {
             // ZStack にすることで ScrollView が全幅を確保し、HStack 並列時の
             // クリップ境界による縦ラインが発生しない。✕ ボタンはオーバーレイ。
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: 0) {
-                    chipScrollRow(items: categoryChips, selected: $selectedCategories)
+                    unopenedRow
+                    chipScrollRow(items: visibleCategoryChips, selected: $selectedCategories)
                     chipScrollRow(items: tagChips, selected: $selectedTags)
                 }
                 .padding(.vertical, DS.Spacing.xs)
@@ -407,6 +319,7 @@ private struct FilterChipsBar: View {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             selectedCategories = []
                             selectedTags = []
+                            unopenedOnly = false
                         }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -421,6 +334,30 @@ private struct FilterChipsBar: View {
                 }
             }
             .background(Color(.systemBackground))
+        }
+    }
+
+    /// spec 104: 先頭の「未開封」トグルチップ (件数は出さない)。
+    private var unopenedRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Spacing.xs) {
+                Button {
+                    unopenedOnly.toggle()
+                } label: {
+                    Text("library.filter.unopened")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(
+                            unopenedOnly ? DS.Color.sumiInk.opacity(0.15) : Color(.tertiarySystemFill),
+                            in: Capsule()
+                        )
+                        .foregroundStyle(unopenedOnly ? DS.Color.sumiInk : .primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("library.filter.unopened")
+            }
+            .padding(.horizontal, DS.Spacing.xl)
+            .padding(.vertical, 3)
         }
     }
 
@@ -465,8 +402,8 @@ private struct FilterChipsBar: View {
 
 // MARK: - ConceptSearchRow
 
-/// Library 検索結果内の Wiki ページ行。名前 + 要点 or サマリー先頭1行。
-private struct ConceptSearchRow: View {
+/// 検索タブの Wiki ページ (トピック) 行。名前 + 要点 or サマリー先頭1行。
+struct ConceptSearchRow: View {
     let concept: ConceptPage
 
     var body: some View {

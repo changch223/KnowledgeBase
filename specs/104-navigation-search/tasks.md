@@ -152,3 +152,27 @@
 ## 実機で確認（ユーザー）
 - CloudKit 同期後も `lastOpenedAt` が端末間で崩れない（別端末で開いた記事の点が消える）
 - 長い会話を開いたときのスクロール・キーボード（会話画面が検索タブのスタック内に入ったため）
+
+---
+
+## 実装メモ（builder / 2026-11-19）
+
+**状態**: T1〜T9 すべて実装。ビルド SUCCEEDED、`-only-testing:KnowledgeBaseTests` TEST SUCCEEDED（756 ケース pass / 0 fail、新規 3: isUnopened / shouldShowCategoryChips / recentSaves）。新規 warning なし。UI テストは更新済み（実行結果は報告参照）。
+
+**新規**: `Views/SearchTabView.swift`（`ChatConversationDestination` 同居）、`Views/CitationPreviewSheet.swift`、`Views/FirstSaveGuide.swift`。
+**リネーム**: `ChatTabView.swift` → `ChatConversationView.swift`（`git mv`）。
+**削除**: `Views/ChatHistorySidebar.swift`（未使用化。`ChatSessionRow` は検索タブで流用）、`KnowledgeClipView` の `V3MigrationTooltip` / `feedEmptyState`、`ArticleListView` の検索・FAB 関連コード。
+**@Model**: `Article.lastOpenedAt: Date? = nil` のみ。
+
+**解釈・差異**:
+- 「最近聞いたこと」は `mode == .general` かつメッセージ 1 件以上の session のみ（空 session・学習チャットは出さない）。
+- `ConceptSearchRow`（旧 ArticleListView の private）は検索タブで再利用するため internal 化し、同ファイルに残置。
+- ツールバーの ＋ は FAB と同じく各画面（KnowledgeClipView / ArticleListView）が `showAddArticle` を保持して `AddArticleSheet` を開く（共通部品は作っていない）。検索タブには ＋ / アバターを付けていない（T7 はナレッジ・ライブラリのみ）。
+- 未開封の点は T7 どおり `ArticleShelfCard` のみ。ライブラリの行 (`ArticleRow`) には付けていない（「未開封」フィルタで代替）。
+- `pendingRegenerateRequest` は `.onChange` に加え `.task` でも消費（タブ未表示の間に値がセットされた場合の取りこぼし防止）。再生成は AI 不可判定を通さない（従来動作維持）。
+- 会話画面は session が一度でも見つかった後に消えたとき `dismiss()`（初回 @Query 反映前の誤 dismiss 防止）。
+- 出典プレビューから「記事を開く」は sheet の `onDismiss` で push（遷移競合回避）。
+- `chat.tab.title` は参照ゼロのため xcstrings から削除。`onboarding.page5.body` は 7 ロケール更新、`feed.new.title` は 7 ロケール `translated` に更新。
+- T8 grep 結果（変更なし・報告のみ）: 「タブ」前提の残存文言 = `knowledgeClip.v3.tooltip.body`（ツールチップ削除で参照ゼロ・キー残置）。参照ゼロになった可能性のあるキー = `chat.sidebar.newSession` / `chat.sidebar.section.general` / `chat.sidebar.empty` / `chat.sidebar.title`（旧サイドバー）、`knowledgeClip.v3.tooltip.*`、`search.placeholder` / `search.suggestions.*` / `search.concepts.header` / `search.empty.title`（旧ライブラリ検索）、`clip.recent.empty`。`SavedAnswer.empty.description`「AI チャットで質問すると…」は機能名としての言及なので据え置き。
+
+**実機で確認が必要**: iOS 26 の search role タブの見た目（分頁列右端・検索欄の出方）、会話画面（検索タブのスタック内）のキーボード・スクロール、再生成導線（保存済み回答 → 検索タブの新会話で自動質問）、未開封の点の消え方と既存記事に点が付かないこと、CloudKit 同期後の `lastOpenedAt`。

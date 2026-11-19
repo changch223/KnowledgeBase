@@ -100,6 +100,32 @@ final class FeedBuilder: FeedBuilding {
         }
     }
 
+    // MARK: - spec 104: 未開封 / 最近保存 / 分野チップ表示判定
+
+    /// 未開封 = 記事詳細をまだ開いていない (`lastOpenedAt == nil`)。
+    static func isUnopened(_ article: Article) -> Bool {
+        article.lastOpenedAt == nil
+    }
+
+    /// 「最近保存したもの」棚用。savedAt 降順、`isObsolete` を除く、処理中も含む。
+    static func recentSaves(articles: [Article], limit: Int = 8) -> [Article] {
+        articles
+            .filter { !$0.isObsolete }
+            .sorted { $0.savedAt > $1.savedAt }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// 分野チップ行を出すか。チップが 1 個以下、または最多分野が全体の 70% 以上なら
+    /// 絞り込みとして機能しないので false。
+    static func shouldShowCategoryChips(counts: [Int]) -> Bool {
+        let positive = counts.filter { $0 > 0 }
+        guard positive.count > 1 else { return false }
+        let total = positive.reduce(0, +)
+        guard total > 0, let maxCount = positive.max() else { return false }
+        return Double(maxCount) / Double(total) < 0.7
+    }
+
     // MARK: - spec 068: おすすめ carousel (recommend)
 
     /// 記事と Wiki を同一スコア軸でソートし、上位 limit 件を carousel 用に返す (AI 呼び出しゼロ)。

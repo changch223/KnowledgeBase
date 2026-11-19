@@ -88,6 +88,10 @@ struct ConceptPageDetailView: View {
 
     /// spec 064: 本文中の concept-id:// リンク tap 先 (self-contained 遷移)。
     @State private var wikiLinkTarget: WikiLinkTarget?
+    /// spec 104: 要点の出典 tap → プレビュー sheet → 「記事を開く」で push。
+    @State private var previewArticle: Article?
+    @State private var pendingOpenArticle: Article?
+    @State private var openedArticle: Article?
 
     var body: some View {
         // page が削除/merge で消えた瞬間に短絡 → conceptPage プロパティ参照を一切させない (crash 防止)
@@ -184,6 +188,20 @@ struct ConceptPageDetailView: View {
                 }
                 .foregroundStyle(DS.Color.sumiInk)
             }
+        }
+        .sheet(item: $previewArticle, onDismiss: {
+            if let article = pendingOpenArticle {
+                pendingOpenArticle = nil
+                openedArticle = article
+            }
+        }) { article in
+            CitationPreviewSheet(article: article) {
+                pendingOpenArticle = article
+                previewArticle = nil
+            }
+        }
+        .navigationDestination(item: $openedArticle) { article in
+            ArticleDetailView(article: article, embedNavigationStack: false)
         }
         .navigationDestination(item: $wikiLinkTarget) { target in
             // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
@@ -363,7 +381,9 @@ struct ConceptPageDetailView: View {
                         }
                         // spec 089: 各要点の出典 (最も関連する元記事) をタップで開ける。
                         if let article = insightSourceArticle(at: index) {
-                            NavigationLink(value: article) {
+                            Button {
+                                previewArticle = article
+                            } label: {
                                 HStack(spacing: DS.Spacing.xxs) {
                                     Image(systemName: "doc.text")
                                         .font(.caption2)

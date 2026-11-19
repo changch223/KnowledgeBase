@@ -9,7 +9,8 @@
 //  ※ 旧 V3.0 の 3 section view (RecentArticlesSection / InterestingNextSection /
 //    FollowingPeopleSection) は spec 075 以降で未使用になり、spec 102 で削除した。
 //
-//  右上 toolbar: AvatarMenu (Settings 遷移)
+//  右上 toolbar: ＋ (追加) と AvatarMenu (Settings 遷移)。spec 104 で FAB を廃止し toolbar に統一。
+//  spec 104: 「最近保存したもの」棚 + トピック縦カード。記事 0 件では FirstSaveGuide を表示。
 //
 
 import SwiftUI
@@ -27,10 +28,8 @@ struct KnowledgeClipView: View {
     @State private var orderedConceptIDs: [UUID] = []
     /// spec 035 + 056: タブ表示時に lock した「前回開いた時刻」(view ライフタイム中は固定)
     @State private var sinceForRecent: Date?
-    /// spec 056: FAB tap で URL 入力 sheet
+    /// spec 104: 右上 ＋ tap で追加 sheet
     @State private var showAddArticle: Bool = false
-    /// spec 056 polish: V2.5 → V3.0 初回起動 1 回限りの tooltip 表示
-    @State private var showV3Tooltip: Bool = false
 
     // spec 066 (News+ フィード): 記事 + Wiki 更新を @Query で取り、FeedBuilder.assemble で
     // 時系列 mix。@Query ゆえ保存/更新で自動反映 (reactive)。AI 呼び出しゼロ。
@@ -70,9 +69,9 @@ struct KnowledgeClipView: View {
         try? modelContext.save()
     }
 
-    /// spec 075: 上部「新着」棚 = まだ概念に束ねられていない新着記事。概念化されると消える。
-    private var newShelfArticles: [Article] {
-        FeedBuilder.newArticleShelf(articles: feedArticles, now: Date())
+    /// spec 104: 「最近保存したもの」棚 = 保存日時の新しい順 (処理中も含む、未開封は点付き)。
+    private var recentSavedArticles: [Article] {
+        FeedBuilder.recentSaves(articles: feedArticles, limit: 8)
     }
 
     /// spec 087: 「おすすめのまとめ」横列の表示フラグ (一旦非表示)。true で復活。
@@ -91,9 +90,9 @@ struct KnowledgeClipView: View {
                     // spec 103: 処理中は先頭に 1 行だけ表示
                     ProcessingInlineStatus(monitor: monitor)
 
-                    // spec 075: 上部「新着」棚 — まだ概念化されていない新着記事 (概念化で消える)。
-                    if !newShelfArticles.isEmpty {
-                        newArticleShelf
+                    // spec 104: 「最近保存したもの」棚。
+                    if !recentSavedArticles.isEmpty {
+                        recentSavesShelf
                     }
 
                     // spec 075: 「おすすめのまとめ」横棚 — トップレベル概念。候補不足なら非表示。
@@ -102,7 +101,10 @@ struct KnowledgeClipView: View {
                         RecommendCarousel(items: recommendItems)
                     }
 
-                    if displayedConceptEntries.isEmpty {
+                    if feedArticles.isEmpty {
+                        // spec 104: 初回 (記事 0 件) は保存方法の案内
+                        FirstSaveGuide()
+                    } else if displayedConceptEntries.isEmpty {
                         SeigaihaEmptyState(message: "clip.empty.concepts")
                     } else {
                         // 北斎スタイル見出し
@@ -127,6 +129,25 @@ struct KnowledgeClipView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(DS.Color.washiBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                // spec 104: ナレッジ・ライブラリ共通の右上 (＋ と設定)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showAddArticle = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityIdentifier("toolbar.addArticle")
+                    .accessibilityLabel(Text("addArticle.title"))
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    AvatarMenu()
+                }
+            }
+            // spec 104: FirstSaveGuide → Safari 拡張セットアップ
+            .navigationDestination(for: SafariSetupDestination.self) { _ in
+                SafariSetupView()
+            }
             // 既存 navigationDestination (V2.5 から継承、機能維持)
             .navigationDestination(for: CategoryDigestDetailDestination.self) { dest in
                 CategoryKnowledgeDetailView(category: dest.category)
@@ -174,12 +195,6 @@ struct KnowledgeClipView: View {
                 try? await services.digestService?.regenerateAllStale()
                 refreshFeedOrder()  // spec 080拡張: 引っ張り更新で重要×最新×既読 並びを取り直す
             }
-            .overlay(alignment: .bottomTrailing) {
-                FABButton(icon: "plus") {
-                    showAddArticle = true
-                }
-                .accessibilityIdentifier("fab.addArticle")
-            }
             .sheet(isPresented: $showAddArticle) {
                 AddArticleSheet()
             }
@@ -188,26 +203,11 @@ struct KnowledgeClipView: View {
         .accessibilityIdentifier("tab.knowledgeClip")
         .task {
             captureRecentSinceAndTouch()
-            checkV3MigrationTooltip()
             refreshFeedOrder()  // spec 080拡張: 初回表示時に並び順 snapshot を確定
         }
         // spec 080拡張: アプリ復帰 (.active) で並び順を取り直す → 既読が下がる「次回」並び替え
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active { refreshFeedOrder() }
-        }
-        // spec 056 polish: V3 migration tooltip (初回起動 1 回限り)
-        .overlay(alignment: .top) {
-            if showV3Tooltip {
-                V3MigrationTooltip {
-                    UserDefaults.standard.set(true, forKey: "spec056_v3_migrated")
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        showV3Tooltip = false
-                    }
-                }
-                .padding(.horizontal, DS.Spacing.xxl)
-                .padding(.top, DS.Spacing.md)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
         }
         // spec 052 + 056: Widget deep link 受信時の card push 遷移
         .onChange(of: services.pendingDeepLinkCardID) { _, newID in
@@ -221,15 +221,14 @@ struct KnowledgeClipView: View {
         }
     }
 
-    /// spec 075: 上部「新着」棚 — まだ概念に束ねられていない新着記事を横スクロールで。
-    /// 既存 ArticleShelfCard 流用。概念化されると newShelfArticles から外れて自動的に消える。
-    private var newArticleShelf: some View {
+    /// spec 104: 「最近保存したもの」棚 — 横スクロール。既存 ArticleShelfCard 流用 (未開封は点付き)。
+    private var recentSavesShelf: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             SumiSectionHeader(title: "feed.new.title")
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: DS.Spacing.md) {
-                    ForEach(newShelfArticles, id: \.id) { article in
+                    ForEach(recentSavedArticles, id: \.id) { article in
                         ArticleShelfCard(article: article)
                     }
                 }
@@ -238,21 +237,6 @@ struct KnowledgeClipView: View {
         }
         .padding(.vertical, DS.Spacing.sm)
         .accessibilityIdentifier("clip.newShelf")
-    }
-
-    /// 空状態 — 青海波 + 「知」
-    private var feedEmptyState: some View {
-        SeigaihaEmptyState(message: "clip.recent.empty")
-    }
-
-    /// spec 056 polish: V3 migration tooltip の表示判定 (初回起動 1 回限り)。
-    private func checkV3MigrationTooltip() {
-        let key = "spec056_v3_migrated"
-        if !UserDefaults.standard.bool(forKey: key) {
-            withAnimation(.easeIn(duration: 0.4).delay(0.5)) {
-                showV3Tooltip = true
-            }
-        }
     }
 
     /// spec 035 + 056: タブ初表示時に lastOpenedAt を取得 (差分起点)、その後現在時刻で touch。
@@ -375,47 +359,5 @@ struct SavedAnswerDetailLoader: View {
                     .onAppear { dismiss() }
             }
         }
-    }
-}
-
-// MARK: - spec 056 polish: V3 migration tooltip
-
-/// V2.5 → V3.0 アップデート時の初回起動で 1 回だけ表示する「タブが新しくなりました」 tooltip。
-/// UserDefaults `spec056_v3_migrated` flag で永続的に dismiss を記録。
-private struct V3MigrationTooltip: View {
-    let onDismiss: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            HStack(alignment: .top, spacing: DS.Spacing.md) {
-                Image(systemName: "sparkles")
-                    .font(.title3)
-                    .foregroundStyle(.yellow)
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text("knowledgeClip.v3.tooltip.title")
-                        .font(.headline)
-                    Text("knowledgeClip.v3.tooltip.body")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-                Button {
-                    onDismiss()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.tertiary)
-                }
-                .accessibilityIdentifier("v3Tooltip.dismiss")
-                .accessibilityLabel(Text("knowledgeClip.v3.tooltip.ok"))
-            }
-        }
-        .padding(DS.Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: DS.Radius.card)
-                .fill(DS.Color.surfaceSecondary)
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-        )
-        .accessibilityIdentifier("v3Tooltip")
     }
 }

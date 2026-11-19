@@ -178,6 +178,16 @@ struct ArticleDetailView: View {
                 guard !isFullyComplete else { return }
                 bumpRefresh()
             }
+            // spec 104: 開封日時を記録 (未開封の点を消す)。失敗はログのみ。
+            .task {
+                guard article.lastOpenedAt == nil else { return }
+                article.lastOpenedAt = .now
+                do {
+                    try modelContext.save()
+                } catch {
+                    AppErrorReporter.shared.report(error, operation: "markArticleOpened")
+                }
+            }
     }
 
     /// 訂正シート (本文見直し / 確認) を開いている間は再描画を止める。
