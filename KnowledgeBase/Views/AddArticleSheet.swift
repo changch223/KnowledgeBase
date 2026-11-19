@@ -52,6 +52,9 @@ struct AddArticleSheet: View {
     @State private var audioText: String = ""
     @State private var isTranscribing: Bool = false
     @State private var errorMessage: String?
+    /// 実行中の OCR / 文字起こし Task (× で cancel) と世代 ID (古い結果の上書き防止)。
+    @State private var attachmentTask: Task<Void, Never>?
+    @State private var attachmentGeneration: Int = 0
     @State private var isProcessing: Bool = false
     @State private var showDuplicateAlert: Bool = false
 
@@ -69,8 +72,14 @@ struct AddArticleSheet: View {
                         if inputText.isEmpty {
                             PasteButton(payloadType: URL.self) { urls in
                                 guard let url = urls.first else { return }
-                                inputText = url.absoluteString
-                                Task { await save() }
+                                Task { @MainActor in
+                                    inputText = url.absoluteString
+                                    // http/https のときだけ自動保存。file: / mailto: 等は入力欄に入れるだけ。
+                                    let scheme = url.scheme?.lowercased()
+                                    if scheme == "http" || scheme == "https" {
+                                        await save()
+                                    }
+                                }
                             }
                             .accessibilityIdentifier("addArticle.pasteButton")
                         }
@@ -213,7 +222,10 @@ struct AddArticleSheet: View {
             .onChange(of: photoItem) { _, newItem in
                 guard let newItem else { return }
                 mode = .image
-                Task { await runOCR(on: newItem) }
+                attachmentTask?.cancel()
+                attachmentGeneration += 1
+                let gen = attachmentGeneration
+                attachmentTask = Task { await runOCR(on: newItem, generation: gen) }
             }
             .fileImporter(
                 isPresented: $showAudioImporter,
@@ -226,7 +238,10 @@ struct AddArticleSheet: View {
                         pickedAudioName = url.lastPathComponent
                         mode = .audio
                         errorMessage = nil
-                        Task { await runTranscription(on: url) }
+                        attachmentTask?.cancel()
+                        attachmentGeneration += 1
+                        let gen = attachmentGeneration
+                        attachmentTask = Task { await runTranscription(on: url, generation: gen) }
                     }
                 case .failure(let error):
                     errorMessage = error.localizedDescription
@@ -247,12 +262,17 @@ struct AddArticleSheet: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("common.cancel"))
+            .accessibilityLabel(Text("addArticle.attach.remove"))
             .accessibilityIdentifier("addArticle.clearAttachment")
         }
     }
 
     private func clearAttachment() {
+        attachmentTask?.cancel()
+        attachmentTask = nil
+        attachmentGeneration += 1
+        isOCRRunning = false
+        isTranscribing = false
         mode = .text
         pickedFileURL = nil
         pickedFileName = nil
@@ -293,27 +313,32 @@ struct AddArticleSheet: View {
         }
     }
 
-    private func runTranscription(on url: URL) async {
+    private func runTranscription(on url: URL, generation: Int) async {
         isTranscribing = true
         audioText = ""
         errorMessage = nil
-        defer { isTranscribing = false }
+        defer { if generation == attachmentGeneration { isTranscribing = false } }
 
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         do {
             let raw = try await audioService.transcribe(fileURL: url)
+            guard !Task.isCancelled, generation == attachmentGeneration else { return }
             if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 errorMessage = String(localized: "addArticle.audio.error.noText")
             } else {
                 // spec 094: 既知の用語集で誤認識を補正してからプレビュー表示。
                 let glossary = TranscriptGlossaryBuilder.build(context: context)
-                audioText = await transcriptCorrector.correct(raw, glossary: glossary)
+                let corrected = await transcriptCorrector.correct(raw, glossary: glossary)
+                guard !Task.isCancelled, generation == attachmentGeneration else { return }
+                audioText = corrected
             }
         } catch AudioTranscriptionError.unauthorized {
+            guard !Task.isCancelled, generation == attachmentGeneration else { return }
             errorMessage = String(localized: "addArticle.audio.error.unauthorized")
         } catch {
+            guard !Task.isCancelled, generation == attachmentGeneration else { return }
             errorMessage = String(localized: "addArticle.audio.error.failed")
         }
     }
@@ -328,16 +353,19 @@ struct AddArticleSheet: View {
         handle(result)
     }
 
-    private func runOCR(on item: PhotosPickerItem) async {
+    private func runOCR(on item: PhotosPickerItem, generation: Int) async {
         isOCRRunning = true
         ocrText = ""
         errorMessage = nil
-        defer { isOCRRunning = false }
-        guard let data = try? await item.loadTransferable(type: Data.self) else {
+        defer { if generation == attachmentGeneration { isOCRRunning = false } }
+        let loaded = try? await item.loadTransferable(type: Data.self)
+        guard !Task.isCancelled, generation == attachmentGeneration else { return }
+        guard let data = loaded else {
             errorMessage = String(localized: "addArticle.image.error.unreadable")
             return
         }
         let recognized = await ocrService.recognizeText(in: data)
+        guard !Task.isCancelled, generation == attachmentGeneration else { return }
         if recognized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             errorMessage = String(localized: "addArticle.image.error.noText")
         } else {

@@ -15,7 +15,7 @@ struct CitationPreviewSheet: View {
     private var title: String {
         let raw = article.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = raw.isEmpty ? (article.enrichment?.canonicalTitle ?? article.url) : raw
-        return TitleCleaner.clean(base, host: URL(string: article.url)?.host)
+        return TitleCleaner.clean(base, host: TitleCleaner.webHost(of: article.url))
     }
 
     private var sourceAndDate: String {

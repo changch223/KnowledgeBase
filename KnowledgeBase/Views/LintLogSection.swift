@@ -138,7 +138,7 @@ private struct LintLogRow: View {
     private var relativeTimestamp: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.locale = Locale.autoupdatingCurrent
         return formatter.localizedString(for: log.timestamp, relativeTo: .now)
     }
 

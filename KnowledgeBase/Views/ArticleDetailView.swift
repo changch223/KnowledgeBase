@@ -49,7 +49,7 @@ struct ArticleDetailView: View {
     }
 
     private var displayTitle: String {
-        TitleCleaner.clean(rawDisplayTitle, host: URL(string: article.url)?.host)
+        TitleCleaner.clean(rawDisplayTitle, host: TitleCleaner.webHost(of: article.url))
     }
 
     private var rawDisplayTitle: String {

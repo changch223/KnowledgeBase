@@ -79,7 +79,7 @@ private struct PastViewArticleRow: View {
     private var relativeAge: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.locale = Locale.autoupdatingCurrent
         return formatter.localizedString(for: article.savedAt, relativeTo: .now)
     }
 

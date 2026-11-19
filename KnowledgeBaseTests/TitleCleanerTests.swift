@@ -22,6 +22,20 @@ struct TitleCleanerTests {
         #expect(TitleCleaner.clean("What's new - Swift 6", host: "example.com") == "What's new - Swift 6")
     }
 
+    @Test func shortCoreNameIsKept() {
+        #expect(TitleCleaner.clean("Tesla - next year", host: "x.com") == "Tesla - next year")
+    }
+
+    @Test func tailContainingHostButNotCoreIsKept() {
+        #expect(TitleCleaner.clean("記事 - AI", host: "mainichi.jp") == "記事 - AI")
+    }
+
+    @Test func syntheticUrlHasNoWebHost() {
+        #expect(TitleCleaner.webHost(of: "knowledgebase://text/abc") == nil)
+        #expect(TitleCleaner.webHost(of: "https://zenn.dev/a") == "zenn.dev")
+        #expect(TitleCleaner.clean("Meeting - notes", host: TitleCleaner.webHost(of: "knowledgebase://text/abc")) == "Meeting - notes")
+    }
+
     @Test func emptyAfterRemovalIsKept() {
         #expect(TitleCleaner.clean("Zenn", host: "zenn.dev") == "Zenn")
     }

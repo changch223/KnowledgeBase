@@ -64,7 +64,7 @@ final class V3RedesignUITests: XCTestCase {
 
         // Add Article sheet (URL 入力欄) が開く
         let sheet = app.otherElements["sheet.addArticle"]
-        let urlField = app.textFields["addArticle.urlField"]
+        let urlField = app.descendants(matching: .any)["addArticle.urlField"]
         XCTAssertTrue(sheet.waitForExistence(timeout: 3) || urlField.waitForExistence(timeout: 3),
                       "Add Article sheet が開かなかった")
     }

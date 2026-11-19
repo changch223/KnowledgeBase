@@ -11,10 +11,18 @@ import Foundation
 nonisolated enum TitleCleaner {
     private static let separators = [" | ", " - ", " – ", " — ", "｜", " :: "]
 
+    /// http/https の URL のときだけ host を返す (合成 URL `knowledgebase://` 等は nil)。
+    static func webHost(of urlString: String) -> String? {
+        guard let url = URL(string: urlString),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else { return nil }
+        return url.host
+    }
+
     static func clean(_ title: String, host: String?) -> String {
         guard let host, !host.isEmpty else { return title }
         let core = coreName(of: host)
-        guard !core.isEmpty else { return title }
+        guard core.count >= 3 else { return title }
 
         // 最も後ろにある区切りで末尾セグメントを取り出す
         var best: (range: Range<String.Index>, sep: String)?
@@ -29,7 +37,7 @@ nonisolated enum TitleCleaner {
         let tail = String(title[found.range.upperBound...])
         let normalizedTail = normalize(tail)
         guard !normalizedTail.isEmpty,
-              normalizedTail.contains(core) || core.contains(normalizedTail) else { return title }
+              normalizedTail.contains(core) else { return title }
 
         let head = String(title[..<found.range.lowerBound])
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -38,7 +46,7 @@ nonisolated enum TitleCleaner {
     }
 
     private static func normalize(_ s: String) -> String {
-        s.lowercased().filter { !$0.isWhitespace }
+        s.lowercased().filter { !$0.isWhitespace && !$0.isPunctuation && !$0.isSymbol }
     }
 
     /// `www.` と TLD を除いた最初のラベル (nikkei.com → nikkei)。

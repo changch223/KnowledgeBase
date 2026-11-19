@@ -29,7 +29,7 @@ struct ArticleRow: View {
     /// Why: 共有時にユーザーが見たタイトルが保存意図に最も近い。
     /// canonicalTitle は HTML <title> のまま (例: 「KFC」) で情報量が落ちる場合があるため。
     private var displayTitle: String {
-        TitleCleaner.clean(rawDisplayTitle, host: URL(string: article.url)?.host)
+        TitleCleaner.clean(rawDisplayTitle, host: TitleCleaner.webHost(of: article.url))
     }
 
     private var rawDisplayTitle: String {
@@ -215,6 +215,7 @@ enum SavedAtFormatter {
         f.locale = locale
         f.dateTimeStyle = .named
         f.unitsStyle = .short
+        f.formattingContext = .beginningOfSentence
         var c = DateComponents()
         c.day = day
         return f.localizedString(from: c)
