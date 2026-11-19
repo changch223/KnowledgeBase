@@ -176,3 +176,13 @@
 - T8 grep 結果（変更なし・報告のみ）: 「タブ」前提の残存文言 = `knowledgeClip.v3.tooltip.body`（ツールチップ削除で参照ゼロ・キー残置）。参照ゼロになった可能性のあるキー = `chat.sidebar.newSession` / `chat.sidebar.section.general` / `chat.sidebar.empty` / `chat.sidebar.title`（旧サイドバー）、`knowledgeClip.v3.tooltip.*`、`search.placeholder` / `search.suggestions.*` / `search.concepts.header` / `search.empty.title`（旧ライブラリ検索）、`clip.recent.empty`。`SavedAnswer.empty.description`「AI チャットで質問すると…」は機能名としての言及なので据え置き。
 
 **実機で確認が必要**: iOS 26 の search role タブの見た目（分頁列右端・検索欄の出方）、会話画面（検索タブのスタック内）のキーボード・スクロール、再生成導線（保存済み回答 → 検索タブの新会話で自動質問）、未開封の点の消え方と既存記事に点が付かないこと、CloudKit 同期後の `lastOpenedAt`。
+
+### QA 修正（builder / 2026-11-19）
+1. 再生成の回答モード: `ChatConversationDestination.initialMode`（既定 `.quick`）を追加。再生成 (`pendingRegenerateRequest`) は `.think`、「AI に聞く」は `.quick`。`ChatConversationView` が初回送信をその mode で行い `chatMode` にも反映。
+2. 初回送信は `.task` 内で await せず `Task { ... }` で画面寿命から切り離す。session が @Query に無ければ最大約 1 秒待って再試行し、確認できてから `hasSentInitial` を立てる（確認できなければ立てず .task 再実行で再試行）。
+3. `SearchTabView.ask()` / 再生成は、メッセージ 0 件の `.general` session があれば再利用し、無いときだけ `createSession()`。
+4. `lastOpenedAt` 一括補完を削除。`spec104_unopenedTrackingSince`（初回起動時に 1 回保存）+ `FeedBuilder.isUnopened(_:since:)`（`lastOpenedAt == nil && savedAt >= since`）+ 読み出しヘルパー `FeedBuilder.unopenedTrackingSince()`。呼び出し側 (ArticleShelfCard / ArticleListView) 更新。FeedBuilderTests 更新 + 1 件追加。
+5. `DeepDiveChatView` の出典プレビュー「記事を開く」: `onArticleLinkTap` + `@State openedArticle` + `.navigationDestination(item:)`。
+6. `SearchTabView` に `SavedAnswerDetailDestination` / `SavedAnswerListByConceptDestination` の遷移先を追加。
+7. ライブラリ: 分野チップ行が非表示のとき `selectedCategories` を空にする。
+8. ServiceContainer / SuggestedPromptsSection の古いコメントを更新。

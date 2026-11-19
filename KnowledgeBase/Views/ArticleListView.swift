@@ -160,7 +160,8 @@ private struct ArticleListContent: View {
             }
         }
         if unopenedOnly {
-            base = base.filter { FeedBuilder.isUnopened($0) }
+            let since = FeedBuilder.unopenedTrackingSince()
+            base = base.filter { FeedBuilder.isUnopened($0, since: since) }
         }
         return base
     }
@@ -334,6 +335,15 @@ private struct FilterChipsBar: View {
                 }
             }
             .background(Color(.systemBackground))
+        }
+        // 分野チップ行が非表示のとき隠れた絞り込みを残さない
+        .onAppear { clearHiddenCategorySelection() }
+        .onChange(of: visibleCategoryChips.isEmpty) { _, _ in clearHiddenCategorySelection() }
+    }
+
+    private func clearHiddenCategorySelection() {
+        if visibleCategoryChips.isEmpty && !selectedCategories.isEmpty {
+            selectedCategories = []
         }
     }
 

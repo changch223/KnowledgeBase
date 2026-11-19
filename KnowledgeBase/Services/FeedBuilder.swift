@@ -102,9 +102,20 @@ final class FeedBuilder: FeedBuilding {
 
     // MARK: - spec 104: 未開封 / 最近保存 / 分野チップ表示判定
 
-    /// 未開封 = 記事詳細をまだ開いていない (`lastOpenedAt == nil`)。
-    static func isUnopened(_ article: Article) -> Bool {
-        article.lastOpenedAt == nil
+    /// 未開封の追跡開始時刻の UserDefaults キー (初回起動時に 1 回だけ保存)。
+    static let unopenedTrackingSinceKey = "spec104_unopenedTrackingSince"
+
+    /// 未開封の追跡開始時刻 (読み出しヘルパー 1 か所)。未設定なら distantFuture
+    /// (= どの記事にも点を付けない) を返す。設定は KnowledgeBaseApp の起動時に行う。
+    static func unopenedTrackingSince(_ defaults: UserDefaults = .standard) -> Date {
+        if let d = defaults.object(forKey: unopenedTrackingSinceKey) as? Date { return d }
+        return .distantFuture
+    }
+
+    /// 未開封 = 追跡開始後に保存され (`savedAt >= since`)、記事詳細をまだ開いていない記事。
+    /// 追跡開始前の記事・CloudKit から後で届く既存記事には点を付けず、一括書き込みも不要。
+    static func isUnopened(_ article: Article, since: Date) -> Bool {
+        article.lastOpenedAt == nil && article.savedAt >= since
     }
 
     /// 「最近保存したもの」棚用。savedAt 降順、`isObsolete` を除く、処理中も含む。

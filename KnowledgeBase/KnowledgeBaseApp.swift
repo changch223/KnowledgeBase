@@ -240,24 +240,11 @@ struct KnowledgeBaseApp: App {
         serviceContainer.pendingDeepLinkCardID = uuid
     }
 
-    /// spec 104: `lastOpenedAt == nil` の既存記事に `savedAt` を入れる one-time migration。
-    /// UserDefaults `spec104_lastOpenedBackfilled` で 1 回限り。
-    @MainActor
-    private func backfillLastOpenedAtIfNeeded(context: ModelContext) {
-        let key = "spec104_lastOpenedBackfilled"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        do {
-            let descriptor = FetchDescriptor<Article>(
-                predicate: #Predicate { $0.lastOpenedAt == nil }
-            )
-            let targets = try context.fetch(descriptor)
-            for article in targets {
-                article.lastOpenedAt = article.savedAt
-            }
-            if !targets.isEmpty { try context.save() }
-            UserDefaults.standard.set(true, forKey: key)
-        } catch {
-            AppErrorReporter.shared.report(error, operation: "backfillLastOpenedAt")
+    /// spec 104: 未開封の追跡開始時刻を初回起動時に 1 回だけ保存 (既存記事・CloudKit 後着記事に点を付けない)。
+    private func recordUnopenedTrackingStartIfNeeded() {
+        let key = FeedBuilder.unopenedTrackingSinceKey
+        if UserDefaults.standard.object(forKey: key) == nil {
+            UserDefaults.standard.set(Date(), forKey: key)
         }
     }
 
@@ -289,8 +276,8 @@ struct KnowledgeBaseApp: App {
 
         let context = sharedModelContainer.mainContext
 
-        // spec 104: 既存記事を「開封済み」扱いに一括補完 (one-time)。新規記事だけが未開封の点を持つ。
-        backfillLastOpenedAtIfNeeded(context: context)
+        // spec 104: 未開封の追跡開始時刻を保存 (記事への一括書き込みはしない)。
+        recordUnopenedTrackingStartIfNeeded()
 
         // spec 009: ChunkProgressStore (incremental 永続化)
         let chunkProgressStore = SwiftDataChunkProgressStore(

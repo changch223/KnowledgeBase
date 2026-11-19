@@ -22,6 +22,8 @@ struct ChatConversationView: View {
     let sessionID: UUID
     /// spec 104: 検索欄から「AI に聞く」で来たときの初回質問 (メッセージ 0 件のときだけ 1 回送信)。
     var initialQuestion: String? = nil
+    /// 初回送信の回答モード (再生成は .think、検索の「AI に聞く」は .quick)
+    var initialMode: ChatMode = .quick
     /// spec 104: 引用 / 関連記事の「記事を開く」を親 (検索タブの stack) に通知。
     let onOpenArticle: (Article) -> Void
 
@@ -141,12 +143,21 @@ struct ChatConversationView: View {
         // spec 104: 初回質問を 1 回だけ送信 / session 消失で dismiss
         .task {
             if currentSession != nil { sessionWasSeen = true }
-            guard !hasSentInitial else { return }
-            hasSentInitial = true
-            if let q = initialQuestion, !q.isEmpty, currentSessionMessages.isEmpty {
-                inputText = q
-                await sendQuestion()
+            guard !hasSentInitial, let q = initialQuestion, !q.isEmpty else { return }
+            // session が @Query にまだ反映されていなければ少し待って再試行 (最大 ~1 秒)
+            var tries = 0
+            while currentSession == nil && tries < 10 && !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                tries += 1
             }
+            // session が確認できなければ立てずに戻る (.task 再実行で再試行できる)
+            guard currentSession != nil, !Task.isCancelled else { return }
+            hasSentInitial = true
+            guard currentSessionMessages.isEmpty else { return }
+            let mode = initialMode
+            chatMode = mode
+            // 画面寿命 (.task のキャンセル) と切り離して送信し、回答を失わない
+            Task { await sendQuestion(text: q, mode: mode) }
         }
         .onChange(of: allSessions.map(\.id)) { _, ids in
             if ids.contains(sessionID) {
@@ -240,10 +251,10 @@ struct ChatConversationView: View {
 
     // MARK: - Actions
 
-    private func sendQuestion() async {
+    private func sendQuestion(text: String? = nil, mode explicitMode: ChatMode? = nil) async {
         guard let chatService = serviceContainer.chatService else { return }
 
-        let question = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let question = (text ?? inputText).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
 
         // spec 104: session は渡された sessionID に固定 (消えていれば何もしない)
@@ -252,10 +263,10 @@ struct ChatConversationView: View {
         // multi-turn context: 直前 4 message (この時点では新 user message はまだ追加されていない)
         let context = contextMessages
 
-        inputText = ""
+        if text == nil { inputText = "" }
         isThinking = true
 
-        let mode = chatMode
+        let mode = explicitMode ?? chatMode
         do {
             // ChatService が user/assistant message を永続化する
             let assistantMsg = try await chatService.send(

@@ -381,9 +381,18 @@ struct FeedBuilderTests {
         let container = try makeContainer()
         let ctx = container.mainContext
         let a = insertArticle(ctx, title: "A", savedAt: fixedNow)
-        #expect(FeedBuilder.isUnopened(a))
+        #expect(FeedBuilder.isUnopened(a, since: fixedNow.addingTimeInterval(-60)))
         a.lastOpenedAt = fixedNow
-        #expect(!FeedBuilder.isUnopened(a))
+        #expect(!FeedBuilder.isUnopened(a, since: fixedNow.addingTimeInterval(-60)))
+    }
+
+    @Test func isUnopenedIgnoresArticlesSavedBeforeTrackingStart() throws {
+        let container = try makeContainer()
+        let ctx = container.mainContext
+        let old = insertArticle(ctx, title: "Old", savedAt: fixedNow.addingTimeInterval(-3600))
+        #expect(!FeedBuilder.isUnopened(old, since: fixedNow))
+        let fresh = insertArticle(ctx, title: "New", savedAt: fixedNow.addingTimeInterval(60))
+        #expect(FeedBuilder.isUnopened(fresh, since: fixedNow))
     }
 
     @Test func shouldShowCategoryChipsRules() {

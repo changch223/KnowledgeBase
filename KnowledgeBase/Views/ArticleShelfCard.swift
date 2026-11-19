@@ -30,7 +30,7 @@ struct ArticleShelfCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
                     // spec 104: 未開封の小さな藍の点 (数字バッジは出さない)
                     .overlay(alignment: .topLeading) {
-                        if FeedBuilder.isUnopened(article) {
+                        if FeedBuilder.isUnopened(article, since: FeedBuilder.unopenedTrackingSince()) {
                             Circle()
                                 .fill(DS.Color.actionBlue)
                                 .frame(width: 7, height: 7)

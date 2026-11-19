@@ -29,6 +29,8 @@ struct DeepDiveChatView: View {
     @State private var isSending: Bool = false
     /// spec 044 brushup 2: 「✓ わかった」「🤔 もっと」「✗ 興味ない」tap 直後の視覚 fb (2 秒で消える)
     @State private var ackToast: String?
+    /// 出典プレビューの「記事を開く」遷移先
+    @State private var openedArticle: Article?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -52,6 +54,9 @@ struct DeepDiveChatView: View {
                     .accessibilityIdentifier("deepdive.ackToast")
             }
         }
+        .navigationDestination(item: $openedArticle) { article in
+            ArticleDetailView(article: article, embedNavigationStack: false)
+        }
         .task {
             await startChat()
         }
@@ -74,7 +79,7 @@ struct DeepDiveChatView: View {
             )
             .accessibilityLabel(Text(startError))
         } else if let session {
-            DeepDiveMessageList(sessionID: session.id, isThinking: isSending)
+            DeepDiveMessageList(sessionID: session.id, isThinking: isSending, onOpenArticle: { openedArticle = $0 })
         } else {
             Color.clear
         }
@@ -239,9 +244,12 @@ private struct DeepDiveMessageList: View {
 
     @Query private var messages: [ChatMessage]
 
-    init(sessionID: UUID, isThinking: Bool) {
+    let onOpenArticle: (Article) -> Void
+
+    init(sessionID: UUID, isThinking: Bool, onOpenArticle: @escaping (Article) -> Void = { _ in }) {
         self.sessionID = sessionID
         self.isThinking = isThinking
+        self.onOpenArticle = onOpenArticle
         _messages = Query(
             filter: #Predicate<ChatMessage> { $0.session?.id == sessionID },
             sort: [SortDescriptor(\.timestamp, order: .forward)]
@@ -253,7 +261,7 @@ private struct DeepDiveMessageList: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: DS.Spacing.lg) {
                     ForEach(messages) { msg in
-                        ChatMessageRow(message: msg, streamingTextOverride: nil)
+                        ChatMessageRow(message: msg, streamingTextOverride: nil, onArticleLinkTap: onOpenArticle)
                             .id(msg.id)
                     }
                     if isThinking {

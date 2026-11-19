@@ -16,6 +16,8 @@ import SwiftData
 struct ChatConversationDestination: Hashable {
     let sessionID: UUID
     let initialQuestion: String?
+    /// 初回送信の回答モード。既定 .quick (検索の「AI に聞く」= 旧 UI の入力既定と同じ)。
+    var initialMode: ChatMode = .quick
 }
 
 struct SearchTabView: View {
@@ -96,6 +98,7 @@ struct SearchTabView: View {
                 ChatConversationView(
                     sessionID: dest.sessionID,
                     initialQuestion: dest.initialQuestion,
+                    initialMode: dest.initialMode,
                     onOpenArticle: { path.append($0) }
                 )
             }
@@ -104,6 +107,12 @@ struct SearchTabView: View {
             }
             .navigationDestination(for: ConceptPageDetailDestination.self) { dest in
                 ConceptPageDetailLoader(destinationID: dest.id)
+            }
+            .navigationDestination(for: SavedAnswerDetailDestination.self) { dest in
+                SavedAnswerDetailLoader(destinationID: dest.id)
+            }
+            .navigationDestination(for: SavedAnswerListByConceptDestination.self) { _ in
+                SavedAnswerHistoryView()
             }
             .alert("error.action.deleteFailed.title", isPresented: $showDeleteError) {
                 Button("common.ok", role: .cancel) { }
@@ -235,8 +244,8 @@ struct SearchTabView: View {
         guard !q.isEmpty, !aiUnavailable,
               let chatService = serviceContainer.chatService else { return }
         do {
-            let session = try chatService.createSession()
-            path.append(ChatConversationDestination(sessionID: session.id, initialQuestion: q))
+            let session = try reusableEmptySession() ?? chatService.createSession()
+            path.append(ChatConversationDestination(sessionID: session.id, initialQuestion: q, initialMode: .quick))
             query = ""
         } catch {
             errorMessage = String(describing: error)
@@ -248,11 +257,16 @@ struct SearchTabView: View {
         serviceContainer.pendingRegenerateRequest = nil
         guard let chatService = serviceContainer.chatService else { return }
         do {
-            let session = try chatService.createSession()
-            path.append(ChatConversationDestination(sessionID: session.id, initialQuestion: req.question))
+            let session = try reusableEmptySession() ?? chatService.createSession()
+            path.append(ChatConversationDestination(sessionID: session.id, initialQuestion: req.question, initialMode: .think))
         } catch {
             errorMessage = String(describing: error)
         }
+    }
+
+    /// メッセージ 0 件の一般 session があれば再利用 (質問ごとの session 作成で 50 件上限を消費しない)。
+    private func reusableEmptySession() -> ChatSession? {
+        allSessions.first { $0.mode == .general && ($0.messages ?? []).isEmpty }
     }
 
     private func deleteSession(_ session: ChatSession) {
