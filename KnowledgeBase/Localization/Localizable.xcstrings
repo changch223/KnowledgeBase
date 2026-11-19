@@ -1185,19 +1185,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld Unterthemen"
+            "value" : "Unterthemen: %lld"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld subtopics"
+            "value" : "Subtopics: %lld"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld subtemas"
+            "value" : "Subtemas: %lld"
           }
         },
         "ja" : {

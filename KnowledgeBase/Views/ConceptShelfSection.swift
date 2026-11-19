@@ -12,6 +12,8 @@ struct ConceptShelfSection: View {
     let entry: ConceptFeedEntry
     /// 子トピックのカードが画面に出たとき (既読化) に呼ぶ。
     var onSeen: (ConceptPage) -> Void = { _ in }
+    /// 書架ページ自身の見出し行が画面に出たとき (既読化) に呼ぶ。
+    var onShelfSeen: () -> Void = {}
 
     private static let maxChildren = 3
     private var page: ConceptPage { entry.page }
@@ -43,6 +45,7 @@ struct ConceptShelfSection: View {
                 .padding(.horizontal, DS.Spacing.xxl)
             }
             .buttonStyle(.plain)
+            .onAppear { onShelfSeen() }
             .accessibilityIdentifier("conceptShelfHeader_\(page.id.uuidString)")
 
             ForEach(entry.children.prefix(Self.maxChildren), id: \.id) { child in

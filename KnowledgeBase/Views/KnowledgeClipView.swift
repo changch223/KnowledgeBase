@@ -114,7 +114,11 @@ struct KnowledgeClipView: View {
                         // spec 080拡張: snapshot 順で表示 + 見たら既読化 (onSeen)。
                         ForEach(displayedConceptEntries) { entry in
                             if entry.isShelf {
-                                ConceptShelfSection(entry: entry, onSeen: { markConceptSeen($0) })
+                                ConceptShelfSection(
+                                    entry: entry,
+                                    onSeen: { markConceptSeen($0) },
+                                    onShelfSeen: { markConceptSeen(entry.page) }
+                                )
                             } else {
                                 ConceptSummaryCard(entry: entry, onSeen: { markConceptSeen(entry.page) })
                             }

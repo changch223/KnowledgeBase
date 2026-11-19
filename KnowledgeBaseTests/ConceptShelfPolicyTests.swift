@@ -38,4 +38,16 @@ struct ConceptShelfPolicyTests {
     @Test func newInsightsSameIsEmpty() {
         #expect(ConceptShelfPolicy.newInsights(current: ["a", "b"], seen: ["a", "b"]).isEmpty)
     }
+
+    @Test func newInsightsTreatsParaphraseAsKnown() {
+        let seen = ["RAG は検索と生成を組み合わせる手法です。"]
+        let current = ["RAG は検索と生成を組み合わせる手法。"]
+        #expect(ConceptShelfPolicy.newInsights(current: current, seen: seen).isEmpty)
+    }
+
+    @Test func newInsightsDetectsDifferentContent() {
+        let seen = ["RAG は検索と生成を組み合わせる手法です。"]
+        let current = ["ベクトルDBの選定ではインデックス方式が重要になる。"]
+        #expect(ConceptShelfPolicy.newInsights(current: current, seen: seen) == ["ベクトルDBの選定ではインデックス方式が重要になる。"])
+    }
 }

@@ -413,7 +413,7 @@ struct ConceptPageDetailView: View {
                 ForEach(visibleInsights, id: \.offset) { index, insight in
                     VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                            if newSet.contains(insight) {
+                            if newSet.contains(insight.trimmingCharacters(in: .whitespacesAndNewlines)) {
                                 NewInsightDot()
                             } else {
                                 Text("•")

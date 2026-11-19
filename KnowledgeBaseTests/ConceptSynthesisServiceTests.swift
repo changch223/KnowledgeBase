@@ -574,6 +574,8 @@ struct ConceptSynthesisServiceTests {
 
         await service.resynthesize(shelf)
 
+        #expect(session.conceptSynthesisCallCount >= 1)  // 通常版で生成 (compact 開始ではない)
+        #expect(session.conceptSynthesisCompactCallCount == 0)
         #expect(!shelf.summary.isEmpty)
         #expect(shelf.crossSourceInsights.isEmpty)
         #expect(shelf.insightSourceArticleIDs.isEmpty)

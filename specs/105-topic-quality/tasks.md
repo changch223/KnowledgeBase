@@ -32,7 +32,7 @@
 ファイル: `KnowledgeBase/Services/ConceptSynthesisService.swift`（Foundation 実装の `_resynthesize`、373 行付近〜）
 - 合成の前に子トピック数を数える: `FetchDescriptor<ConceptPage>(predicate: #Predicate { $0.parentConceptID == pid })` の `fetchCount`（`pid` はローカル定数に取り出してから predicate に入れる）。
 - 書架なら:
-  - `synthesizeWithAdaptiveRetry` を `compact: true` から始める（大きいトピックは overflow しやすいので最初から小型スキーマ。新しい生成メソッドは作らない）。そのための引数 `startCompact: Bool = false` を追加する。
+  - 書架も通常経路で合成し、overflow 時のみ既存の compact 再試行に任せる（summary を hero 想定の 120〜180 字に保つため。新しい生成メソッドは作らない）。
   - 結果の `summary` は保存し、`crossSourceInsights = []`、`insightSourceArticleIDs = []` にする（要点は子トピックで出す）。
 - 書架でないページの処理は一切変えない。
 - **`@Generable` の型・`@Guide`・プロンプト本文は変更しない。** AI 呼び出し回数は同じか減る。
@@ -91,7 +91,7 @@
 - [ ] ビルド成功・ユニットテスト全件成功・新規 warning なし
 
 ## 実機で確認（ユーザー・マージ前に必須）
-- Xcode のログで、書架トピック（例「生成AI」）の合成が overflow せず、`compact` から始まっていること
+- Xcode のログで、書架トピック（例「生成AI」）の合成が overflow せず、summary が 120〜180 字程度であること
 - 定数 `ConceptShelfPolicy.articleThreshold` を 10 / 15 / 20 に変えて、子トピックの要点の質を比べる。決めた値を `CLAUDE.md` に記録
 - 書架にならなかったトピックの要点が改修前と同等であること
 
@@ -104,7 +104,7 @@
 
 **解釈・差異**:
 - 書架の「すべて表示」行の文言は新キーを増やさず `concept.insights.showAll %lld`（子トピック数）を流用。
-- `startCompact` の書架合成が overflow した場合は、compact の再試行（同一スキーマ）は行わず従来どおり essence-list fallback へ。
+- （QA 修正で `startCompact` は廃止。書架も通常 → overflow 時 compact 再試行）
 - 子トピック描画の `ConceptFeedEntry` は children 空・記事数は子自身の件数で生成。
 - 詳細の onDisappear は子画面への push でも発火するため、表示判定（新しい要点の点・前回から増えた記事）は onAppear 時のスナップショット（`@State baseline*`）で固定。書き戻しは onDisappear（tasks.md どおり）。
 - 要点は 3 件表示 + 「すべて表示（N）」。出典インデックスは全件の index のまま維持。
@@ -113,3 +113,5 @@
 - 点の色は `DS.Color.actionBlue`（spec 104 の未開封の点と同じ）。
 
 **実機で確認が必要**: 書架トピックの合成ログ（compact 開始・overflow なし）、閾値 10/15/20 の比較、書架にならないトピックの要点品質、点の表示と詳細往復での挙動、DisclosureGroup 内の concept-id リンク遷移。
+
+**QA 修正（builder / 2026-11-19）**: (1) 書架見出し行 `.onAppear` で書架自身を既読化（`ConceptShelfSection.onShelfSeen`）。(2) `newInsights` を trim + 文字 bigram Jaccard ≥ 0.5 で既知判定（言い換え耐性、trim 済み文字列を返す）。(3) `isShelf` の子数に `!isHidden`。(4) `preserveExisting` 経路でも書架は要点・出典を空に（分岐外）。(5) 点の比較キーを card/detail とも trim に統一。(6) 書架も通常経路 (`startCompact` 引数は削除) で合成、overflow 時は既存 compact 再試行（AI 呼び出しは従来と同数）。以前の「compact から始める」記述・実機確認項目は無効。(7) テスト強化（通常版生成の確認・`topLevelConcepts` の isShelf）。(8) `shelf.childCount` を単複非依存の文言に（7 ロケール）。

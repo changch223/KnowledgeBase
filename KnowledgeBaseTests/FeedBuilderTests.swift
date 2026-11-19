@@ -327,6 +327,24 @@ struct FeedBuilderTests {
         #expect(entries.first?.page.name == "生成AI")  // updatedAt 降順で先頭
     }
 
+    @Test func topLevelConceptsMarksShelf() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        let shelf = insertWiki(ctx, name: "書架", updatedAt: fixedNow, articleCount: ConceptShelfPolicy.articleThreshold + 1)
+        shelf.conceptLevelRaw = "broad"
+        let child = insertWiki(ctx, name: "子", updatedAt: fixedNow, summary: "子")
+        child.parentConceptID = shelf.id
+        let lone = insertWiki(ctx, name: "子無し", updatedAt: fixedNow, articleCount: ConceptShelfPolicy.articleThreshold + 1)
+        lone.conceptLevelRaw = "broad"
+        let hiddenChild = insertWiki(ctx, name: "隠れ子", updatedAt: fixedNow, isHidden: true)
+        hiddenChild.parentConceptID = lone.id
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let entries = FeedBuilder.topLevelConcepts(pages: pages, now: fixedNow)
+        #expect(entries.first { $0.page.name == "書架" }?.isShelf == true)
+        #expect(entries.first { $0.page.name == "子無し" }?.isShelf == false)
+    }
+
     @Test func topLevelConceptsExcludesEmptyAndHidden() throws {
         let c = try makeContainer()
         let ctx = c.mainContext
