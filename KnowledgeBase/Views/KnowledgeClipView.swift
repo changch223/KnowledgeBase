@@ -200,7 +200,7 @@ struct KnowledgeClipView: View {
             }
             .accessibilityIdentifier("clip.scroll")
         }
-        .accessibilityIdentifier("tab.knowledgeClip")
+        .accessibilityIdentifier("clip.root")
         .task {
             captureRecentSinceAndTouch()
             refreshFeedOrder()  // spec 080拡張: 初回表示時に並び順 snapshot を確定

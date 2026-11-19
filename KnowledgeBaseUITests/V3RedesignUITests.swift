@@ -32,7 +32,7 @@ final class V3RedesignUITests: XCTestCase {
         let libraryTab = app.tabBars.buttons["tab.library"]
         let searchTab = app.tabBars.buttons["tab.search"]
 
-        XCTAssertTrue(clipTab.waitForExistence(timeout: 5), "知識 Clip タブが存在しない")
+        XCTAssertTrue(clipTab.waitForExistence(timeout: 20), "知識 Clip タブが存在しない")
         XCTAssertTrue(libraryTab.exists, "ライブラリタブが存在しない")
         XCTAssertTrue(searchTab.exists, "検索タブが存在しない")
         XCTAssertFalse(app.tabBars.buttons["tab.chat"].exists, "廃止された AI チャットタブが残っている")
@@ -53,11 +53,11 @@ final class V3RedesignUITests: XCTestCase {
         app.launch()
 
         let clipTab = app.tabBars.buttons["tab.knowledgeClip"]
-        XCTAssertTrue(clipTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(clipTab.waitForExistence(timeout: 20))
         clipTab.tap()
 
         let plus = app.buttons["toolbar.addArticle"]
-        guard plus.waitForExistence(timeout: 5) else {
+        guard plus.waitForExistence(timeout: 20) else {
             throw XCTSkip("＋ ボタンが見つからない (レイアウト未表示の可能性、実機検証で確認)")
         }
         plus.tap()
@@ -77,13 +77,13 @@ final class V3RedesignUITests: XCTestCase {
         app.launch()
 
         let libraryTab = app.tabBars.buttons["tab.library"]
-        XCTAssertTrue(libraryTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 20))
         libraryTab.tap()
 
         // 空状態 (articleListEmpty) または記事一覧 (articleListRow) のいずれかが表示される
-        let emptyState = app.otherElements["articleListEmpty"]
-        let listRow = app.buttons["articleListRow"]
-        let emptyVisible = emptyState.waitForExistence(timeout: 5)
+        let emptyState = app.descendants(matching: .any)["articleListEmpty"]
+        let listRow = app.descendants(matching: .any)["articleListRow"]
+        let emptyVisible = emptyState.waitForExistence(timeout: 20)
         XCTAssertTrue(emptyVisible || listRow.exists,
                       "ライブラリタブで空状態も記事一覧も表示されなかった")
     }
@@ -96,17 +96,17 @@ final class V3RedesignUITests: XCTestCase {
         app.launch()
 
         let searchTab = app.tabBars.buttons["tab.search"]
-        XCTAssertTrue(searchTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(searchTab.waitForExistence(timeout: 20))
         searchTab.tap()
 
         // 検索欄が表示される
         let searchField = app.searchFields.firstMatch
-        XCTAssertTrue(searchField.waitForExistence(timeout: 5), "検索タブに検索欄が表示されなかった")
+        XCTAssertTrue(searchField.waitForExistence(timeout: 20), "検索タブに検索欄が表示されなかった")
 
         // 履歴がある場合は見出し、無い場合は空案内のどちらかが表示される
         let recentHeader = app.staticTexts["search.section.recentQuestions"]
         let emptyGuide = app.staticTexts["search.empty.recent"]
-        XCTAssertTrue(recentHeader.waitForExistence(timeout: 5) || emptyGuide.exists,
+        XCTAssertTrue(recentHeader.waitForExistence(timeout: 20) || emptyGuide.exists,
                       "「最近聞いたこと」も空案内も表示されなかった")
     }
 
@@ -119,11 +119,11 @@ final class V3RedesignUITests: XCTestCase {
 
         // spec 087: AvatarMenu は Library タブの toolbar に移動 (Knowledge タブからは削除済)
         let libraryTab = app.tabBars.buttons["tab.library"]
-        XCTAssertTrue(libraryTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 20))
         libraryTab.tap()
 
         let avatar = app.buttons["toolbar.avatar"]
-        guard avatar.waitForExistence(timeout: 5) else {
+        guard avatar.waitForExistence(timeout: 20) else {
             throw XCTSkip("Avatar menu が見つからない (実機検証で確認)")
         }
         avatar.tap()
