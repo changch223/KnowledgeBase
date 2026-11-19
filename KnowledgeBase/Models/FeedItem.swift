@@ -58,5 +58,8 @@ struct ConceptFeedEntry: Identifiable, Hashable {
     /// このページの関連記事数。
     let articleCount: Int
 
+    /// spec 105: 書架 (記事が多い広いトピック)。ホームでは見出し + 子トピックのカードで描く。
+    var isShelf: Bool = false
+
     var id: UUID { page.id }
 }

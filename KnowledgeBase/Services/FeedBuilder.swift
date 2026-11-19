@@ -218,7 +218,12 @@ final class FeedBuilder: FeedBuilding {
                 return ConceptFeedEntry(
                     page: page,
                     children: children,
-                    articleCount: (page.relatedArticles ?? []).count
+                    articleCount: (page.relatedArticles ?? []).count,
+                    isShelf: ConceptShelfPolicy.isShelf(
+                        level: page.level,
+                        articleCount: (page.relatedArticles ?? []).count,
+                        childCount: children.count
+                    )
                 )
             }
             .filter { entry in

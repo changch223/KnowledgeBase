@@ -94,3 +94,22 @@
 - Xcode のログで、書架トピック（例「生成AI」）の合成が overflow せず、`compact` から始まっていること
 - 定数 `ConceptShelfPolicy.articleThreshold` を 10 / 15 / 20 に変えて、子トピックの要点の質を比べる。決めた値を `CLAUDE.md` に記録
 - 書架にならなかったトピックの要点が改修前と同等であること
+
+## 実装メモ（builder / 2026-11-19）
+
+**状態**: T1〜T6 実装（T7 は未実装）。ビルド SUCCEEDED、`-only-testing:KnowledgeBaseTests` TEST SUCCEEDED（768 passed / 0 failed、新規 9: ConceptShelfPolicyTests 7 + ConceptSynthesisServiceTests 2）、UI テスト V3RedesignUITests TEST SUCCEEDED。新規 warning なし。`@Generable` / `@Guide` / プロンプト本文の差分なし（`git diff` で確認）。
+
+**新規**: `Services/ConceptShelfPolicy.swift`、`Views/ConceptShelfSection.swift`、`KnowledgeBaseTests/ConceptShelfPolicyTests.swift`。
+**変更**: ConceptPage（`lastOpenedAt` / `seenInsights`）、ConceptSynthesisService（`ConceptSynthesisCommon.isShelf`、`synthesizeWithAdaptiveRetry(startCompact:)`、Foundation/Fallback で書架は要点を空に）、FeedItem（`ConceptFeedEntry.isShelf`）、FeedBuilder、KnowledgeClipView、ConceptSummaryCard（`NewInsightDot` 同居）、ConceptPageDetailView、iknow-schema.md、Localizable.xcstrings（新キー 4 を 7 ロケール translated、未参照の `ConceptPage.detail.summary.title` を削除。ブロックのテキスト挿入のみで他キー差分なし）。
+
+**解釈・差異**:
+- 書架の「すべて表示」行の文言は新キーを増やさず `concept.insights.showAll %lld`（子トピック数）を流用。
+- `startCompact` の書架合成が overflow した場合は、compact の再試行（同一スキーマ）は行わず従来どおり essence-list fallback へ。
+- 子トピック描画の `ConceptFeedEntry` は children 空・記事数は子自身の件数で生成。
+- 詳細の onDisappear は子画面への push でも発火するため、表示判定（新しい要点の点・前回から増えた記事）は onAppear 時のスナップショット（`@State baseline*`）で固定。書き戻しは onDisappear（tasks.md どおり）。
+- 要点は 3 件表示 + 「すべて表示（N）」。出典インデックスは全件の index のまま維持。
+- 「詳しく」(wikiBody) は `DisclosureGroup`（既定折りたたみ）。見出しは既存 `wiki.body.sectionTitle`。
+- 書架判定は詳細でも `ConceptShelfPolicy.isShelf` を使用し、書架なら子トピックを要点位置に繰り上げ。
+- 点の色は `DS.Color.actionBlue`（spec 104 の未開封の点と同じ）。
+
+**実機で確認が必要**: 書架トピックの合成ログ（compact 開始・overflow なし）、閾値 10/15/20 の比較、書架にならないトピックの要点品質、点の表示と詳細往復での挙動、DisclosureGroup 内の concept-id リンク遷移。
