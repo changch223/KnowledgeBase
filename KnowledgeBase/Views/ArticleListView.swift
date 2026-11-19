@@ -2,7 +2,7 @@
 //  ArticleListView.swift
 //  KnowledgeTree
 //
-//  spec 001-005 / 008 — 一覧画面: 検索 / タグ一覧 / Detail sheet / BottomStatusBar /
+//  spec 001-005 / 008 — 一覧画面: 検索 / タグ一覧 / Detail sheet / ProcessingInlineStatus /
 //  live update 5 並列メカニズム
 //
 
@@ -49,7 +49,11 @@ struct ArticleListView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                // spec 103: 処理中は先頭に 1 行だけ表示 (旧 BottomStatusBar を廃止)
+                ProcessingInlineStatus(monitor: monitor)
+                    .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)
+
                 ArticleListContent(
                     searchQuery: searchQuery,
                     refreshTick: refreshTick,
@@ -82,10 +86,6 @@ struct ArticleListView: View {
                 .sheet(item: $selectedArticle) { article in
                     ArticleDetailView(article: article)
                 }
-
-                BottomStatusBar(monitor: monitor)
-                    .animation(DS.Animation.statusBar, value: monitor.totalActiveCount)
-                    .animation(DS.Animation.statusBar, value: monitor.current?.id)
             }
             // spec 056 Phase B: FAB (+ 追加) を右下に配置
             .overlay(alignment: .bottomTrailing) {

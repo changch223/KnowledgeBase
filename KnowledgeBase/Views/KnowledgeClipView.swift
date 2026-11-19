@@ -88,6 +88,9 @@ struct KnowledgeClipView: View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: 26) {
+                    // spec 103: 処理中は先頭に 1 行だけ表示
+                    ProcessingInlineStatus(monitor: monitor)
+
                     // spec 075: 上部「新着」棚 — まだ概念化されていない新着記事 (概念化で消える)。
                     if !newShelfArticles.isEmpty {
                         newArticleShelf

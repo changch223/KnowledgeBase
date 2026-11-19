@@ -49,6 +49,10 @@ struct ArticleDetailView: View {
     }
 
     private var displayTitle: String {
+        TitleCleaner.clean(rawDisplayTitle, host: URL(string: article.url)?.host)
+    }
+
+    private var rawDisplayTitle: String {
         let shareTitle = article.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !shareTitle.isEmpty, shareTitle != article.url { return shareTitle }
         if let canonical = article.enrichment?.canonicalTitle, !canonical.isEmpty { return canonical }
@@ -220,23 +224,27 @@ struct ArticleDetailView: View {
                 // Timer による毎秒 rebuild で AsyncImage が再 download → loading に戻り
                 // 「写真が表示/消える」を繰り返す問題を回避。
                 // @Bindable article で ogImageURL の変化は auto observe される。
+                // spec 103: 答え (AI のまとめ) が先、根拠・原文が後。
+                // 順序: タイトル → まとめ → 写真 → 本文 → トピック → 関連記事 → タグ → 過去の見解
                 headerSection
 
-                // spec 008: タグセクション (手動 + 自動提案)
-                tagsSection
-
                 // knowledgeSection だけ refreshTick で rebuild する。
-                // 完了状態 (知識サマリ) を確実に live update するため。
-                // bodySection は .id(refreshTick) の外に置く:
+                // 完了状態 (この記事の要点) を確実に live update するため。
+                // 写真 (imageSection) と bodySection は .id(refreshTick) の外に置く:
                 // pollTimer が 1 秒ごとに refreshTick を変えると SwiftUI が Group を丸ごと
-                // 破棄・再生成し DisclosureGroup の展開アニメーションが毎秒リセットされ
-                // 永遠に開かない問題を防ぐ (headerSection と同じ対策)。
+                // 破棄・再生成し AsyncImage のちらつき / DisclosureGroup の展開リセットが
+                // 起きる問題を防ぐ。
                 if shouldShowKnowledgeSection {
                     knowledgeSection
                         .id(refreshTick)
                 }
 
+                imageSection
+
                 bodySection
+
+                // spec 042: この記事から派生した概念ページ (relatedArticles に含む ConceptPage)
+                derivedConceptPagesSection
 
                 // spec 008: 関連記事セクション (共通 entity 0 件なら非表示)
                 RelatedArticlesSection(article: article) { related in
@@ -244,8 +252,8 @@ struct ArticleDetailView: View {
                     presentedRelatedArticle = related
                 }
 
-                // spec 042: この記事から派生した概念ページ (relatedArticles に含む ConceptPage)
-                derivedConceptPagesSection
+                // spec 008: タグセクション (手動 + 自動提案) — spec 103 で最下部へ
+                tagsSection
 
                 // spec 058: 過去の見解 DisclosureGroup (ConflictProposal 経由で関連する古い Article)
                 ConflictHistoryDisclosure(currentArticle: article)
@@ -360,35 +368,16 @@ struct ArticleDetailView: View {
 
             // ソース + 日付を一行で (sumiLight)
             HStack(spacing: DS.Spacing.xs) {
-                if let host = URL(string: article.url)?.host {
-                    Text(host.replacingOccurrences(of: "www.", with: ""))
+                let sourceText = ArticleSourceLabel.label(for: article.url).localizedText
+                if !sourceText.isEmpty {
+                    Text(sourceText)
                         .lineLimit(1)
+                    Text("·")
                 }
-                Text("·")
                 Text(SavedAtFormatter.format(article.savedAt))
             }
             .font(.caption)
             .foregroundStyle(DS.Color.sumiLight)
-
-            // 写真 — タイトル下に配置 (ある程度欲しい・コンパクトに 160px)
-            if let urlString = article.enrichment?.ogImageURL,
-               let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                            .frame(height: 160)
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
-                                    .stroke(DS.Color.sumiRule, lineWidth: 0.5)
-                            )
-                    default:
-                        EmptyView()
-                    }
-                }
-            }
 
             // spec 007: マルチページ追跡の取得状況
             if let enrichment = article.enrichment, enrichment.pageCountFetched > 1 {
@@ -402,6 +391,30 @@ struct ArticleDetailView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .accessibilityIdentifier("pagesFetchedNotice")
+                }
+            }
+        }
+    }
+
+    /// spec 103: 写真は AI のまとめの下に配置 (高さ 160)。.id(refreshTick) の外に置くこと。
+    @ViewBuilder
+    private var imageSection: some View {
+        // 写真 — タイトル下に配置 (ある程度欲しい・コンパクトに 160px)
+        if let urlString = article.enrichment?.ogImageURL,
+           let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                        .frame(height: 160)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
+                                .stroke(DS.Color.sumiRule, lineWidth: 0.5)
+                        )
+                default:
+                    EmptyView()
                 }
             }
         }
