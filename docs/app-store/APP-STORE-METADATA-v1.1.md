@@ -1,6 +1,6 @@
 # App Store Connect メタデータ 一括コピペ表 — v1.1（7 ロケール）
 
-対象バージョン: **1.1** / build **2**
+対象バージョン: **1.1** / build **3**
 
 出典: `docs/app-store/RELEASE-MATERIALS.md` §1-J（zh-Hans / zh-Hant / en）・
 §1-K（ko / es / de）・§1-L（ja リブランド版、名前・サブタイトル・プロモ・キーワード・説明文冒頭）・
@@ -107,6 +107,7 @@
 
 ```
 まとメモ（旧 Knowledge Base）v1.1 をリリースしました。
+・画面を整理しました。ホームは「最近保存したもの」とトピック、「検索」タブで記事を探すこともAIに質問することも1か所で。出典はタップでプレビュー
 ・日本語・简体中文・繁體中文・English・한국어・Español・Deutschの7言語に対応。UIもAIが生成する要約・概念ページ・チャット回答も、選んだ言語で
 ・Apple Intelligenceが使えないときは、理由と対処法をバナーでお知らせ
 ・端末の言語設定と生成言語がズレているときも、バナーでお知らせ
@@ -114,7 +115,7 @@
 ・アプリ名が「まとメモ」になりました
 ご意見・不具合はGitHub Issuesまでお寄せください。
 ```
-(実測 278 / 上限 4000)
+(実測 352 / 上限 4000)
 
 ### 6. キーワード
 
@@ -215,13 +216,14 @@ Now, put your iPhone's AI to full use and turn everything you read into knowledg
 
 ```
 Knowledge Base v1.1 is here.
+・Redesigned: Home shows what you saved recently and your topics; find articles and ask the AI from one Search tab; tap a citation to preview its source
 ・Now supports 7 languages: Japanese, Simplified Chinese, Traditional Chinese, English, Korean, Spanish, and German. Both the UI and AI-generated summaries, concept pages, and chat replies follow your chosen language
 ・A banner now explains why and how to fix it when Apple Intelligence isn't available
 ・A banner also lets you know if your device language and generation language don't match
 ・When AI becomes available again, any paused organizing automatically resumes
 Feedback and bug reports are welcome via GitHub Issues.
 ```
-(実測 552 / 上限 4000)
+(実測 704 / 上限 4000)
 
 ### 6. キーワード
 
@@ -322,13 +324,14 @@ Knowledge Base 支持简体中文、繁體中文、日文、English 4 种界面�
 
 ```
 Knowledge Base v1.1 发布了。
+・全新界面：首页显示最近保存的内容和主题；在「搜索」标签页即可查找文章或向 AI 提问；点出处即可预览原文
 ・现已支持日文、简体中文、繁體中文、英文、韩文、西班牙文、德文共 7 种语言。界面与 AI 生成的摘要、概念页面、聊天回答都会使用你选择的语言
 ・Apple Intelligence 无法使用时，会用提示条告知原因与解决方法
 ・设备语言与生成语言不一致时，也会用提示条提醒你
 ・AI 恢复可用后，被中断的整理会自动继续
 欢迎通过 GitHub Issues 提出意见与问题反馈。
 ```
-(実測 214 / 上限 4000)
+(実測 268 / 上限 4000)
 
 ### 6. キーワード
 
@@ -429,13 +432,14 @@ Knowledge Base 支援繁體中文、簡體中文、日文、English 4 種介面�
 
 ```
 Knowledge Base v1.1 發布了。
+・全新介面：首頁顯示最近儲存的內容和主題；在「搜尋」標籤頁即可查找文章或向 AI 提問；點出處即可預覽原文
 ・現已支援日文、簡體中文、繁體中文、英文、韓文、西班牙文、德文共 7 種語言。介面與 AI 產生的摘要、概念頁面、聊天回答都會使用你選擇的語言
 ・Apple Intelligence 無法使用時，會用提示條告知原因與解決方法
 ・裝置語言與產生語言不一致時，也會用提示條提醒你
 ・AI 復原可用後，被中斷的整理會自動繼續
 歡迎透過 GitHub Issues 提出意見與問題回報。
 ```
-(実測 214 / 上限 4000)
+(実測 268 / 上限 4000)
 
 ### 6. キーワード
 
@@ -536,13 +540,14 @@ Knowledge Base는 한국어・日本語・简体中文・繁體中文・English�
 
 ```
 Knowledge Base v1.1을 출시했습니다.
+・새로운 화면: 홈에서 최근 저장한 글과 주제를 확인하고, 검색 탭 하나에서 글 찾기와 AI 질문을 모두 할 수 있습니다. 출처를 탭하면 미리보기가 열립니다
 ・일본어・简体中文・繁體中文・English・한국어・Español・Deutsch 총 7개 언어를 지원합니다. UI는 물론 AI가 생성하는 요약・개념 페이지・채팅 답변도 선택한 언어로 제공됩니다
 ・Apple Intelligence를 사용할 수 없을 때는 이유와 해결 방법을 배너로 안내합니다
 ・기기 언어와 생성 언어가 다를 때도 배너로 알려드립니다
 ・AI를 다시 사용할 수 있게 되면, 중단되었던 정리 작업이 자동으로 재개됩니다
 의견이나 문제는 GitHub Issues로 알려주세요.
 ```
-(実測 296 / 上限 4000)
+(実測 384 / 上限 4000)
 
 ### 6. キーワード
 
@@ -643,13 +648,14 @@ Ahora, aprovecha al máximo la IA de tu iPhone y convierte todo lo que lees en u
 
 ```
 Knowledge Base v1.1 ya está disponible.
+・Nuevo diseño: el inicio muestra lo guardado recientemente y tus temas; busca artículos y pregunta a la IA desde la pestaña Buscar; toca una cita para ver una vista previa
 ・Ahora con 7 idiomas: japonés, chino simplificado, chino tradicional, inglés, coreano, español y alemán. Los resúmenes, páginas de concepto y respuestas del chat generados por IA también siguen el idioma elegido
 ・Cuando Apple Intelligence no está disponible, un aviso explica el motivo y cómo solucionarlo
 ・Un aviso también te avisa si el idioma del dispositivo y el idioma de generación no coinciden
 ・Cuando la IA vuelve a estar disponible, el trabajo de organización pendiente se reanuda automáticamente
 Tus comentarios y reportes de errores son bienvenidos a través de GitHub Issues.
 ```
-(実測 626 / 上限 4000)
+(実測 798 / 上限 4000)
 
 ### 6. キーワード
 
@@ -750,13 +756,14 @@ Nutzen Sie jetzt die KI Ihres iPhones voll aus und verwandeln Sie alles, was Sie
 
 ```
 Knowledge Base v1.1 ist da.
+・Neues Design: Die Startseite zeigt zuletzt Gespeichertes und Ihre Themen; Artikel suchen und die KI fragen in einem Such-Tab; Quellen per Tippen in der Vorschau ansehen
 ・Jetzt mit 7 Sprachen: Japanisch, vereinfachtes Chinesisch, traditionelles Chinesisch, Englisch, Koreanisch, Spanisch und Deutsch. Auch die von der KI erzeugten Zusammenfassungen, Konzeptseiten und Chat-Antworten folgen der gewählten Sprache
 ・Wenn Apple Intelligence nicht verfügbar ist, erklärt ein Banner den Grund und die Lösung
 ・Ein Banner informiert Sie auch, wenn Gerätesprache und Generierungssprache nicht übereinstimmen
 ・Sobald die KI wieder verfügbar ist, wird unterbrochene Organisation automatisch fortgesetzt
 Feedback und Fehlermeldungen sind über GitHub Issues willkommen.
 ```
-(実測 614 / 上限 4000)
+(実測 784 / 上限 4000)
 
 ### 6. キーワード
 
