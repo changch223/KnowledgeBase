@@ -57,7 +57,7 @@ final class Article {
     var extractionGuidance: String?
 
     /// spec 104: 記事詳細を最後に開いた日時。nil = 未開封 (カード/行に小さな点を出す)。
-    /// 既存記事は起動時 one-time backfill で savedAt を入れる (全記事が未開封に見えるのを防ぐ)。
+    /// 未開封の点は `spec104_unopenedTrackingSince` 以降に保存された記事だけに付ける (一括補完はしない)。
     /// CloudKit lightweight 安全 (default nil)。
     var lastOpenedAt: Date? = nil
 

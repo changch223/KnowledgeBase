@@ -265,8 +265,14 @@ struct SearchTabView: View {
     }
 
     /// メッセージ 0 件の一般 session があれば再利用 (質問ごとの session 作成で 50 件上限を消費しない)。
+    /// 再利用時は createdAt を現在時刻に更新する: ChatService の 50 件 FIFO は createdAt 昇順で消すため、
+    /// 古い空 session を再利用した最新の会話が真っ先に削除されるのを防ぐ。
     private func reusableEmptySession() -> ChatSession? {
-        allSessions.first { $0.mode == .general && ($0.messages ?? []).isEmpty }
+        guard let session = allSessions.first(where: { $0.mode == .general && ($0.messages ?? []).isEmpty }) else {
+            return nil
+        }
+        session.createdAt = .now
+        return session
     }
 
     private func deleteSession(_ session: ChatSession) {
