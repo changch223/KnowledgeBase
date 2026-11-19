@@ -21,6 +21,11 @@ struct ConceptSummaryCard: View {
             .filter { !$0.isEmpty }
     }
 
+    /// spec 105: 前回詳細を閉じたときから増えた要点 (行頭を藍の点にする)。
+    private var newInsightSet: Set<String> {
+        ConceptShelfPolicy.newInsights(current: page.crossSourceInsights, seen: page.seenInsights)
+    }
+
     private var previewText: String {
         let summary = page.summaryPreview.trimmingCharacters(in: .whitespacesAndNewlines)
         if !summary.isEmpty { return summary }
@@ -100,12 +105,17 @@ struct ConceptSummaryCard: View {
     }
 
     private var keyPointsView: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+        let newSet = newInsightSet
+        return VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             ForEach(Array(displayPoints.prefix(2).enumerated()), id: \.offset) { _, point in
                 HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                    Text("•")
-                        .font(.subheadline)
-                        .foregroundStyle(DS.Color.sumiMid)
+                    if newSet.contains(point) {
+                        NewInsightDot()
+                    } else {
+                        Text("•")
+                            .font(.subheadline)
+                            .foregroundStyle(DS.Color.sumiMid)
+                    }
                     Text(point)
                         .font(.subheadline)
                         .foregroundStyle(DS.Color.sumiInk)
@@ -150,5 +160,18 @@ struct ConceptSummaryCard: View {
         }
         .font(.caption2)
         .foregroundStyle(DS.Color.sumiLight)
+    }
+}
+
+
+/// spec 105: 「前回から追加」された要点の行頭に置く藍の点 (直径 7pt)。
+struct NewInsightDot: View {
+    var body: some View {
+        Circle()
+            .fill(DS.Color.actionBlue)
+            .frame(width: 7, height: 7)
+            .padding(.top, 6)
+            .padding(.horizontal, 2)
+            .accessibilityLabel(Text("concept.insight.new"))
     }
 }

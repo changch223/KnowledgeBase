@@ -545,6 +545,64 @@ struct ConceptSynthesisServiceTests {
         #expect(session.conceptSynthesisCompactCallCount == 1)  // compact が 1 回呼ばれた
     }
 
+    // MARK: - spec 105: 書架トピックは要点を作らない
+
+    @Test func testShelfConceptSavesSummaryButNoInsights() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        var arts: [Article] = []
+        for i in 0..<(ConceptShelfPolicy.articleThreshold + 1) {
+            arts.append(makeArticle(url: "s\(i)", title: "S\(i)", categoryRaw: "テクノロジー", entityNames: ["X"], in: context))
+        }
+        let shelf = ConceptPage(name: "生成AI", categoryRaw: "テクノロジー", relatedArticles: arts,
+                                isStale: true, conceptLevelRaw: ConceptLevel.broad.rawValue)
+        context.insert(shelf)
+        let child = ConceptPage(name: "RAG", categoryRaw: "テクノロジー", relatedArticles: [arts[0]],
+                                isStale: false, parentConceptID: shelf.id)
+        context.insert(child)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextConceptSynthesisCompactResult = .success(
+            ConceptSynthesisCompactOutput(summary: "書架の要約。", crossSourceInsights: ["要点1", "要点2"])
+        )
+        session.nextConceptSynthesisResult = .success(
+            ConceptSynthesisOutput(summary: "書架の要約。", crossSourceInsights: ["要点1", "要点2"])
+        )
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(shelf)
+
+        #expect(session.conceptSynthesisCallCount >= 1)  // 通常版で生成 (compact 開始ではない)
+        #expect(session.conceptSynthesisCompactCallCount == 0)
+        #expect(!shelf.summary.isEmpty)
+        #expect(shelf.crossSourceInsights.isEmpty)
+        #expect(shelf.insightSourceArticleIDs.isEmpty)
+    }
+
+    @Test func testNonShelfConceptKeepsInsights() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let a = makeArticle(url: "a", title: "A", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let b = makeArticle(url: "b", title: "B", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let page = ConceptPage(name: "X", categoryRaw: "テクノロジー", relatedArticles: [a, b],
+                               isStale: true, conceptLevelRaw: ConceptLevel.broad.rawValue)
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        session.nextConceptSynthesisResult = .success(
+            ConceptSynthesisOutput(summary: "要約。", crossSourceInsights: ["要点1", "要点2"])
+        )
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(page.crossSourceInsights == ["要点1", "要点2"])
+    }
+
     // P1-2 / P2-1: isContextOverflow は実 overflow と preflight overflow の両方を検出する。
     @Test func testIsContextOverflowRecognizesPreflightError() {
         struct RealOverflow: Error, CustomStringConvertible {

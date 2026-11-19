@@ -21,10 +21,11 @@ import SwiftData
 /// spec 035: TabView selection 識別子。
 /// spec 056: V3.0 redesign で 3 タブに削減 (知識 Clip / ライブラリ / AI チャット)。
 /// 学習タブ / AI ブレインタブ / Settings root tab は削除、機能は新動線で完全保持。
+/// spec 104: AI チャットタブを廃止し、検索タブ (検索 + AI に聞く + 最近聞いたこと) に統合。
 enum AppTab: Hashable {
     case knowledgeClip  // spec 056: 起動 default、Today タブ
     case library
-    case chat
+    case search  // spec 104: 検索 + AI に聞く (iOS 26 の search role タブ)
 }
 
 @main
@@ -116,27 +117,21 @@ struct KnowledgeBaseApp: App {
     var body: some Scene {
         WindowGroup {
             TabView(selection: $selectedTab) {
-                // spec 056: 3 タブ構成 V3.0 (起動 default = 知識 Clip)
-                KnowledgeClipView()
-                    .tabItem {
-                        Label("clip.tab.title", systemImage: "newspaper.fill")
-                    }
-                    .tag(AppTab.knowledgeClip)
-                    .accessibilityIdentifier("tab.knowledgeClip")
+                // spec 104: ナレッジ / ライブラリ / 検索 (起動 default = ナレッジ)
+                Tab("clip.tab.title", systemImage: "newspaper.fill", value: AppTab.knowledgeClip) {
+                    KnowledgeClipView()
+                }
+                .accessibilityIdentifier("tab.knowledgeClip")
 
-                ArticleListView()
-                    .tabItem {
-                        Label("library.tab.title", systemImage: "books.vertical")
-                    }
-                    .tag(AppTab.library)
-                    .accessibilityIdentifier("tab.library")
+                Tab("library.tab.title", systemImage: "books.vertical", value: AppTab.library) {
+                    ArticleListView()
+                }
+                .accessibilityIdentifier("tab.library")
 
-                ChatTabView()
-                    .tabItem {
-                        Label("chat.tab.title", systemImage: "bubble.left.and.bubble.right.fill")
-                    }
-                    .tag(AppTab.chat)
-                    .accessibilityIdentifier("tab.chat")
+                Tab("search.tab.title", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
+                    SearchTabView()
+                }
+                .accessibilityIdentifier("tab.search")
             }
             .environment(processingMonitor)
             .environment(refreshTrigger)
@@ -175,10 +170,10 @@ struct KnowledgeBaseApp: App {
             .task {
                 await bootstrap()
             }
-            // spec 045: 「再生成」trigger を検知して AI チャットタブに自動切替
+            // spec 045 / 104: 「再生成」trigger を検知して検索タブに自動切替 (SearchTabView が消費)
             .onChange(of: serviceContainer.pendingRegenerateRequest) { _, new in
                 if new != nil {
-                    selectedTab = .chat
+                    selectedTab = .search
                 }
             }
             // アプリ復帰時に Apple Intelligence の利用可否を再チェック (解消/再発を取りこぼさない)。
@@ -245,6 +240,14 @@ struct KnowledgeBaseApp: App {
         serviceContainer.pendingDeepLinkCardID = uuid
     }
 
+    /// spec 104: 未開封の追跡開始時刻を初回起動時に 1 回だけ保存 (既存記事・CloudKit 後着記事に点を付けない)。
+    private func recordUnopenedTrackingStartIfNeeded() {
+        let key = FeedBuilder.unopenedTrackingSinceKey
+        if UserDefaults.standard.object(forKey: key) == nil {
+            UserDefaults.standard.set(Date(), forKey: key)
+        }
+    }
+
     @MainActor
     private func bootstrap() async {
         // 二重 bootstrap 抑止: scene 復帰時の .task 再実行で backfill が重複しないように。
@@ -272,6 +275,9 @@ struct KnowledgeBaseApp: App {
         #endif
 
         let context = sharedModelContainer.mainContext
+
+        // spec 104: 未開封の追跡開始時刻を保存 (記事への一括書き込みはしない)。
+        recordUnopenedTrackingStartIfNeeded()
 
         // spec 009: ChunkProgressStore (incremental 永続化)
         let chunkProgressStore = SwiftDataChunkProgressStore(

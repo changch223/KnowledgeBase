@@ -25,7 +25,7 @@ struct ChatInputField: View {
             Button {
                 chatMode = chatMode == .quick ? .think : .quick
             } label: {
-                Text(chatMode == .quick ? "Fast" : "Think")
+                Text(chatMode == .quick ? "chat.mode.quick" : "chat.mode.think")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DS.Color.sumiInk)
                     .padding(.horizontal, 10)
@@ -36,7 +36,7 @@ struct ChatInputField: View {
                     )
             }
             .accessibilityIdentifier("chat.input.modeToggle")
-            .accessibilityLabel(Text(chatMode == .quick ? "Fast" : "Think"))
+            .accessibilityLabel(Text(chatMode == .quick ? "chat.mode.quick" : "chat.mode.think"))
 
             inputTextField
                 .lineLimit(1...4)

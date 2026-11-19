@@ -52,14 +52,10 @@ struct KnowledgeSummaryView: View {
 
             // summary (段落)
             if let summary = knowledge.summary, !summary.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
-                    Text("knowledge.summary.heading")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(summary)
-                        .font(.body)
-                        .accessibilityIdentifier("knowledgeSummaryText")
-                }
+                // spec 103: 「要約」見出しは出さず essence の直後に続ける
+                Text(summary)
+                    .font(.body)
+                    .accessibilityIdentifier("knowledgeSummaryText")
             }
 
             // 重要な事実

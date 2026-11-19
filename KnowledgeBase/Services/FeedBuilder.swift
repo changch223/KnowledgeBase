@@ -100,6 +100,43 @@ final class FeedBuilder: FeedBuilding {
         }
     }
 
+    // MARK: - spec 104: 未開封 / 最近保存 / 分野チップ表示判定
+
+    /// 未開封の追跡開始時刻の UserDefaults キー (初回起動時に 1 回だけ保存)。
+    static let unopenedTrackingSinceKey = "spec104_unopenedTrackingSince"
+
+    /// 未開封の追跡開始時刻 (読み出しヘルパー 1 か所)。未設定なら distantFuture
+    /// (= どの記事にも点を付けない) を返す。設定は KnowledgeBaseApp の起動時に行う。
+    static func unopenedTrackingSince(_ defaults: UserDefaults = .standard) -> Date {
+        if let d = defaults.object(forKey: unopenedTrackingSinceKey) as? Date { return d }
+        return .distantFuture
+    }
+
+    /// 未開封 = 追跡開始後に保存され (`savedAt >= since`)、記事詳細をまだ開いていない記事。
+    /// 追跡開始前の記事・CloudKit から後で届く既存記事には点を付けず、一括書き込みも不要。
+    static func isUnopened(_ article: Article, since: Date) -> Bool {
+        article.lastOpenedAt == nil && article.savedAt >= since
+    }
+
+    /// 「最近保存したもの」棚用。savedAt 降順、`isObsolete` を除く、処理中も含む。
+    static func recentSaves(articles: [Article], limit: Int = 8) -> [Article] {
+        articles
+            .filter { !$0.isObsolete }
+            .sorted { $0.savedAt > $1.savedAt }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// 分野チップ行を出すか。チップが 1 個以下、または最多分野が全体の 70% 以上なら
+    /// 絞り込みとして機能しないので false。
+    static func shouldShowCategoryChips(counts: [Int]) -> Bool {
+        let positive = counts.filter { $0 > 0 }
+        guard positive.count > 1 else { return false }
+        let total = positive.reduce(0, +)
+        guard total > 0, let maxCount = positive.max() else { return false }
+        return Double(maxCount) / Double(total) < 0.7
+    }
+
     // MARK: - spec 068: おすすめ carousel (recommend)
 
     /// 記事と Wiki を同一スコア軸でソートし、上位 limit 件を carousel 用に返す (AI 呼び出しゼロ)。
@@ -192,7 +229,12 @@ final class FeedBuilder: FeedBuilding {
                 return ConceptFeedEntry(
                     page: page,
                     children: children,
-                    articleCount: (page.relatedArticles ?? []).count
+                    articleCount: (page.relatedArticles ?? []).count,
+                    isShelf: ConceptShelfPolicy.isShelf(
+                        level: page.level,
+                        articleCount: (page.relatedArticles ?? []).count,
+                        childCount: children.count
+                    )
                 )
             }
             .filter { entry in

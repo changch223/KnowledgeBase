@@ -23,6 +23,9 @@ struct ChatMessageRow: View {
     var onArticleLinkTap: ((Article) -> Void)? = nil
 
     @Query private var allArticles: [Article]
+    /// spec 104: 出典タップ → まずプレビュー sheet、「記事を開く」で onArticleLinkTap。
+    @State private var previewArticle: Article?
+    @State private var pendingOpenArticle: Article?
     @Environment(\.openURL) private var openURL
     /// spec 057: long press menu 「保存」で SavedAnswerService 利用
     @Environment(ServiceContainer.self) private var serviceContainer
@@ -38,6 +41,18 @@ struct ChatMessageRow: View {
             }
         }
         .accessibilityIdentifier("chat.message.row.\(message.role)")
+        .sheet(item: $previewArticle, onDismiss: {
+            // sheet を閉じ切ってから push (遷移の競合回避)
+            if let article = pendingOpenArticle {
+                pendingOpenArticle = nil
+                onArticleLinkTap?(article)
+            }
+        }) { article in
+            CitationPreviewSheet(article: article) {
+                pendingOpenArticle = article
+                previewArticle = nil
+            }
+        }
     }
 
     private var userBubble: some View {
@@ -69,10 +84,10 @@ struct ChatMessageRow: View {
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                     .environment(\.openURL, OpenURLAction { url in
-                        // spec 059 (P0-4): 引用リンク tap → 親 (ChatTabView) へ Article を通知し遷移。
+                        // spec 059 (P0-4) / spec 104: 引用リンク tap → 出典プレビュー → 「記事を開く」で親へ通知。
                         if let id = Self.extractArticleID(from: url),
                            let article = allArticles.first(where: { $0.id == id }) {
-                            onArticleLinkTap?(article)
+                            previewArticle = article
                             return .handled
                         }
                         return .systemAction
@@ -96,7 +111,7 @@ struct ChatMessageRow: View {
             // spec 081: ChatGPT/Gemini スタイルの番号付き「出典」リスト
             let sources = citationResult.sources
             if !sources.isEmpty {
-                CitationSourcesSection(sources: sources)
+                CitationSourcesSection(sources: sources) { previewArticle = $0 }
             }
             if !message.citedArticleIDs.isEmpty {
                 // spec 047: 引用記事から関連 ConceptPage chips を導出
@@ -117,10 +132,10 @@ struct ChatMessageRow: View {
         }
     }
 
-    /// spec 057: clarification chip tap を ChatTabView に通知する Combine subject (static)。
+    /// spec 057: clarification chip tap を ChatConversationView に通知する Combine subject (static)。
     static let clarificationTapNotificationPublisher = PassthroughSubject<String, Never>()
 
-    /// spec 083: clarification「その他（自由に入力）」tap を ChatTabView に通知 (入力欄フォーカス用)。
+    /// spec 083: clarification「その他（自由に入力）」tap を ChatConversationView に通知 (入力欄フォーカス用)。
     static let clarificationOtherTapNotificationPublisher = PassthroughSubject<Void, Never>()
 
     /// spec 057: assistant message に紐付く直前の user message text (long press 「保存」用)。
@@ -189,6 +204,8 @@ struct ChatMessageRow: View {
 /// `[n] 記事タイトル` を常時表示、tap で ArticleDetailView 遷移。引用元 Article が削除済なら行を省く。
 private struct CitationSourcesSection: View {
     let sources: [ChatCitationFormatter.Source]
+    /// spec 104: 行 tap → 出典プレビューを開く。
+    let onSelect: (Article) -> Void
     @Query private var allArticles: [Article]
 
     private var resolved: [(number: Int, article: Article)] {
@@ -209,7 +226,9 @@ private struct CitationSourcesSection: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 ForEach(rows, id: \.number) { row in
-                    NavigationLink(value: row.article) {
+                    Button {
+                        onSelect(row.article)
+                    } label: {
                         HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.sm) {
                             Text("[\(row.number)]")
                                 .font(.caption.monospacedDigit())
@@ -226,6 +245,7 @@ private struct CitationSourcesSection: View {
                         }
                         .padding(.vertical, DS.Spacing.xs)
                     }
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier("chat.message.citedRow")
                 }
             }

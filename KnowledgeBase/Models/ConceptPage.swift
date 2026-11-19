@@ -105,6 +105,16 @@ final class ConceptPage {
     /// `updatedAt > lastSeenAt` (or nil) = 未読/更新あり → フィード上位に。CloudKit lightweight 安全 (default nil)。
     var lastSeenAt: Date? = nil
 
+    // MARK: - spec 105 (トピックの質) 追加フィールド
+
+    /// spec 105: トピック詳細を最後に閉じた時刻。「前回から増えた記事」の基準。lastSeenAt (フィード表示) とは別物。
+    /// CloudKit lightweight 安全 (default nil)。
+    var lastOpenedAt: Date? = nil
+
+    /// spec 105: 前回詳細を閉じたときに表示していた要点のスナップショット。新しい要点の判定に使う。
+    /// CloudKit lightweight 安全 (default [])。
+    var seenInsights: [String] = []
+
     // MARK: - AI 復旧機能 追加フィールド
 
     /// この概念ページの summary / bodyMarkdown が Apple Intelligence 不可時の劣化生成 (essence 並べ /

@@ -29,6 +29,10 @@ struct ArticleRow: View {
     /// Why: 共有時にユーザーが見たタイトルが保存意図に最も近い。
     /// canonicalTitle は HTML <title> のまま (例: 「KFC」) で情報量が落ちる場合があるため。
     private var displayTitle: String {
+        TitleCleaner.clean(rawDisplayTitle, host: TitleCleaner.webHost(of: article.url))
+    }
+
+    private var rawDisplayTitle: String {
         let shareTitle = article.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !shareTitle.isEmpty, shareTitle != article.url {
             return shareTitle
@@ -57,15 +61,17 @@ struct ArticleRow: View {
         return essence
     }
 
-    private var topEntities: [KnowledgeEntity] {
-        guard knowledgeAvailable,
-              let entities = article.extractedKnowledge?.entities,
-              !entities.isEmpty
-        else { return [] }
-        return entities.sorted {
-            if $0.salience != $1.salience { return $0.salience > $1.salience }
-            return $0.order < $1.order
-        }.prefix(3).map { $0 }
+    /// spec 103: 知識抽出が未完 (pending / extracting) のとき 2 行目に「整理中…」を出す。
+    private var isOrganizing: Bool {
+        guard !FeedBuilder.isProcessingComplete(article) else { return false }
+        switch article.extractedKnowledge?.status {
+        case .pending, .extracting: return true
+        default: return false
+        }
+    }
+
+    private var sourceLabelText: String {
+        ArticleSourceLabel.label(for: article.url).localizedText
     }
 
     var body: some View {
@@ -94,6 +100,11 @@ struct ArticleRow: View {
                                 .font(.caption)
                                 .foregroundStyle(DS.Color.textEmphasis)
                                 .lineLimit(2)
+                        } else if isOrganizing {
+                            Text("article.row.organizing")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
                         } else if let summary = enrichmentSummaryText {
                             Text(summary)
                                 .font(.caption)
@@ -101,40 +112,19 @@ struct ArticleRow: View {
                                 .lineLimit(2)
                         }
 
-                        if !topEntities.isEmpty {
-                            HStack(spacing: DS.Spacing.xs) {
-                                ForEach(topEntities, id: \.id) { entity in
-                                    EntityChip(entity: entity)
-                                }
-                            }
-                        }
-
                         HStack(spacing: DS.Spacing.sm) {
-                            Text(article.url)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                            if !sourceLabelText.isEmpty {
+                                Text(sourceLabelText)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
                             Spacer(minLength: DS.Spacing.sm)
                             Text(SavedAtFormatter.format(article.savedAt))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .accessibilityIdentifier("articleRowSavedAt")
-                        }
-
-                        // spec 004: 「AI 生成」カプセルバッジ
-                        if knowledgeAvailable {
-                            HStack(spacing: DS.Spacing.xs) {
-                                Image(systemName: "sparkles")
-                                    .font(DS.Typography.aiLabel)
-                                Text("knowledge.aiGeneratedLabel")
-                                    .font(DS.Typography.aiLabel)
-                            }
-                            .foregroundStyle(DS.Color.sumiInk)
-                            .padding(.horizontal, DS.Spacing.sm)
-                            .padding(.vertical, DS.Spacing.xxs)
-                            .background(DS.Color.sumiInk.opacity(0.08), in: Capsule())
-                            .accessibilityIdentifier("knowledgeAIGeneratedLabel")
                         }
                     }
 
@@ -190,10 +180,12 @@ struct ArticleRow: View {
         var parts: [String] = [displayTitle]
         if let essence = essenceText {
             parts.append(essence)
+        } else if isOrganizing {
+            parts.append(String(localized: "article.row.organizing"))
         } else if let summary = enrichmentSummaryText {
             parts.append(summary)
         }
-        parts.append(article.url)
+        if !sourceLabelText.isEmpty { parts.append(sourceLabelText) }
         parts.append(SavedAtFormatter.accessibilityText(article.savedAt))
         return parts.joined(separator: ", ")
     }
@@ -205,57 +197,63 @@ struct ArticleRow: View {
 enum SavedAtFormatter {
     private static let calendar: Calendar = .current
 
-    private static let timeFormatter: DateFormatter = {
+    private static func timeString(_ date: Date, locale: Locale) -> String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "ja_JP")
-        f.dateFormat = "HH:mm"
-        return f
-    }()
+        f.locale = locale
+        // ja は従来どおり "09:15" (template だと "9:15" になり桁が揃わない)。
+        // 他ロケールは端末の 12/24 時間設定に従う (en_US なら "9:15 AM")。
+        if locale.language.languageCode == .japanese {
+            f.dateFormat = "HH:mm"
+        } else {
+            f.setLocalizedDateFormatFromTemplate("jmm")
+        }
+        return f.string(from: date)
+    }
 
-    private static let absoluteFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ja_JP")
-        f.dateFormat = "yyyy/MM/dd"
-        return f
-    }()
-
-    private static let relativeFormatter: RelativeDateTimeFormatter = {
+    private static func dayWord(_ day: Int, locale: Locale) -> String {
         let f = RelativeDateTimeFormatter()
-        f.locale = Locale(identifier: "ja_JP")
+        f.locale = locale
+        f.dateTimeStyle = .named
         f.unitsStyle = .short
-        return f
-    }()
+        f.formattingContext = .beginningOfSentence
+        var c = DateComponents()
+        c.day = day
+        return f.localizedString(from: c)
+    }
 
-    private static let accessibilityFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ja_JP")
-        f.dateStyle = .long
-        f.timeStyle = .short
-        return f
-    }()
-
-    static func format(_ date: Date, now: Date = .now) -> String {
+    static func format(_ date: Date, now: Date = .now, locale: Locale = .autoupdatingCurrent) -> String {
         // spec 019 fix: Calendar.isDateInToday/isDateInYesterday はシステム時刻固定で
         // now 引数を尊重しない。test 決定論性のため自前で「同日 / 前日」判定する。
         let nowDay = calendar.dateComponents([.year, .month, .day], from: now)
         let dateDay = calendar.dateComponents([.year, .month, .day], from: date)
         if nowDay.year == dateDay.year, nowDay.month == dateDay.month, nowDay.day == dateDay.day {
-            return "今日 " + timeFormatter.string(from: date)
+            return dayWord(0, locale: locale) + " " + timeString(date, locale: locale)
         }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now) {
             let yDay = calendar.dateComponents([.year, .month, .day], from: yesterday)
             if yDay.year == dateDay.year, yDay.month == dateDay.month, yDay.day == dateDay.day {
-                return "昨日 " + timeFormatter.string(from: date)
+                return dayWord(-1, locale: locale) + " " + timeString(date, locale: locale)
             }
         }
         let daysAgo = calendar.dateComponents([.day], from: date, to: now).day ?? 0
         if daysAgo >= 0 && daysAgo <= 7 {
-            return relativeFormatter.localizedString(for: date, relativeTo: now)
+            let r = RelativeDateTimeFormatter()
+            r.locale = locale
+            r.unitsStyle = .short
+            return r.localizedString(for: date, relativeTo: now)
         }
-        return absoluteFormatter.string(from: date)
+        let f = DateFormatter()
+        f.locale = locale
+        f.setLocalizedDateFormatFromTemplate("yMMdd")
+        return f.string(from: date)
     }
 
-    static func accessibilityText(_ date: Date) -> String {
-        accessibilityFormatter.string(from: date) + " 保存"
+    static func accessibilityText(_ date: Date, locale: Locale = .autoupdatingCurrent) -> String {
+        let f = DateFormatter()
+        f.locale = locale
+        f.dateStyle = .long
+        f.timeStyle = .short
+        let formatted = f.string(from: date)
+        return String(localized: "savedAt.accessibility \(formatted)")
     }
 }

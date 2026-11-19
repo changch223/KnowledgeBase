@@ -327,6 +327,24 @@ struct FeedBuilderTests {
         #expect(entries.first?.page.name == "生成AI")  // updatedAt 降順で先頭
     }
 
+    @Test func topLevelConceptsMarksShelf() throws {
+        let c = try makeContainer()
+        let ctx = c.mainContext
+        let shelf = insertWiki(ctx, name: "書架", updatedAt: fixedNow, articleCount: ConceptShelfPolicy.articleThreshold + 1)
+        shelf.conceptLevelRaw = "broad"
+        let child = insertWiki(ctx, name: "子", updatedAt: fixedNow, summary: "子")
+        child.parentConceptID = shelf.id
+        let lone = insertWiki(ctx, name: "子無し", updatedAt: fixedNow, articleCount: ConceptShelfPolicy.articleThreshold + 1)
+        lone.conceptLevelRaw = "broad"
+        let hiddenChild = insertWiki(ctx, name: "隠れ子", updatedAt: fixedNow, isHidden: true)
+        hiddenChild.parentConceptID = lone.id
+
+        let pages = try ctx.fetch(FetchDescriptor<ConceptPage>())
+        let entries = FeedBuilder.topLevelConcepts(pages: pages, now: fixedNow)
+        #expect(entries.first { $0.page.name == "書架" }?.isShelf == true)
+        #expect(entries.first { $0.page.name == "子無し" }?.isShelf == false)
+    }
+
     @Test func topLevelConceptsExcludesEmptyAndHidden() throws {
         let c = try makeContainer()
         let ctx = c.mainContext
@@ -373,5 +391,43 @@ struct FeedBuilderTests {
         let names = FeedBuilder.topLevelConcepts(pages: pages, now: fixedNow).map(\.page.name)
         // 未読が先 (記事数降順)、既読は記事 10 でも最後
         #expect(names == ["未読大", "未読小", "既読大"])
+    }
+
+    // MARK: - spec 104
+
+    @Test func isUnopenedReflectsLastOpenedAt() throws {
+        let container = try makeContainer()
+        let ctx = container.mainContext
+        let a = insertArticle(ctx, title: "A", savedAt: fixedNow)
+        #expect(FeedBuilder.isUnopened(a, since: fixedNow.addingTimeInterval(-60)))
+        a.lastOpenedAt = fixedNow
+        #expect(!FeedBuilder.isUnopened(a, since: fixedNow.addingTimeInterval(-60)))
+    }
+
+    @Test func isUnopenedIgnoresArticlesSavedBeforeTrackingStart() throws {
+        let container = try makeContainer()
+        let ctx = container.mainContext
+        let old = insertArticle(ctx, title: "Old", savedAt: fixedNow.addingTimeInterval(-3600))
+        #expect(!FeedBuilder.isUnopened(old, since: fixedNow))
+        let fresh = insertArticle(ctx, title: "New", savedAt: fixedNow.addingTimeInterval(60))
+        #expect(FeedBuilder.isUnopened(fresh, since: fixedNow))
+    }
+
+    @Test func shouldShowCategoryChipsRules() {
+        #expect(FeedBuilder.shouldShowCategoryChips(counts: [341, 21]) == false)
+        #expect(FeedBuilder.shouldShowCategoryChips(counts: [40, 30, 30]) == true)
+        #expect(FeedBuilder.shouldShowCategoryChips(counts: [10]) == false)
+    }
+
+    @Test func recentSavesSortsAndExcludesObsolete() throws {
+        let container = try makeContainer()
+        let ctx = container.mainContext
+        let old = insertArticle(ctx, title: "old", savedAt: fixedNow.addingTimeInterval(-300))
+        let pending = insertArticle(ctx, title: "pending", savedAt: fixedNow.addingTimeInterval(-100), status: .pending)
+        let obsolete = insertArticle(ctx, title: "obsolete", savedAt: fixedNow)
+        obsolete.isObsolete = true
+        let result = FeedBuilder.recentSaves(articles: [old, pending, obsolete], limit: 8)
+        #expect(result.map(\.title) == ["pending", "old"])
+        #expect(FeedBuilder.recentSaves(articles: [old, pending, obsolete], limit: 1).count == 1)
     }
 }

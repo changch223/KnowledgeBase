@@ -162,6 +162,12 @@ final class FallbackConceptSynthesisService: ConceptSynthesisServiceProtocol {
             conceptPage.insightSourceArticleIDs = pairs.map { $0.sourceID }
         }
 
+        // spec 105: 書架トピックは要点を作らない (要点は子トピックで出す)。
+        if ConceptSynthesisCommon.isShelf(conceptPage, articleCount: articles.count, in: context) {
+            conceptPage.crossSourceInsights = []
+            conceptPage.insightSourceArticleIDs = []
+        }
+
         // AI 復旧機能: Fallback (essence 並べ簡易生成) で確定した summary は劣化生成。
         // AI 復活検知で再合成できるよう印を付ける。
         conceptPage.synthesizedWithoutAI = true
@@ -393,6 +399,11 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         do {
             logger.notice("concept synthesis start for \(conceptPage.name, privacy: .public) [\(conceptPage.categoryRaw, privacy: .public)]: articles=\(articles.count) hierarchical=\(articles.count >= Self.hierarchicalThreshold)")
             // spec 080拡張: overflow なら 1 回だけ小型スキーマで再試行 (essence-list fallback より良い)。
+            // spec 105: 書架 (記事が多い広いトピック) は要点を保存しない (通常経路で合成、overflow 時のみ既存 compact 再試行)。
+            let isShelf = ConceptSynthesisCommon.isShelf(conceptPage, articleCount: articles.count, in: context)
+            if isShelf {
+                logger.notice("concept synthesis shelf topic \(conceptPage.name, privacy: .public) → no insights")
+            }
             let output = try await synthesizeWithAdaptiveRetry(conceptPage: conceptPage, articles: articles)
 
             // post-process: 500 chars 超 trim → 文境界トリムで「文の途中で切れた表示」を根絶。insights 5 件超 truncate。
@@ -411,13 +422,21 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 && !conceptPage.summary.isEmpty
             if !preserveExisting {
                 conceptPage.summary = trimmedSummary
-                conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(5))
-                // spec 089: 各要点を最も関連する元記事に照合し出典 ID を保存。
-                conceptPage.insightSourceArticleIDs = ConceptSynthesisCommon.matchInsightSources(
-                    insights: conceptPage.crossSourceInsights,
-                    articles: conceptPage.relatedArticles ?? [],
-                    embeddingService: embeddingService
-                )
+                if !isShelf {
+                    conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(5))
+                    // spec 089: 各要点を最も関連する元記事に照合し出典 ID を保存。
+                    conceptPage.insightSourceArticleIDs = ConceptSynthesisCommon.matchInsightSources(
+                        insights: conceptPage.crossSourceInsights,
+                        articles: conceptPage.relatedArticles ?? [],
+                        embeddingService: embeddingService
+                    )
+                }
+            }
+
+            if isShelf {
+                // spec 105: 書架は summary のみ保存。要点・出典は子トピックで出す (preserveExisting 経路も含む)。
+                conceptPage.crossSourceInsights = []
+                conceptPage.insightSourceArticleIDs = []
             }
 
             // embedding 再生成 (summary が更新されたので)
@@ -1085,6 +1104,16 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 /// (entity スキャン + ConceptPage 生成 / isStale toggle は availability に依存しない)
 @MainActor
 enum ConceptSynthesisCommon {
+
+    /// spec 105: このページが書架 (記事が多い広いトピック) か。子トピック数は parentConceptID で fetchCount。
+    static func isShelf(_ page: ConceptPage, articleCount: Int, in context: ModelContext) -> Bool {
+        guard page.level == .broad, articleCount > ConceptShelfPolicy.articleThreshold else { return false }
+        let pid = page.id
+        let childCount = (try? context.fetchCount(
+            FetchDescriptor<ConceptPage>(predicate: #Predicate { $0.parentConceptID == pid && !$0.isHidden })
+        )) ?? 0
+        return ConceptShelfPolicy.isShelf(level: page.level, articleCount: articleCount, childCount: childCount)
+    }
 
     /// entity 名は 2 文字未満 (例: "AI" は 2 文字なので含まれる、1 文字は除外) で ambiguous なので skip。
     static let minEntityNameLength = 2

@@ -25,12 +25,12 @@ enum LintRunStore {
         guard let date = lastRunDate else { return nil }
         let rel = RelativeDateTimeFormatter()
         rel.unitsStyle = .full
-        rel.locale = Locale(identifier: "ja_JP")
+        rel.locale = .autoupdatingCurrent
         let relStr = rel.localizedString(for: date, relativeTo: .now)
 
         let time = DateFormatter()
-        time.locale = Locale(identifier: "ja_JP")
-        time.dateFormat = "M/d HH:mm"
-        return "\(relStr)（\(time.string(from: date))）"
+        time.locale = .autoupdatingCurrent
+        time.setLocalizedDateFormatFromTemplate("MdHHmm")
+        return "\(relStr) (\(time.string(from: date)))"
     }
 }

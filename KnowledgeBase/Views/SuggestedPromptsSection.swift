@@ -15,7 +15,7 @@ struct SuggestedPromptsSection: View {
     @State private var prompts: [SuggestedPrompt] = []
     @State private var isLoading: Bool = false
 
-    /// Suggested prompt tap → 上位 view (ChatTabView) に text を渡す。
+    /// Suggested prompt tap → 上位 view (ChatConversationView 等) に text を渡す。
     let onPromptTap: (String) -> Void
 
     var body: some View {

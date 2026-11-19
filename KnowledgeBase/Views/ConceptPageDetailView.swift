@@ -88,6 +88,16 @@ struct ConceptPageDetailView: View {
 
     /// spec 064: 本文中の concept-id:// リンク tap 先 (self-contained 遷移)。
     @State private var wikiLinkTarget: WikiLinkTarget?
+    /// spec 104: 要点の出典 tap → プレビュー sheet → 「記事を開く」で push。
+    @State private var previewArticle: Article?
+    @State private var pendingOpenArticle: Article?
+    @State private var openedArticle: Article?
+    /// spec 105: 要点を 3 件超えて全表示するか。
+    @State private var showAllInsights = false
+    /// spec 105: 開いた時点の「前回開いた時刻 / 前回見た要点」。子画面への push でも onDisappear が走るため、
+    /// 表示判定は開いた瞬間のスナップショットで固定する (閉じるときだけ conceptPage に書き戻す)。
+    @State private var baselineLastOpenedAt: Date?
+    @State private var baselineSeenInsights: [String]?
 
     var body: some View {
         // page が削除/merge で消えた瞬間に短絡 → conceptPage プロパティ参照を一切させない (crash 防止)
@@ -104,36 +114,48 @@ struct ConceptPageDetailView: View {
     private var aliveBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // ── グループ A: タイトル + 知識セクション ──────────────
+                // spec 105: 固定構成 = 何のトピックか → 要点 → 前回から増えた記事 → 子トピック → 記事 → 詳しく
+                let children = childPages
+                let isShelfPage = ConceptShelfPolicy.isShelf(
+                    level: conceptPage.level,
+                    articleCount: (conceptPage.relatedArticles ?? []).count,
+                    childCount: children.count
+                )
                 Group {
                     parentBreadcrumb
                         .padding(.bottom, DS.Spacing.md)
                     heroTitleSection
-                    sumiRuleDivider.padding(.vertical, DS.Spacing.section)
-                    // spec 080: 要点先出し
-                    crossSourceInsightsSection
+
+                    // 要点 (書架は空なのでセクションごと出さない)
                     if !conceptPage.crossSourceInsights.isEmpty {
                         sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                        crossSourceInsightsSection
                     }
-                    wikiBodySection
-                    if !conceptPage.bodyMarkdown.isEmpty {
+                    // 書架は子トピックを要点の位置に繰り上げる
+                    if isShelfPage && !children.isEmpty {
                         sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                        childConceptsSection
                     }
-                    summarySection
+                    // 前回から増えた記事
+                    if !articlesSinceLastOpen.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                        sinceLastOpenSection
+                    }
+                    if !isShelfPage && !children.isEmpty {
+                        sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                        childConceptsSection
+                    }
+                    sumiRuleDivider.padding(.vertical, DS.Spacing.section)
+                    relatedArticlesSection
                         .padding(.bottom, DS.Spacing.section)
                 }
 
-                // ── グループ B: 階層 + 記事 + 関連 ──────────────────
                 Group {
-                    let children = childPages
-                    if !children.isEmpty {
-                        sumiRuleDivider.padding(.bottom, DS.Spacing.section)
-                        childConceptsSection
+                    // 詳しく (既定で折りたたみ)
+                    if !conceptPage.bodyMarkdown.isEmpty {
+                        wikiBodySection
                             .padding(.bottom, DS.Spacing.section)
                     }
-                    sumiRuleDivider.padding(.bottom, DS.Spacing.section)
-                    relatedArticlesSection
-                        .padding(.bottom, DS.Spacing.section)
                     // spec 043: この概念についての質問と答え
                     SavedAnswerSection(conceptPageID: conceptPage.id)
                     let others = relatedConcepts()
@@ -185,6 +207,20 @@ struct ConceptPageDetailView: View {
                 .foregroundStyle(DS.Color.sumiInk)
             }
         }
+        .sheet(item: $previewArticle, onDismiss: {
+            if let article = pendingOpenArticle {
+                pendingOpenArticle = nil
+                openedArticle = article
+            }
+        }) { article in
+            CitationPreviewSheet(article: article) {
+                pendingOpenArticle = article
+                previewArticle = nil
+            }
+        }
+        .navigationDestination(item: $openedArticle) { article in
+            ArticleDetailView(article: article, embedNavigationStack: false)
+        }
         .navigationDestination(item: $wikiLinkTarget) { target in
             // spec 064: 本文リンク → 既存 Loader 経由で push (削除済は Loader の @Query guard で安全)
             ConceptPageDetailLoader(destinationID: target.id)
@@ -205,6 +241,20 @@ struct ConceptPageDetailView: View {
             }
         }
         .accessibilityIdentifier("conceptPageDetail_root")
+        .onAppear {
+            if baselineSeenInsights == nil {
+                baselineLastOpenedAt = conceptPage.lastOpenedAt
+                baselineSeenInsights = conceptPage.seenInsights
+            }
+        }
+        // spec 105: 閉じる (非表示になる) ときに「前回開いた時刻 / 見ていた要点」を保存。
+        // 開いている間は点が消えないよう onAppear では書かない。
+        .onDisappear {
+            guard isAlive else { return }
+            conceptPage.lastOpenedAt = .now
+            conceptPage.seenInsights = conceptPage.crossSourceInsights
+            try? context.save()
+        }
     }
 
     // MARK: - Sections
@@ -264,8 +314,33 @@ struct ConceptPageDetailView: View {
                     .font(.caption)
                     .foregroundStyle(DS.Color.sumiLight)
             }
+
+            heroSummary
         }
         .accessibilityIdentifier("conceptPageDetail_header")
+    }
+
+    /// spec 105: 「何のトピックか」= summary 全文 (旧「概要」セクションを hero に統合)。
+    @ViewBuilder
+    private var heroSummary: some View {
+        if conceptPage.isSynthesisInProgress {
+            HStack(spacing: DS.Spacing.md) {
+                ProgressView()
+                    .scaleEffect(0.8)
+                Text("ConceptPage.detail.synthesisInProgress")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if !conceptPage.summary.isEmpty {
+            Text(conceptPage.summary)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .lineSpacing(DS.Typography.bodyLineSpacing)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("conceptPageDetail_summarySection")
+        }
     }
 
     /// 旧 headerSection — heroTitleSection に統合のため空にする
@@ -277,8 +352,7 @@ struct ConceptPageDetailView: View {
     @ViewBuilder
     private var wikiBodySection: some View {
         if !conceptPage.bodyMarkdown.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Spacing.md) {
-                sectionHeader("wiki.body.sectionTitle")
+            DisclosureGroup {
                 // spec 079: 行ベースレンダラで見出し/箇条書きを整形 + 生 concept-id 漏れを除去。
                 WikiBodyView(markdown: conceptPage.bodyMarkdown)
                     .environment(\.openURL, OpenURLAction { url in
@@ -289,7 +363,12 @@ struct ConceptPageDetailView: View {
                         }
                         return .systemAction
                     })
+                    .padding(.top, DS.Spacing.md)
+            } label: {
+                // spec 105: 「詳しく」は既定で折りたたみ
+                sectionHeader("wiki.body.sectionTitle")
             }
+            .tint(DS.Color.sumiInk)
             .accessibilityIdentifier("conceptPageDetail_wikiBody")
         }
     }
@@ -312,31 +391,6 @@ struct ConceptPageDetailView: View {
         return AttributedString(markdown)
     }
 
-    @ViewBuilder
-    private var summarySection: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.md) {
-            sectionHeader("ConceptPage.detail.summary.title")
-            if conceptPage.isSynthesisInProgress {
-                HStack(spacing: DS.Spacing.md) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("ConceptPage.detail.synthesisInProgress")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text(conceptPage.summary)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineSpacing(DS.Typography.bodyLineSpacing)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .accessibilityIdentifier("conceptPageDetail_summarySection")
-    }
-
     /// spec 089: index 番目の要点の出典記事 (insightSourceArticleIDs と relatedArticles から解決)。
     private func insightSourceArticle(at index: Int) -> Article? {
         guard index < conceptPage.insightSourceArticleIDs.count else { return nil }
@@ -350,12 +404,22 @@ struct ConceptPageDetailView: View {
         if !conceptPage.crossSourceInsights.isEmpty {
             VStack(alignment: .leading, spacing: DS.Spacing.md) {
                 sectionHeader("ConceptPage.detail.crossSourceInsights.title")
-                ForEach(Array(conceptPage.crossSourceInsights.enumerated()), id: \.offset) { index, insight in
+                let newSet = ConceptShelfPolicy.newInsights(
+                    current: conceptPage.crossSourceInsights,
+                    seen: baselineSeenInsights ?? conceptPage.seenInsights
+                )
+                let allInsights = Array(conceptPage.crossSourceInsights.enumerated())
+                let visibleInsights = showAllInsights ? allInsights : Array(allInsights.prefix(Self.initialInsightCount))
+                ForEach(visibleInsights, id: \.offset) { index, insight in
                     VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                         HStack(alignment: .top, spacing: DS.Spacing.sm) {
-                            Text("•")
-                                .font(.body)
-                                .foregroundStyle(DS.Color.sumiInk)
+                            if newSet.contains(insight.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                                NewInsightDot()
+                            } else {
+                                Text("•")
+                                    .font(.body)
+                                    .foregroundStyle(DS.Color.sumiInk)
+                            }
                             Text(insight)
                                 .font(.body)
                                 .foregroundStyle(.primary)
@@ -363,7 +427,9 @@ struct ConceptPageDetailView: View {
                         }
                         // spec 089: 各要点の出典 (最も関連する元記事) をタップで開ける。
                         if let article = insightSourceArticle(at: index) {
-                            NavigationLink(value: article) {
+                            Button {
+                                previewArticle = article
+                            } label: {
                                 HStack(spacing: DS.Spacing.xxs) {
                                     Image(systemName: "doc.text")
                                         .font(.caption2)
@@ -380,9 +446,49 @@ struct ConceptPageDetailView: View {
                         }
                     }
                 }
+                if !showAllInsights && allInsights.count > Self.initialInsightCount {
+                    Button {
+                        showAllInsights = true
+                    } label: {
+                        Text(String(format: String(localized: "concept.insights.showAll %lld"), allInsights.count))
+                            .font(.subheadline)
+                            .foregroundStyle(DS.Color.sumiMid)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("conceptPageDetail_insightsShowAll")
+                }
             }
             .accessibilityIdentifier("conceptPageDetail_crossSourceInsightsSection")
         }
+    }
+
+    // MARK: - spec 105: 前回から増えた記事
+
+    static let initialInsightCount = 3
+
+    /// 前回開いたとき以降に保存された関連記事 (新しい順、最大 3 件)。初めて開く (nil) なら空。
+    private var articlesSinceLastOpen: [Article] {
+        guard let since = baselineLastOpenedAt ?? (baselineSeenInsights == nil ? conceptPage.lastOpenedAt : nil) else { return [] }
+        return Array(
+            (conceptPage.relatedArticles ?? [])
+                .filter { $0.savedAt > since }
+                .sorted { $0.savedAt > $1.savedAt }
+                .prefix(3)
+        )
+    }
+
+    @ViewBuilder
+    private var sinceLastOpenSection: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            sectionHeader("concept.sinceLastOpen")
+            ForEach(articlesSinceLastOpen, id: \.id) { article in
+                NavigationLink(value: article) {
+                    ArticleRow(article: article)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .accessibilityIdentifier("conceptPageDetail_sinceLastOpenSection")
     }
 
     @ViewBuilder
