@@ -394,7 +394,9 @@ enum FoundationModelGate {
             "assetsUnavailable",
             "wouldExceedContextWindowSize",
         ]
-        return !deterministic.contains { desc.contains($0) }
+        // case 名の先頭一致で判定する (debugDescription にモデルの生成文が入るため、部分一致だと
+        // 生成文中の "refusal" 等で誤判定する)。String(describing:) は「case名(Context(...))」の形。
+        return !deterministic.contains { desc.hasPrefix($0) }
     }
 }
 

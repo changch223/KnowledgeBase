@@ -71,15 +71,16 @@ struct KnowledgeExtractor {
     /// `unsupportedLanguageOrLocale` (翻訳文が pl と誤判定) で落ち、記事の 3/4 が抽出されなかった。
     /// 出力言語は prompt で指定しているので、原文入力でもパイプライン言語で出力される。
     nonisolated static func shouldRetryWithRawText(_ error: Error) -> Bool {
+        // case 名の先頭一致 (FoundationModelGate.isRetryable と同じ理由で部分一致は使わない)。
         let desc = String(describing: error)
-        return desc.contains("refusal")
-            || desc.contains("unsupportedLanguageOrLocale")
-            || desc.contains("guardrailViolation")
+        return desc.hasPrefix("refusal")
+            || desc.hasPrefix("unsupportedLanguageOrLocale")
+            || desc.hasPrefix("guardrailViolation")
     }
 
     private static func shortReason(_ error: Error) -> String {
         let desc = String(describing: error)
-        for key in ["refusal", "unsupportedLanguageOrLocale", "guardrailViolation"] where desc.contains(key) {
+        for key in ["refusal", "unsupportedLanguageOrLocale", "guardrailViolation"] where desc.hasPrefix(key) {
             return key
         }
         return String(desc.prefix(80))

@@ -427,6 +427,7 @@ struct FakeGenerationError: Error, CustomStringConvertible {
 }
 
 /// 翻訳後の本文が拒否・非対応言語で落ちたときの原文リトライ と FoundationModelGate の再試行判定。
+@Suite(.serialized)
 @MainActor
 struct ExtractionResilienceTests {
     private let japaneseText = """
@@ -489,13 +490,50 @@ struct ExtractionResilienceTests {
         }
     }
 
+    @Test func gateRunsDeterministicFailureOnlyOnce() async {
+        var calls = 0
+        do {
+            _ = try await FoundationModelGate.run { () async throws -> Int in
+                calls += 1
+                throw FakeGenerationError(description: "refusal(May contain sensitive content)")
+            }
+        } catch {}
+        #expect(calls == 1)
+    }
+
+    @Test func extractRetriesWithRawTextWhenTranslatedTextIsRefused() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .success(
+                "About the Swift 6 release. Apple announced new strict concurrency features and " +
+                "further hardened the async/await model. Developers can adopt it gradually."
+            )
+            session.knowledgeResultQueue = [
+                .failure(FakeGenerationError(description: "unsupportedLanguageOrLocale(Unsupported language.)")),
+                .success(.fixture()),
+            ]
+            let extractor = KnowledgeExtractor(session: session)
+            _ = try await extractor.extract(extractedText: japaneseText)
+
+            #expect(session.callCount == 2)
+            #expect(session.lastPrompt?.contains("Swift 6 のリリースについて") == true)
+        }
+    }
+
     @Test func gateRetriesOnlyTransientErrors() {
         #expect(FoundationModelGate.isRetryable(FakeGenerationError(description: "exceededContextWindowSize")))
         #expect(FoundationModelGate.isRetryable(FakeGenerationError(description: "decodingFailure")))
         #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "refusal(x)")))
-        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "unsupportedLanguageOrLocale")))
-        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "guardrailViolation")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "unsupportedLanguageOrLocale(x)")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "guardrailViolation(x)")))
         #expect(!FoundationModelGate.isRetryable(CancellationError()))
+        // 生成文に "refusal" を含む decodingFailure は一時エラーのまま (部分一致で誤判定しない)
+        #expect(FoundationModelGate.isRetryable(
+            FakeGenerationError(description: "decodingFailure(Text: {\"essence\": \"the refusal of the court\"})")
+        ))
+        #expect(!KnowledgeExtractor.shouldRetryWithRawText(
+            FakeGenerationError(description: "decodingFailure(the refusal of the court)")
+        ))
         #expect(!FoundationModelGate.isRetryable(
             FoundationModelPreflightError.wouldExceedContextWindowSize(promptTokens: 1, schemaTokens: 1, contextSize: 1)
         ))
@@ -604,9 +642,17 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var lastAgentActionPrompt: String?
     var agentActionError: Error?
 
+    /// 呼び出しごとに先頭から消費する結果 (空なら nextResult)。
+    var knowledgeResultQueue: [Result<ExtractedKnowledgeOutput, Error>] = []
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
+        if !knowledgeResultQueue.isEmpty {
+            switch knowledgeResultQueue.removeFirst() {
+            case .success(let output): return output
+            case .failure(let error): throw error
+            }
+        }
         switch nextResult {
         case .success(let output): return output
         case .failure(let error): throw error
