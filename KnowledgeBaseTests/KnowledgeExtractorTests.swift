@@ -421,6 +421,87 @@ struct KnowledgeExtractorTests {
     }
 }
 
+/// Foundation Models の GenerationError の `String(describing:)` を模した失敗。
+struct FakeGenerationError: Error, CustomStringConvertible {
+    let description: String
+}
+
+/// 翻訳後の本文が拒否・非対応言語で落ちたときの原文リトライ と FoundationModelGate の再試行判定。
+@MainActor
+struct ExtractionResilienceTests {
+    private let japaneseText = """
+    Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
+    既存の async/await モデルをさらに堅牢化しました。開発者は migration mode を使って
+    段階的に対応できます。
+    """
+
+    @Test func chunkRetriesWithRawTextWhenTranslatedTextIsRefused() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .success(
+                "About the Swift 6 release. Apple announced new strict concurrency features and " +
+                "further hardened the async/await model. Developers can adopt it gradually."
+            )
+            session.chunkResultQueue = [
+                .failure(FakeGenerationError(description: "refusal(May contain sensitive content)")),
+                .success(ChunkKnowledgeOutput(essence: "ok", keyFacts: [], entities: [])),
+            ]
+            let extractor = KnowledgeExtractor(session: session)
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
+
+            #expect(result.error == nil)
+            #expect(result.output?.essence == "ok")
+            #expect(session.chunkCallCount == 2)
+            #expect(session.chunkPrompts.first?.contains("About the Swift 6 release") == true)
+            #expect(session.chunkPrompts.last?.contains("Swift 6 のリリースについて") == true)
+        }
+    }
+
+    @Test func chunkDoesNotRetryWhenTextWasNotTranslated() async throws {
+        try await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.chunkResultQueue = [
+                .failure(FakeGenerationError(description: "refusal(May contain sensitive content)")),
+            ]
+            let extractor = KnowledgeExtractor(session: session)
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
+
+            #expect(result.error != nil)
+            #expect(session.chunkCallCount == 1)
+        }
+    }
+
+    @Test func chunkDoesNotRetryOnOtherErrors() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .success(
+                "About the Swift 6 release. Apple announced new strict concurrency features and " +
+                "further hardened the async/await model. Developers can adopt it gradually."
+            )
+            session.chunkResultQueue = [
+                .failure(FakeGenerationError(description: "exceededContextWindowSize")),
+            ]
+            let extractor = KnowledgeExtractor(session: session)
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
+
+            #expect(result.error != nil)
+            #expect(session.chunkCallCount == 1)
+        }
+    }
+
+    @Test func gateRetriesOnlyTransientErrors() {
+        #expect(FoundationModelGate.isRetryable(FakeGenerationError(description: "exceededContextWindowSize")))
+        #expect(FoundationModelGate.isRetryable(FakeGenerationError(description: "decodingFailure")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "refusal(x)")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "unsupportedLanguageOrLocale")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "guardrailViolation")))
+        #expect(!FoundationModelGate.isRetryable(CancellationError()))
+        #expect(!FoundationModelGate.isRetryable(
+            FoundationModelPreflightError.wouldExceedContextWindowSize(promptTokens: 1, schemaTokens: 1, contextSize: 1)
+        ))
+    }
+}
+
 /// i18n Phase B: `PipelineLanguage.current` が参照する実 UserDefaults (App Group or .standard) を
 /// テスト中だけ書き換え、終了後に元の値へ厳密に復元するヘルパ (実ストレージを汚染しない)。
 @MainActor
@@ -534,10 +615,20 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
 
     /// 案A: chunk 抽出用小型スキーマ。デフォルトは nextResult から essence/keyFacts/entities を流用。
     var nextChunkResult: Result<ChunkKnowledgeOutput, Error>?
+    /// 呼び出しごとに先頭から消費する結果 (空なら nextChunkResult / nextResult にフォールバック)。
+    var chunkResultQueue: [Result<ChunkKnowledgeOutput, Error>] = []
     private(set) var chunkCallCount = 0
+    private(set) var chunkPrompts: [String] = []
     func generateChunkKnowledge(prompt: String) async throws -> ChunkKnowledgeOutput {
         chunkCallCount += 1
         lastPrompt = prompt
+        chunkPrompts.append(prompt)
+        if !chunkResultQueue.isEmpty {
+            switch chunkResultQueue.removeFirst() {
+            case .success(let output): return output
+            case .failure(let error): throw error
+            }
+        }
         if let nextChunkResult {
             switch nextChunkResult {
             case .success(let output): return output

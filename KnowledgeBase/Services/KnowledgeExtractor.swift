@@ -56,7 +56,33 @@ struct KnowledgeExtractor {
         let truncated = Self.truncate(text: stripped, maxChars: maxBodyChars)
         let prepared = await prepareForExtraction(truncated)
         let prompt = Self.buildPrompt(text: prepared, guidance: guidance)
-        return try await session.generateKnowledge(prompt: prompt)
+        do {
+            return try await session.generateKnowledge(prompt: prompt)
+        } catch {
+            // 翻訳後の本文が拒否・非対応言語と判定された場合は、原文で 1 回だけやり直す。
+            guard prepared != truncated, Self.shouldRetryWithRawText(error) else { throw error }
+            Self.logger.notice("extract retry with raw text after: \(Self.shortReason(error), privacy: .public)")
+            return try await session.generateKnowledge(prompt: Self.buildPrompt(text: truncated, guidance: guidance))
+        }
+    }
+
+    /// 翻訳した本文で失敗したとき、原文に戻せば通る可能性がある失敗か。
+    /// 実機ログ: 日本語記事を英語に翻訳した chunk が `refusal ("May contain sensitive content")` や
+    /// `unsupportedLanguageOrLocale` (翻訳文が pl と誤判定) で落ち、記事の 3/4 が抽出されなかった。
+    /// 出力言語は prompt で指定しているので、原文入力でもパイプライン言語で出力される。
+    nonisolated static func shouldRetryWithRawText(_ error: Error) -> Bool {
+        let desc = String(describing: error)
+        return desc.contains("refusal")
+            || desc.contains("unsupportedLanguageOrLocale")
+            || desc.contains("guardrailViolation")
+    }
+
+    private static func shortReason(_ error: Error) -> String {
+        let desc = String(describing: error)
+        for key in ["refusal", "unsupportedLanguageOrLocale", "guardrailViolation"] where desc.contains(key) {
+            return key
+        }
+        return String(desc.prefix(80))
     }
 
     /// spec 006: 1 chunk を Foundation Models に渡して結果を ChunkResult として返す。
@@ -68,7 +94,17 @@ struct KnowledgeExtractor {
         // 案A: chunk は小型スキーマ (ChunkKnowledgeOutput) で抽出 → 出力予約が減り chunk を大きくできる。
         let prompt = Self.buildChunkPrompt(text: prepared, guidance: guidance)
         do {
-            let slim = try await session.generateChunkKnowledge(prompt: prompt)
+            let slim: ChunkKnowledgeOutput
+            do {
+                slim = try await session.generateChunkKnowledge(prompt: prompt)
+            } catch {
+                // 翻訳後の本文で拒否・非対応言語 → 原文で 1 回だけやり直す (extract と同じ方針)。
+                guard prepared != stripped, Self.shouldRetryWithRawText(error) else { throw error }
+                Self.logger.notice("chunk \(chunk.index) retry with raw text after: \(Self.shortReason(error), privacy: .public)")
+                slim = try await session.generateChunkKnowledge(
+                    prompt: Self.buildChunkPrompt(text: stripped, guidance: guidance)
+                )
+            }
             // aggregator は ExtractedKnowledgeOutput を期待するので変換 (summary は per-chunk 不使用 → 空)。
             let output = ExtractedKnowledgeOutput(
                 essence: slim.essence,

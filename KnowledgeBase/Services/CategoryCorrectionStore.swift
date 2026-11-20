@@ -23,12 +23,17 @@ import os
 final class CategoryCorrectionStore {
     private static let logger = Logger(subsystem: "app.KnowledgeTree", category: "category-learning")
     private let context: ModelContext
+    /// container を保持する。保持しないと bootstrap 直後に container が解放されてストアが外れ、
+    /// 監視が「our store removed」を検知して isValid=false になる (実機ログで起動のたびに発生し、
+    /// 分類の学習 = ユーザー修正の few-shot が常に無効になっていた)。
+    private let container: ModelContainer
     /// ストアが削除された後は false になり、以降の fetch/save を全てスキップする。
     private(set) var isValid: Bool = true
     private var storeObserver: NSObjectProtocol?
 
     init(context: ModelContext, container: ModelContainer) {
         self.context = context
+        self.container = container
         // ストア削除を監視して isValid を下げる。
         // object: nil だと main SharedSchema の Coordinator のイベントも拾い、
         // iCloud 同期時のストア置換で isValid=false になる誤動作が起きる。
