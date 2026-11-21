@@ -10,8 +10,8 @@ import Testing
 import Foundation
 @testable import KnowledgeBase
 
-// i18n Phase B: withPipelineLanguage は PipelineLanguage.current の実プロセス状態
-// (UserDefaults + static cache) を書き換える。他 suite との並列実行で読み書きが競合しないよう直列化する。
+// i18n Phase B: withPipelineLanguage は task-local (`PipelineLanguage.testOverride`) で生成言語を上書きする
+// (グローバル状態は書き換えないので他 suite と競合しない)。suite 内の直列化は従来どおり維持。
 @Suite(.serialized)
 @MainActor
 struct KnowledgeExtractorTests {
@@ -546,19 +546,12 @@ struct ExtractionResilienceTests {
 /// テスト中だけ書き換え、終了後に元の値へ厳密に復元するヘルパ (実ストレージを汚染しない)。
 @MainActor
 func withPipelineLanguage<T>(_ language: PipelineLanguage, _ body: () async throws -> T) async rethrows -> T {
-    let defaults = UserDefaults(suiteName: AppGroup.identifier) ?? .standard
-    let originalRaw = defaults.string(forKey: PipelineLanguage.userDefaultsKey)
-    defaults.set(language.rawValue, forKey: PipelineLanguage.userDefaultsKey)
-    PipelineLanguage._resetForTesting()
-    defer {
-        if let originalRaw {
-            defaults.set(originalRaw, forKey: PipelineLanguage.userDefaultsKey)
-        } else {
-            defaults.removeObject(forKey: PipelineLanguage.userDefaultsKey)
-        }
-        PipelineLanguage._resetForTesting()
+    // task-local で上書きする (グローバルの UserDefaults / キャッシュは触らない)。
+    // 以前はグローバルを書き換えていたため、暗黙に `.current` (= ja) を前提とする並列 suite が
+    // 英語指示版プロンプトを掴んで間欠的に失敗していた (spec 106 QA)。
+    try await PipelineLanguage.$testOverride.withValue(language) {
+        try await body()
     }
-    return try await body()
 }
 
 /// spec 101: String(describing:) に "notInstalled" を含む擬似翻訳エラー。
