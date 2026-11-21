@@ -143,11 +143,12 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
 
     /// spec 040: graph 構造を「## このカテゴリーの主要エンティティと関係性」セクションに整形する。
     /// graphTraversal 不在 / 対象ノードなしは空文字。
-    private func buildGraphSection(categoryName: String) -> String {
+    /// spec 107: ja 以外は英語の見出し・件数ラベル・指示文 (digest 英語版 prompt に日本語が混ざらないように)。
+    private func buildGraphSection(categoryName: String, language: PipelineLanguage = .current) -> String {
         guard let graphTraversal else { return "" }
         let topNodes = graphTraversal.topByDegree(categoryRaw: categoryName, limit: 5, in: context)
         guard !topNodes.isEmpty else { return "" }
-        var graphLines: [String] = []
+        var entries: [(name: String, mentionCount: Int, edges: String)] = []
         for node in topNodes {
             // 各 node の outgoing edge 上位 2 件 (label + target、ラベル付きを優先)
             let labeledOutgoing = (node.outgoingEdges ?? [])
@@ -160,10 +161,32 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
                     return "\(label) → \(target.name)"
                 }
                 .joined(separator: " / ")
-            let line = edgeStr.isEmpty
-                ? "・\(node.name) (記事数 \(node.mentionCount))"
-                : "・\(node.name) (記事数 \(node.mentionCount)): \(edgeStr)"
-            graphLines.append(line)
+            entries.append((node.name, node.mentionCount, edgeStr))
+        }
+        return Self.formatGraphSection(entries: entries, language: language)
+    }
+
+    /// graph セクションの整形 (純関数、テスト可)。ja は従来文字列のまま、ja 以外は英語。
+    static func formatGraphSection(entries: [(name: String, mentionCount: Int, edges: String)], language: PipelineLanguage) -> String {
+        let japanese = PromptLocalizer.usesJapaneseInstructions(language)
+        let graphLines = entries.map { e -> String in
+            if japanese {
+                return e.edges.isEmpty
+                    ? "・\(e.name) (記事数 \(e.mentionCount))"
+                    : "・\(e.name) (記事数 \(e.mentionCount)): \(e.edges)"
+            }
+            return e.edges.isEmpty
+                ? "- \(e.name) (\(e.mentionCount) articles)"
+                : "- \(e.name) (\(e.mentionCount) articles): \(e.edges)"
+        }
+        if !japanese {
+            return """
+
+            ## Main entities and relations in this category
+            \(graphLines.joined(separator: "\n"))
+
+            Write a narrative centered on the main entities.
+            """
         }
         return """
 
@@ -184,6 +207,23 @@ final class FoundationModelsKnowledgeDigestService: KnowledgeDigestService {
             return "[\(idx + 1)] (id=\(article.id.uuidString)) \(essence)"
         }
 
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+                \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+                You are an AI that integrates the summaries of \(lines.count) articles in the category "\(categoryName)".
+
+                Key point of each article:
+                \(lines.joined(separator: "\n"))
+                \(graphSection)
+
+                Integrate the above and generate 1 to 3 knowledge cards.
+                Each card has a summary (at most 150 characters), topKeyFacts (3 items), topEntityNames (3 items),
+                and sourceArticleIDs (UUIDs of the matching articles).
+
+                If one topic covers everything, make 1 card; if the topics are scattered, split into 2-3 cards.
+                \(PromptLocalizer.outputLanguageFooter(language))
+                """
+        }
         return """
             あなたは「\(categoryName)」カテゴリの \(lines.count) 件の記事要約を統合する AI です。
             出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
@@ -282,9 +322,9 @@ final class FallbackKnowledgeDigestService: KnowledgeDigestService {
         let topEssences = articles.prefix(3).compactMap(\.extractedKnowledge?.essence).filter { !$0.isEmpty }
         let summary: String
         if topEssences.isEmpty {
-            summary = "最近の \(articles.count) 件の記事を集約しました。"
+            summary = String(format: String(localized: "digest.fallback.summary.empty"), articles.count)
         } else {
-            summary = "最近の \(articles.count) 件から: " + topEssences.joined(separator: " / ")
+            summary = String(format: String(localized: "digest.fallback.summary.essences"), articles.count, topEssences.joined(separator: " / "))
         }
 
         let topKeyFacts = articles

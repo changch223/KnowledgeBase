@@ -178,7 +178,7 @@ final class ChatService: ChatServiceProtocol {
                 case .askClarification(let q, let suggestions):
                     if shouldForceFinal {
                         // max round 到達後の clarification は強制的に「最善努力 immediate」化
-                        let fallback = await tryGenerateFallbackAnswer(question: trimmed) ?? "私の理解では、もう少し具体的な質問をいただけると、お手伝いできるかもしれません。"
+                        let fallback = await tryGenerateFallbackAnswer(question: trimmed) ?? String(localized: "chat.agent.forceFinalFallback")
                         let filtered = HedgePhraseFilter.replace(fallback)
                         return try persistAssistant(text: filtered, citedIDs: [], suggestions: [], in: session)
                     }
@@ -239,6 +239,9 @@ final class ChatService: ChatServiceProtocol {
     /// immediate の answer / askClarification の question・suggestions / finalAnswer の text が
     /// ユーザーに生表示されるため出力言語ヘッダを明示する。
     static func buildAgentPrompt(question: String, contextMessages: [ChatMessage], forceFinalAnswer: Bool = false, language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishAgentPrompt(question: question, contextMessages: contextMessages, forceFinalAnswer: forceFinalAnswer, language: language)
+        }
         let recent = contextMessages.suffix(4)
         let contextLines = recent.map { msg in
             let role = msg.role == ChatMessageRole.user.rawValue ? "ユーザー" : "アシスタント"
@@ -279,6 +282,50 @@ final class ChatService: ChatServiceProtocol {
         \(contextLines.isEmpty ? "" : "## 直前の会話\n\(contextLines)\n")
         ## 質問
         \(question)
+        """
+    }
+
+    /// spec 107: 英語指示版 (生成言語が日本語以外)。action 名 (searchArticles 等) は code が解釈するため原文のまま。
+    static func buildEnglishAgentPrompt(question: String, contextMessages: [ChatMessage], forceFinalAnswer: Bool, language: PipelineLanguage) -> String {
+        let contextLines = contextMessages.suffix(4).map { msg in
+            let role = msg.role == ChatMessageRole.user.rawValue ? "User" : "Assistant"
+            return "\(role): \(String(msg.text.prefix(200)))"
+        }.joined(separator: "\n")
+        let hedgeExamples = PromptLocalizer.quotedList(language.hedgePhraseExamples)
+        let forceClause = forceFinalAnswer ? """
+
+        ## Top priority (forceFinalAnswer)
+        You have already asked 3 clarification questions. **Do not use askClarification.**
+        Give the best answer you can with the information so far (immediate or finalAnswer).
+        If information is lacking, use hedges such as \(hedgeExamples), but still return some answer.
+        """ : ""
+
+        return """
+        \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+        You are the AI assistant of Knowledge Base. By default you answer from the articles the user has saved (the knowledge base).
+        Write the answer of immediate, the question and suggestions of askClarification, and the text of finalAnswer in \(language.englishName).
+        Choose exactly one of these 4 actions for the question:
+
+        - searchArticles(query): search the saved articles. **For questions about information, knowledge, topics, people, events, technology or terms, choose this by default.**
+        - immediate(answer): answer directly only for greetings, small talk or app usage unrelated to saved articles.
+        - askClarification(question, suggestions): ask back ONLY when the intent splits into several meanings and there is almost no clue (very rarely).
+        - finalAnswer(text, citedArticleIDs): the final answer that integrates the search results.
+
+        ## Important rules
+        - **When in doubt, choose searchArticles**, even without words like "saved articles". Even for vague questions, search with the best interpretation first: expand abbreviations and short words (e.g. "pm") into likely meanings (query "pm product manager project management"). Do not ask back lightly.
+        - The query of searchArticles must be a **standalone search query that uses the conversation history**. Resolve pronouns, follow-up questions and abbreviations from the previous turns so the query works on its own.
+          Example: previous "what is pm?" and now "product manager" -> query "PM product manager".
+          Example: "tell me about recent AI-related articles" -> query "AI".
+        - Field names (e.g. Technology, Economy) or words like "recent" and "this week" may be included in the query (optional).
+        - immediate is only for small talk truly unrelated to saved articles, never for information questions.
+        - Never output phrases like \(PromptLocalizer.quotedList(language.bannedPhraseExamples)).
+        - askClarification suggestions: exactly 3, each at most 30 characters (the user can also type freely).
+        \(forceClause)
+        \(contextLines.isEmpty ? "" : "## Previous conversation\n\(contextLines)\n")
+        ## Question
+        \(question)
+
+        \(PromptLocalizer.outputLanguageFooter(language))
         """
     }
 
@@ -415,6 +462,18 @@ final class ChatService: ChatServiceProtocol {
     /// spec 081 の一般知識回答 fallback 用 prompt。
     /// i18n Phase B: 出力言語 + 禁止句/hedge 句の例示は `language` (既定 `PipelineLanguage.current`) に追従する。
     static func buildFallbackPrompt(question: String, language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+            Answer the following question with your general knowledge.
+            Never output phrases like \(PromptLocalizer.quotedList(language.bannedPhraseExamples)).
+            If information is lacking, use hedges such as \(PromptLocalizer.quotedList(language.hedgePhraseExamples)).
+
+            Question: \(question)
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
         let banned = language.bannedPhraseExamples.map { "「\($0)」" }.joined()
         let hedges = language.hedgePhraseExamples.map { "「\($0)」" }.joined()
         return """
@@ -445,11 +504,75 @@ final class ChatService: ChatServiceProtocol {
     /// 特定トピックではなく「直近の保存記事の要約」を求める質問。recency 語 + meta 語の両方を含む。
     /// (トピック検索が成功する「最近のAI記事」は retrieval ヒット側で処理され、この判定には到達しない)
     static func isRecencyQuery(_ question: String) -> Bool {
-        let recency = ["最近", "最新", "今週", "今月", "このごろ", "近頃", "さいきん", "直近"]
-        let meta = ["記事", "保存", "まとめ", "要点", "サマリ", "読んだ", "クリップ", "ためた", "ため込", "何を"]
-        let hasRecency = recency.contains { question.contains($0) }
-        let hasMeta = meta.contains { question.contains($0) }
+        // spec 107: 全言語 OR (生成言語に依存しない)。英/西/独は大文字小文字を無視して比較する。
+        // 末尾 `*` = 語頭一致 (屈折・複数形を許す)、`*` なしのラテン語 = 語全体一致 (`read` が `ready` に誤一致しない)。
+        // CJK / ハングルは従来どおり単純な部分一致。
+        let recency = [
+            // ja (従来どおり)
+            "最近", "最新", "今週", "今月", "このごろ", "近頃", "さいきん", "直近",
+            // ko
+            "최근", "최신", "이번 주", "이번주", "이번 달", "요즘", "지난주", "지난 주",
+            // en
+            "recent*", "latest", "this week", "this month", "lately", "newest", "last week", "past week", "past few days",
+            // es
+            "reciente*", "último", "últimos", "última", "últimas", "ultimo", "ultimos", "ultima", "ultimas",
+            "esta semana", "este mes", "semana pasada", "recién", "últimamente", "ultimamente",
+            // de
+            "kürzlich", "neueste*", "letzte", "letzten", "letztes", "letzter", "diese woche", "dieser woche", "diesen monat", "zuletzt",
+        ]
+        let meta = [
+            // ja (従来どおり)
+            "記事", "保存", "まとめ", "要点", "サマリ", "読んだ", "クリップ", "ためた", "ため込", "何を",
+            // ko
+            "기사", "저장", "요약", "읽은", "클립",
+            // en
+            "article*", "save", "saved", "saves", "summary", "summaries", "summarize", "summarise", "read", "reads", "reading", "bookmark*",
+            // es
+            "artículo*", "articulo*", "guardad*", "guardé", "guarde", "guardaste", "resumen*", "resumir", "leído", "leido",
+            // de
+            "artikel*", "gespeichert*", "zusammenfassung*", "gelesen*",
+        ]
+        // 中国語固有の語。日本語でも使う漢字語 (文章 / 重点 / 摘要 / 本週 / 近期 など) を含むため、
+        // かな (ひらがな・カタカナ) を含まない質問にだけ適用する (日本語の質問の挙動を main と同じに保つ)。
+        let zhRecency = ["本周", "本週", "这周", "這週", "上周", "上週", "近期", "这几天", "這幾天"]
+        let zhMeta = ["文章", "摘要", "重點", "重点", "存了", "收藏", "总结", "總結", "读了", "讀了"]
+
+        let lower = question.lowercased()
+        let useZh = !containsKana(lower)
+        let hasRecency = recency.contains { containsKeyword(lower, $0.lowercased()) }
+            || (useZh && zhRecency.contains { lower.contains($0) })
+        let hasMeta = meta.contains { containsKeyword(lower, $0.lowercased()) }
+            || (useZh && zhMeta.contains { lower.contains($0) })
         return hasRecency && hasMeta
+    }
+
+    /// ひらがな / カタカナ (半角含む) を含むか。
+    private static func containsKana(_ text: String) -> Bool {
+        text.unicodeScalars.contains { (0x3040...0x30FF).contains($0.value) || (0xFF66...0xFF9F).contains($0.value) }
+    }
+
+    private static func isLatinWordChar(_ ch: Character) -> Bool {
+        guard let v = ch.unicodeScalars.first?.value, v < 0x250 else { return false }
+        return ch.isLetter || ch.isNumber
+    }
+
+    /// spec 107: キーワード一致。ラテン文字で始まる語は語頭境界を要求し (直前が CJK なら境界扱い)、
+    /// 末尾 `*` なしなら語末境界も要求する。CJK / ハングルは単純な部分一致。
+    private static func containsKeyword(_ text: String, _ rawKeyword: String) -> Bool {
+        let prefixOnly = rawKeyword.hasSuffix("*")
+        let keyword = prefixOnly ? String(rawKeyword.dropLast()) : rawKeyword
+        guard let first = keyword.unicodeScalars.first else { return false }
+        guard first.value < 0x250 else { return text.contains(keyword) }
+        var searchStart = text.startIndex
+        while let range = text.range(of: keyword, range: searchStart..<text.endIndex) {
+            let startOK = range.lowerBound == text.startIndex
+                || !isLatinWordChar(text[text.index(before: range.lowerBound)])
+            let endOK = prefixOnly || range.upperBound == text.endIndex
+                || !isLatinWordChar(text[range.upperBound])
+            if startOK && endOK { return true }
+            searchStart = range.upperBound
+        }
+        return false
     }
 
     /// spec 084: 直近保存の (処理完了) 記事を savedAt desc で取得。
@@ -752,6 +875,9 @@ final class ChatService: ChatServiceProtocol {
     /// spec 081: 番号引用契約 (本文に裸マーカー `(article-id://UUID)`) + Wiki まとめを文脈に注入 (引用不可)。
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     static func buildPrompt(question: String, articles: [Article], conceptPages: [ConceptPage] = [], contextMessages: [ChatMessage] = [], relatedEntities: [GraphNode] = [], chatMode: ChatMode = .think, language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishPrompt(question: question, articles: articles, conceptPages: conceptPages, contextMessages: contextMessages, relatedEntities: relatedEntities, chatMode: chatMode, language: language)
+        }
         let quickConstraint = chatMode == .quick ? """
 
         ## Quick モード制約
@@ -833,6 +959,92 @@ final class ChatService: ChatServiceProtocol {
 
         ## ユーザーの質問
         \(question)
+        """
+        return prompt
+    }
+
+    /// spec 107: RAG 回答 prompt の英語指示版。引用契約 `(article-id://UUID)` / citedArticleIDs は code が解釈するため原文のまま。
+    static func buildEnglishPrompt(question: String, articles: [Article], conceptPages: [ConceptPage], contextMessages: [ChatMessage], relatedEntities: [GraphNode], chatMode: ChatMode, language: PipelineLanguage) -> String {
+        let quickConstraint = chatMode == .quick ? """
+
+        ## Quick mode constraint
+        Answer briefly in about 70 words (or about 200 characters for Chinese, Japanese or Korean). Cite only the 2 most important articles.
+        """ : ""
+
+        var prompt = """
+        \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+        You are the AI assistant of Knowledge Base. Answer the question based on the articles the user has saved.
+
+        ## Rules
+        1. Base your answer ONLY on the Reference articles below. Do not guess from general knowledge.
+        2. Right after the sentence an article supports, put only the marker `(article-id://UUID)`. Do not write article titles or numbers like "[1]" in the body. Example: "Swift 6 strengthened concurrency (article-id://12345...)."
+        3. Also list the IDs of the articles you used in the citedArticleIDs field (UUID strings of Article.id).
+        4. You may use the Wiki summaries under Supplementary context to help understanding, but never cite them (neither the marker nor citedArticleIDs). Only the Reference articles can be cited.
+        5. If the Reference articles do not contain the answer, set answer to an empty string and citedArticleIDs to an empty array.
+        6. Answer concisely, in at most 3 paragraphs, in \(language.englishName).
+        7. If there is a recent conversation, use it as context. Treat a short question like "tell me more" as a follow-up on the previous topic.
+        \(quickConstraint)
+        """
+
+        if !contextMessages.isEmpty {
+            prompt += "\n## Recent conversation\n"
+            for msg in contextMessages {
+                let role = msg.role == ChatMessageRole.user.rawValue ? "User" : "Assistant"
+                let truncated = msg.text.count > 200 ? String(msg.text.prefix(200)) + "…" : msg.text
+                prompt += "\n\(role): \(truncated)"
+            }
+            prompt += "\n"
+        }
+
+        if !conceptPages.isEmpty {
+            prompt += "\n## Supplementary context (Wiki summaries; do not cite)\n"
+            for page in conceptPages.prefix(2) {
+                let insights = page.crossSourceInsights.prefix(2).joined(separator: " / ")
+                let hint = insights.isEmpty ? page.summary : insights
+                let trimmedHint = hint.count > 160 ? String(hint.prefix(160)) + "…" : hint
+                prompt += "- \(page.name): \(trimmedHint)\n"
+            }
+        }
+
+        prompt += "\n## Reference articles"
+
+        for (i, article) in articles.enumerated() {
+            let essence = article.extractedKnowledge?.essence ?? ""
+            let keyFacts = article.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
+            prompt += """
+
+            [\(i + 1)] ID: \(article.id.uuidString)
+            Title: \(article.title)
+            Key point: \(essence)
+            KeyFacts: \(keyFacts)
+            """
+        }
+
+        if !relatedEntities.isEmpty {
+            prompt += "\n\n## Related entities (reference)\n"
+            for node in relatedEntities.prefix(10) {
+                let labeledOutgoing = (node.outgoingEdges ?? [])
+                    .filter { $0.label != nil && $0.target?.isActive == true }
+                    .sorted { $0.weight > $1.weight }
+                    .prefix(2)
+                let edgeSummary = labeledOutgoing.compactMap { edge -> String? in
+                    guard let label = edge.label, let target = edge.target else { return nil }
+                    return "\(label) → \(target.name)"
+                }.joined(separator: " / ")
+                if edgeSummary.isEmpty {
+                    prompt += "- \(node.name)\n"
+                } else {
+                    prompt += "- \(node.name): \(edgeSummary)\n"
+                }
+            }
+        }
+
+        prompt += """
+
+        ## User question
+        \(question)
+
+        \(PromptLocalizer.outputLanguageFooter(language))
         """
         return prompt
     }

@@ -108,7 +108,7 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
 
         // 2. 会話履歴を含む tutor prompt 構築
         let history = (session.messages ?? []).sorted { $0.timestamp < $1.timestamp }
-        let prompt = buildContinuationPrompt(card: card, history: history)
+        let prompt = Self.buildContinuationPrompt(card: card, history: history, historyWindow: historyWindow)
 
         // 3. AI 応答生成
         let replyText = await generateReply(prompt: prompt, fallbackHint: fallbackContinuation(for: card))
@@ -136,8 +136,27 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
 
     /// 初回 AI 発話用 prompt — 「ユーザーがこれから何を学びたいか」を聞き出す質問 1 つを返す。
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildInitialPrompt(for card: UnderstandingCard, language: PipelineLanguage = .current) -> String {
-        let context = buildContextBlock(for: card)
+    static func buildInitialPrompt(for card: UnderstandingCard, language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+            You are a warm, calm tutor. Help the student (the user) deeply understand "\(card.deepDiveTitleFormatArg)".
+
+            [Your role]
+            - Do not just state answers; draw out the student's questions and explain step by step
+            - Use analogies when helpful and avoid abstract explanations
+            - Do not talk long at once (2-4 short paragraphs of 1-3 sentences each)
+
+            \(buildContextBlock(for: card, language: language))
+
+            [Your response now]
+            This is the first exchange with the student. First ask ONE short question: "what do you most want to know about this concept right now?"
+            Reply with a single question, not an answer. No preamble or "Understood"; start with the question directly.
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
+        let context = buildContextBlock(for: card, language: language)
         return """
         あなたは温かく落ち着いた「家庭教師」です。生徒 (ユーザー) が「\(card.deepDiveTitleFormatArg)」を深く理解できるよう助けてください。
         出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
@@ -158,9 +177,30 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
 
     /// 継続 AI 発話用 prompt — 履歴 + 最新 user 入力に応じて家庭教師として応答。
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildContinuationPrompt(card: UnderstandingCard, history: [ChatMessage], language: PipelineLanguage = .current) -> String {
-        let contextBlock = buildContextBlock(for: card)
-        let historyBlock = formatHistory(history)
+    static func buildContinuationPrompt(card: UnderstandingCard, history: [ChatMessage], historyWindow: Int = 2, language: PipelineLanguage = .current) -> String {
+        let contextBlock = buildContextBlock(for: card, language: language)
+        let historyBlock = formatHistory(history, window: historyWindow, language: language)
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+            You are a warm, calm tutor. Help the student (the user) deeply understand "\(card.deepDiveTitleFormatArg)".
+
+            [Your role]
+            - Beyond giving answers, use analogies and counter-questions so the student truly understands
+            - Do not talk long at once (2-4 short paragraphs of 1-3 sentences each)
+            - Use the supporting information, and general knowledge if needed (without exaggeration; state clearly where you are unsure)
+
+            \(contextBlock)
+
+            [Conversation so far]
+            \(historyBlock)
+
+            [Your response now]
+            Reply to the student's latest message as a tutor. No preamble; start with the reply itself.
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
         return """
         あなたは温かく落ち着いた「家庭教師」です。生徒 (ユーザー) が「\(card.deepDiveTitleFormatArg)」を深く理解できるよう助けてください。
         出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
@@ -184,7 +224,36 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     /// concept / saved answer の補助情報を block 化。
     /// V3.0 polish: 4096 token 連発 fix のため更に圧縮。
     /// summary 200→120, insight 80×2→60×1, 関連記事 60×2→50×1。
-    private func buildContextBlock(for card: UnderstandingCard) -> String {
+    static func buildContextBlock(for card: UnderstandingCard, language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            switch card.kind {
+            case .conceptPage(let page):
+                var parts: [String] = []
+                if !page.summary.isEmpty {
+                    parts.append("[Concept summary]\n\(page.summary.prefix(120))")
+                }
+                if let first = page.crossSourceInsights.first {
+                    parts.append("[Key insight]\n  \(first.prefix(60))")
+                }
+                if let latest = (page.relatedArticles ?? [])
+                    .sorted(by: { $0.savedAt > $1.savedAt })
+                    .first
+                {
+                    parts.append("[Reference article]\n  - \(latest.title.prefix(50))")
+                }
+                return parts.isEmpty ? "" : parts.joined(separator: "\n\n")
+            case .savedAnswer(let answer):
+                let q = answer.question.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)
+                let a = answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120)
+                return """
+                [Previous question]
+                \(q)
+
+                [Previous answer (excerpt)]
+                \(a)
+                """
+            }
+        }
         switch card.kind {
         case .conceptPage(let page):
             var parts: [String] = []
@@ -216,13 +285,15 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     }
 
     /// chat 履歴を「生徒:」「あなた:」形式の plain text に整形 (直近 historyWindow 件)。
-    private func formatHistory(_ history: [ChatMessage]) -> String {
-        let recent = Array(history.suffix(historyWindow))
+    static func formatHistory(_ history: [ChatMessage], window: Int = 2, language: PipelineLanguage = .current) -> String {
+        let recent = Array(history.suffix(window))
+        let english = !PromptLocalizer.usesJapaneseInstructions(language)
         if recent.isEmpty {
-            return "(まだ対話はありません)"
+            return english ? "(No conversation yet)" : "(まだ対話はありません)"
         }
         return recent.map { msg -> String in
-            let speaker = msg.role == ChatMessageRole.user.rawValue ? "生徒" : "あなた"
+            let isUser = msg.role == ChatMessageRole.user.rawValue
+            let speaker = english ? (isUser ? "Student" : "You") : (isUser ? "生徒" : "あなた")
             return "\(speaker): \(msg.text)"
         }.joined(separator: "\n\n")
     }
@@ -230,7 +301,7 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     // MARK: - private: AI invocation
 
     private func generateInitialQuestion(for card: UnderstandingCard) async -> String {
-        let prompt = buildInitialPrompt(for: card)
+        let prompt = Self.buildInitialPrompt(for: card)
         return await generateReply(prompt: prompt, fallbackHint: fallbackInitial(for: card))
     }
 
@@ -264,18 +335,18 @@ final class DefaultDeepDiveChatService: DeepDiveChatServiceProtocol {
     private func fallbackInitial(for card: UnderstandingCard) -> String {
         switch card.kind {
         case .conceptPage(let page):
-            return "「\(page.name)」について、今いちばん気になっていることを教えてください。"
+            return String(format: String(localized: "deepdive.fallback.initial.concept"), page.name)
         case .savedAnswer:
-            return "前回の答えについて、特にどの部分をもっと深く知りたいですか?"
+            return String(localized: "deepdive.fallback.initial.saved")
         }
     }
 
     private func fallbackContinuation(for card: UnderstandingCard) -> String {
         switch card.kind {
         case .conceptPage(let page) where !page.summary.isEmpty:
-            return "(AI が応答できないため、保存されているサマリの抜粋を共有します)\n\n\(page.summary.prefix(300))"
+            return String(format: String(localized: "deepdive.fallback.continuation.summary"), String(page.summary.prefix(300)))
         default:
-            return "申し訳ありません。今は AI が応答できません。少し時間をおいて再度お試しください。"
+            return String(localized: "deepdive.fallback.continuation.default")
         }
     }
 }

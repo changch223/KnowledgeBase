@@ -79,7 +79,7 @@ struct PipelinePromptLanguageTests {
         #expect(jaPrompt.contains("出力言語: 日本語"))
 
         let zhPrompt = ChatService.buildPrompt(question: "Swift について", articles: [article], language: .zhHans)
-        #expect(zhPrompt.contains("出力言語: 简体中文"))
+        #expect(zhPrompt.contains("Output language: Simplified Chinese"))
         #expect(!zhPrompt.contains("出力言語: 日本語"))
     }
 
@@ -114,7 +114,7 @@ struct PipelinePromptLanguageTests {
         let zhPrompt = ConflictDetectionService.buildPrompt(
             newArticle: newArticle, oldArticle: oldArticle, entityName: "Apple", language: .zhHant
         )
-        #expect(zhPrompt.contains("出力言語: 繁體中文"))
+        #expect(zhPrompt.contains("Output language: Traditional Chinese"))
         #expect(!zhPrompt.contains("出力言語: 日本語"))
     }
 
@@ -129,7 +129,7 @@ struct PipelinePromptLanguageTests {
         let zhPrompt = FoundationModelsKnowledgeDigestService.buildPrompt(
             articles: [], categoryName: "テクノロジー", language: .zhHans
         )
-        #expect(zhPrompt.contains("出力言語: 简体中文"))
+        #expect(zhPrompt.contains("Output language: Simplified Chinese"))
         #expect(!zhPrompt.contains("出力言語: 日本語"))
     }
 
@@ -140,7 +140,7 @@ struct PipelinePromptLanguageTests {
         #expect(jaPrompt.contains("出力言語: 日本語"))
 
         let zhPrompt = ChatService.buildAgentPrompt(question: "Swift について", contextMessages: [], language: .zhHant)
-        #expect(zhPrompt.contains("出力言語: 繁體中文"))
+        #expect(zhPrompt.contains("Output language: Traditional Chinese"))
         #expect(!zhPrompt.contains("出力言語: 日本語"))
     }
 
@@ -151,7 +151,7 @@ struct PipelinePromptLanguageTests {
         #expect(jaPrompt.contains("出力言語: 日本語"))
 
         let zhPrompt = ChatService.buildFallbackPrompt(question: "Swift について", language: .zhHant)
-        #expect(zhPrompt.contains("出力言語: 繁體中文"))
+        #expect(zhPrompt.contains("Output language: Traditional Chinese"))
         #expect(!zhPrompt.contains("出力言語: 日本語"))
     }
 

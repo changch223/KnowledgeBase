@@ -105,14 +105,6 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
             return CategoryClassification(category: other, confidence: .low)
         }
 
-        // spec 072: context (記事タイトル/essence) があれば文脈ブロックを足す。
-        let contextBlock: String
-        if let context, !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            contextBlock = "\n\nこのタグが登場した文脈:\n\(String(context.prefix(200)))"
-        } else {
-            contextBlock = ""
-        }
-
         // spec 074: 候補はレジストリ駆動 (動的カテゴリ対応)。nil なら CategorySeed に fallback。
         let candidatesText = categoryRegistry?.promptCandidatesWithDefinitions()
             ?? CategorySeed.promptCandidatesWithDefinitions
@@ -120,31 +112,18 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
             ?? Set(CategorySeed.allSeeds.map { $0.name })
 
         // spec 097 Phase 2: 過去のユーザー修正を few-shot で注入 (最大 8 件)。
-        let exampleBlock = Self.buildExampleBlock(examples)
+        let exampleBlock = Self.buildExampleBlock(examples, language: PipelineLanguage.current)
 
-        // i18n: 候補リスト (candidatesText) と其他 (other) は既に PipelineLanguage.current に
-        // 追従済みだが、指示文の骨格が日本語ハードコードのままだと zh パイプラインでもモデルが
-        // ja のカテゴリー名を出力しがちで validNames 照合に失敗 → その他落ちの一因になっていた。
-        // Phase B で確立した出力言語ヘッダのパターンをここにも適用する。
-        let language = PipelineLanguage.current
-        let prompt = """
-            次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
-            出力言語: \(language.endonym)。スキーマの説明文が日本語でも、カテゴリー名は必ず下記候補リストに書かれている表記のまま、翻訳・言い換えせずに返すこと。
-            必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
-            判断に迷う人名・組織名・一般語は「\(other)」にしてください。
-            ただし下記の特例に当てはまる場合は、迷わずその分野に分類すること:
-            \(CategorySeed.firstPassTieBreakers)
-            \(exampleBlock)
-            # カテゴリー候補 (定義と例)
-            \(candidatesText)
-
-            # 分類するタグ
-            \(trimmed)\(contextBlock)
-
-            # 確信度
-            回答の最後に確信度を [High / Medium / Low] のいずれかで出力してください。
-            High=文脈や一般的事実から直接の根拠がある / Medium=情報が一部不足だが推論で妥当 / Low=情報が足りず推測の域を出ない。
-            """
+        // i18n / spec 107: 指示文の言語は PipelineLanguage.current に追従 (ja 以外は英語指示版)。
+        let prompt = Self.buildPrompt(
+            tagName: trimmed,
+            context: context,
+            candidatesText: candidatesText,
+            other: other,
+            tieBreakers: CategorySeed.firstPassTieBreakers,
+            exampleBlock: exampleBlock,
+            language: PipelineLanguage.current
+        )
 
         do {
             let session = LanguageModelSession()
@@ -173,9 +152,95 @@ final class FoundationModelsAutoCategoryClassifier: AutoCategoryClassifier {
         }
     }
 
+    /// 分類 prompt (純関数、テスト可)。spec 107: ja は従来の日本語指示文を一字も変えず、
+    /// ja 以外は英語指示版 (候補名は一字一句そのまま返させる)。
+    static func buildPrompt(
+        tagName trimmed: String,
+        context: String?,
+        candidatesText: String,
+        other: String,
+        tieBreakers: String,
+        exampleBlock: String,
+        language: PipelineLanguage
+    ) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            let englishContext: String
+            if let context, !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                englishContext = "\n\nContext where this tag appeared:\n\(String(context.prefix(200)))"
+            } else {
+                englishContext = ""
+            }
+            return """
+                Output language: \(language.englishName). The category name must be copied exactly as written in the candidate list below; never translate or rephrase it.
+                Classify the following tag into exactly one of the categories below.
+                Return exactly one name from the candidate list, using the exact spelling written there. Do not translate it.
+                Never invent a new name that is not in the list (e.g. Tech, Math, Politics, Men).
+                For ambiguous personal names, organization names or generic words, use "\(other)".
+                However, if one of these exceptions applies, classify into that field without hesitation:
+                \(tieBreakers)
+                \(exampleBlock)
+                # Category candidates (definitions and examples)
+                \(candidatesText)
+
+                # Tag to classify
+                \(trimmed)\(englishContext)
+
+                # Confidence
+                At the end, output a confidence value, one of [High / Medium / Low].
+                High = direct grounds from context or common facts / Medium = some information is missing but the inference is reasonable / Low = not enough information, just a guess.
+
+                \(PromptLocalizer.outputLanguageFooter(language))
+                """
+        }
+        // spec 072: context (記事タイトル/essence) があれば文脈ブロックを足す。
+        let contextBlock: String
+        if let context, !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            contextBlock = "\n\nこのタグが登場した文脈:\n\(String(context.prefix(200)))"
+        } else {
+            contextBlock = ""
+        }
+
+        // i18n: 候補リスト (candidatesText) と其他 (other) は既に PipelineLanguage.current に
+        // 追従済みだが、指示文の骨格が日本語ハードコードのままだと zh パイプラインでもモデルが
+        // ja のカテゴリー名を出力しがちで validNames 照合に失敗 → その他落ちの一因になっていた。
+        // Phase B で確立した出力言語ヘッダのパターンをここにも適用する。
+        return """
+            次のタグを、下記カテゴリーのいずれか 1 つに分類してください。
+            出力言語: \(language.endonym)。スキーマの説明文が日本語でも、カテゴリー名は必ず下記候補リストに書かれている表記のまま、翻訳・言い換えせずに返すこと。
+            必ず候補リストにあるカテゴリー名だけを完全一致で 1 つ返すこと。リストにない新しい名前 (技術/数学/政治/男性 等) を作ってはいけません。
+            判断に迷う人名・組織名・一般語は「\(other)」にしてください。
+            ただし下記の特例に当てはまる場合は、迷わずその分野に分類すること:
+            \(tieBreakers)
+            \(exampleBlock)
+            # カテゴリー候補 (定義と例)
+            \(candidatesText)
+
+            # 分類するタグ
+            \(trimmed)\(contextBlock)
+
+            # 確信度
+            回答の最後に確信度を [High / Medium / Low] のいずれかで出力してください。
+            High=文脈や一般的事実から直接の根拠がある / Medium=情報が一部不足だが推論で妥当 / Low=情報が足りず推測の域を出ない。
+            """
+    }
+
     /// spec 097 Phase 2: ユーザー修正の few-shot ブロックを組み立てる (最大 8 件、空なら空文字)。
-    static func buildExampleBlock(_ examples: [CategoryFewShot]) -> String {
+    static func buildExampleBlock(_ examples: [CategoryFewShot], language: PipelineLanguage = .current) -> String {
         guard !examples.isEmpty else { return "" }
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            let lines = examples.prefix(8).map { ex -> String in
+                if let wrong = ex.wrongCategory, !wrong.isEmpty, wrong != ex.correctCategory {
+                    return "- \"\(ex.tagName)\" -> \"\(ex.correctCategory)\" (not \"\(wrong)\")"
+                }
+                return "- \"\(ex.tagName)\" -> \"\(ex.correctCategory)\""
+            }
+            return """
+
+                # Past user corrections (avoid the same mistakes)
+                \(lines.joined(separator: "\n"))
+
+                """
+        }
         let lines = examples.prefix(8).map { ex -> String in
             if let wrong = ex.wrongCategory, !wrong.isEmpty, wrong != ex.correctCategory {
                 return "- 「\(ex.tagName)」→「\(ex.correctCategory)」(「\(wrong)」ではない)"
