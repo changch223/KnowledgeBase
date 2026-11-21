@@ -10,8 +10,8 @@ import Testing
 import Foundation
 @testable import KnowledgeBase
 
-// i18n Phase B: withPipelineLanguage は PipelineLanguage.current の実プロセス状態
-// (UserDefaults + static cache) を書き換える。他 suite との並列実行で読み書きが競合しないよう直列化する。
+// i18n Phase B: withPipelineLanguage は task-local (`PipelineLanguage.testOverride`) で生成言語を上書きする
+// (グローバル状態は書き換えないので他 suite と競合しない)。suite 内の直列化は従来どおり維持。
 @Suite(.serialized)
 @MainActor
 struct KnowledgeExtractorTests {
@@ -177,7 +177,7 @@ struct KnowledgeExtractorTests {
             "このフレームワークは on-device 言語モデルを公開し、開発者が SwiftUI アプリに" +
             "structured output と RAG 機能を追加できるようになります。"
         )
-        let extractor = KnowledgeExtractor(session: session)
+        let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
         let englishText = """
         Apple announced a new framework called Foundation Models at WWDC. The on-device
@@ -203,7 +203,7 @@ struct KnowledgeExtractorTests {
             "端末内の言語モデルを公開し、開発者が外部サーバーなしで structured output を" +
             "利用できるようになります。"
         )
-        let extractor = KnowledgeExtractor(session: session)
+        let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
         let chineseText = """
         苹果在全球开发者大会上发布了一个名为基础模型的全新框架。这个设备端的语言模型
@@ -221,23 +221,25 @@ struct KnowledgeExtractorTests {
 
     /// 翻訳 throws → 英語のまま抽出 (silent fallback)
     @Test func extractFallsBackToRawTextWhenTranslationFails() async throws {
-        let session = MockLanguageModelSession()
-        session.nextResult = .success(.fixture())
-        session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
-        let extractor = KnowledgeExtractor(session: session)
+        try await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+            let extractor = KnowledgeExtractor(session: session)
 
-        let englishText = """
-        Apple announced a new framework called Foundation Models at WWDC. The on-device
-        language model exposes structured output via the @Generable macro, enabling
-        developers to add RAG features without external servers.
-        """
-        _ = try await extractor.extract(extractedText: englishText)
+            let englishText = """
+            Apple announced a new framework called Foundation Models at WWDC. The on-device
+            language model exposes structured output via the @Generable macro, enabling
+            developers to add RAG features without external servers.
+            """
+            _ = try await extractor.extract(extractedText: englishText)
 
-        // 翻訳は試みた
-        #expect(session.translationCallCount == 1)
-        // 失敗したので抽出は元の英文で進む (throw しない)
-        #expect(session.callCount == 1)
-        #expect(session.lastPrompt?.contains("announced a new framework") == true)
+            // 翻訳は試みた (1 回のみ)
+            #expect(session.translationCallCount == 1)
+            // 失敗したので抽出は元の英文で進む (throw しない)
+            #expect(session.callCount == 1)
+            #expect(session.lastPrompt?.contains("announced a new framework") == true)
+        }
     }
 
     /// spec 101: 翻訳が notInstalled で失敗した言語は、以後の抽出で翻訳をスキップする
@@ -248,7 +250,7 @@ struct KnowledgeExtractorTests {
         session.nextResult = .success(.fixture())
         session.nextTranslationResult = .failure(FakeNotInstalledTranslateError())
         let cache = TranslationCache()
-        let extractor = KnowledgeExtractor(session: session, translationCache: cache)
+        let extractor = KnowledgeExtractor(session: session, translationCache: cache, preferTranslateFirst: { true })
 
         let english = """
         Apple announced a new framework called Foundation Models at WWDC. The on-device
@@ -287,7 +289,7 @@ struct KnowledgeExtractorTests {
             session.nextTranslationResult = .success(
                 "苹果在 WWDC 上宣布了新的 Foundation Models 框架，公开了设备端语言模型的结构化输出能力。"
             )
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
             let japaneseText = """
             Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
@@ -334,7 +336,7 @@ struct KnowledgeExtractorTests {
                 "Apple announced a new Foundation Models framework at WWDC, exposing structured " +
                 "output from an on-device language model."
             )
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
             let japaneseText = """
             Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
@@ -383,7 +385,7 @@ struct KnowledgeExtractorTests {
                 "Apple presentó un nuevo framework Foundation Models en la WWDC, exponiendo salida " +
                 "estructurada desde un modelo de lenguaje en el dispositivo."
             )
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
             let japaneseText = """
             Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
@@ -421,23 +423,135 @@ struct KnowledgeExtractorTests {
     }
 }
 
+/// Foundation Models の GenerationError の `String(describing:)` を模した失敗。
+struct FakeGenerationError: Error, CustomStringConvertible {
+    let description: String
+}
+
+/// 翻訳後の本文が拒否・非対応言語で落ちたときの原文リトライ と FoundationModelGate の再試行判定。
+@Suite(.serialized)
+@MainActor
+struct ExtractionResilienceTests {
+    private let japaneseText = """
+    Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
+    既存の async/await モデルをさらに堅牢化しました。開発者は migration mode を使って
+    段階的に対応できます。
+    """
+
+    @Test func chunkRetriesWithRawTextWhenTranslatedTextIsRefused() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .success(
+                "About the Swift 6 release. Apple announced new strict concurrency features and " +
+                "further hardened the async/await model. Developers can adopt it gradually."
+            )
+            session.chunkResultQueue = [
+                .failure(FakeGenerationError(description: "refusal(May contain sensitive content)")),
+                .success(ChunkKnowledgeOutput(essence: "ok", keyFacts: [], entities: [])),
+            ]
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
+
+            #expect(result.error == nil)
+            #expect(result.output?.essence == "ok")
+            #expect(session.chunkCallCount == 2)
+            #expect(session.chunkPrompts.first?.contains("About the Swift 6 release") == true)
+            #expect(session.chunkPrompts.last?.contains("Swift 6 のリリースについて") == true)
+        }
+    }
+
+    @Test func chunkDoesNotRetryWhenTextWasNotTranslated() async throws {
+        try await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.chunkResultQueue = [
+                .failure(FakeGenerationError(description: "refusal(May contain sensitive content)")),
+            ]
+            let extractor = KnowledgeExtractor(session: session)
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
+
+            #expect(result.error != nil)
+            #expect(session.chunkCallCount == 1)
+        }
+    }
+
+    @Test func chunkDoesNotRetryOnOtherErrors() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .success(
+                "About the Swift 6 release. Apple announced new strict concurrency features and " +
+                "further hardened the async/await model. Developers can adopt it gradually."
+            )
+            session.chunkResultQueue = [
+                .failure(FakeGenerationError(description: "exceededContextWindowSize")),
+            ]
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
+
+            #expect(result.error != nil)
+            #expect(session.chunkCallCount == 1)
+        }
+    }
+
+    @Test func gateRunsDeterministicFailureOnlyOnce() async {
+        var calls = 0
+        do {
+            _ = try await FoundationModelGate.run { () async throws -> Int in
+                calls += 1
+                throw FakeGenerationError(description: "refusal(May contain sensitive content)")
+            }
+        } catch {}
+        #expect(calls == 1)
+    }
+
+    @Test func extractRetriesWithRawTextWhenTranslatedTextIsRefused() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .success(
+                "About the Swift 6 release. Apple announced new strict concurrency features and " +
+                "further hardened the async/await model. Developers can adopt it gradually."
+            )
+            session.knowledgeResultQueue = [
+                .failure(FakeGenerationError(description: "unsupportedLanguageOrLocale(Unsupported language.)")),
+                .success(.fixture()),
+            ]
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
+            _ = try await extractor.extract(extractedText: japaneseText)
+
+            #expect(session.callCount == 2)
+            #expect(session.lastPrompt?.contains("Swift 6 のリリースについて") == true)
+        }
+    }
+
+    @Test func gateRetriesOnlyTransientErrors() {
+        #expect(FoundationModelGate.isRetryable(FakeGenerationError(description: "exceededContextWindowSize")))
+        #expect(FoundationModelGate.isRetryable(FakeGenerationError(description: "decodingFailure")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "refusal(x)")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "unsupportedLanguageOrLocale(x)")))
+        #expect(!FoundationModelGate.isRetryable(FakeGenerationError(description: "guardrailViolation(x)")))
+        #expect(!FoundationModelGate.isRetryable(CancellationError()))
+        // 生成文に "refusal" を含む decodingFailure は一時エラーのまま (部分一致で誤判定しない)
+        #expect(FoundationModelGate.isRetryable(
+            FakeGenerationError(description: "decodingFailure(Text: {\"essence\": \"the refusal of the court\"})")
+        ))
+        #expect(!KnowledgeExtractor.shouldRetryWithRawText(
+            FakeGenerationError(description: "decodingFailure(the refusal of the court)")
+        ))
+        #expect(!FoundationModelGate.isRetryable(
+            FoundationModelPreflightError.wouldExceedContextWindowSize(promptTokens: 1, schemaTokens: 1, contextSize: 1)
+        ))
+    }
+}
+
 /// i18n Phase B: `PipelineLanguage.current` が参照する実 UserDefaults (App Group or .standard) を
 /// テスト中だけ書き換え、終了後に元の値へ厳密に復元するヘルパ (実ストレージを汚染しない)。
 @MainActor
 func withPipelineLanguage<T>(_ language: PipelineLanguage, _ body: () async throws -> T) async rethrows -> T {
-    let defaults = UserDefaults(suiteName: AppGroup.identifier) ?? .standard
-    let originalRaw = defaults.string(forKey: PipelineLanguage.userDefaultsKey)
-    defaults.set(language.rawValue, forKey: PipelineLanguage.userDefaultsKey)
-    PipelineLanguage._resetForTesting()
-    defer {
-        if let originalRaw {
-            defaults.set(originalRaw, forKey: PipelineLanguage.userDefaultsKey)
-        } else {
-            defaults.removeObject(forKey: PipelineLanguage.userDefaultsKey)
-        }
-        PipelineLanguage._resetForTesting()
+    // task-local で上書きする (グローバルの UserDefaults / キャッシュは触らない)。
+    // 以前はグローバルを書き換えていたため、暗黙に `.current` (= ja) を前提とする並列 suite が
+    // 英語指示版プロンプトを掴んで間欠的に失敗していた (spec 106 QA)。
+    try await PipelineLanguage.$testOverride.withValue(language) {
+        try await body()
     }
-    return try await body()
 }
 
 /// spec 101: String(describing:) に "notInstalled" を含む擬似翻訳エラー。
@@ -523,9 +637,17 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
     var lastAgentActionPrompt: String?
     var agentActionError: Error?
 
+    /// 呼び出しごとに先頭から消費する結果 (空なら nextResult)。
+    var knowledgeResultQueue: [Result<ExtractedKnowledgeOutput, Error>] = []
     func generateKnowledge(prompt: String) async throws -> ExtractedKnowledgeOutput {
         callCount += 1
         lastPrompt = prompt
+        if !knowledgeResultQueue.isEmpty {
+            switch knowledgeResultQueue.removeFirst() {
+            case .success(let output): return output
+            case .failure(let error): throw error
+            }
+        }
         switch nextResult {
         case .success(let output): return output
         case .failure(let error): throw error
@@ -534,10 +656,20 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked S
 
     /// 案A: chunk 抽出用小型スキーマ。デフォルトは nextResult から essence/keyFacts/entities を流用。
     var nextChunkResult: Result<ChunkKnowledgeOutput, Error>?
+    /// 呼び出しごとに先頭から消費する結果 (空なら nextChunkResult / nextResult にフォールバック)。
+    var chunkResultQueue: [Result<ChunkKnowledgeOutput, Error>] = []
     private(set) var chunkCallCount = 0
+    private(set) var chunkPrompts: [String] = []
     func generateChunkKnowledge(prompt: String) async throws -> ChunkKnowledgeOutput {
         chunkCallCount += 1
         lastPrompt = prompt
+        chunkPrompts.append(prompt)
+        if !chunkResultQueue.isEmpty {
+            switch chunkResultQueue.removeFirst() {
+            case .success(let output): return output
+            case .failure(let error): throw error
+            }
+        }
         if let nextChunkResult {
             switch nextChunkResult {
             case .success(let output): return output

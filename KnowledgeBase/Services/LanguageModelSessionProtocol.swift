@@ -367,6 +367,9 @@ enum FoundationModelGate {
                 return result
             } catch {
                 lastError = error
+                // 同じ入力では結果が変わらない失敗 (拒否 / 非対応言語 / guardrail / キャンセル等) は
+                // 再試行しても時間を浪費するだけなので即座に返す (実機ログで 1 chunk あたり 3 回 + sleep を浪費)。
+                guard isRetryable(error) else { break }
                 // 一時エラー (exceededContextWindowSize / inference 失敗) は待って再試行。
                 // セマフォは保持したまま sleep → 直列性を保ちつつランタイムの回復を待つ。
                 if attempt < maxAttempts {
@@ -376,6 +379,24 @@ enum FoundationModelGate {
         }
         await semaphore.release()
         throw lastError ?? CancellationError()
+    }
+
+    /// 再試行で結果が変わりうる一時エラーか。拒否・非対応言語・guardrail・アセット未導入・
+    /// 送信前 preflight の窓超過・キャンセルは決定的なので false (呼び出し側の fallback に任せる)。
+    /// 判定は既存の overflow 検出と同じく `String(describing:)` ベース (GenerationError の case 名)。
+    nonisolated static func isRetryable(_ error: Error) -> Bool {
+        if error is CancellationError { return false }
+        let desc = String(describing: error)
+        let deterministic = [
+            "refusal",
+            "unsupportedLanguageOrLocale",
+            "guardrailViolation",
+            "assetsUnavailable",
+            "wouldExceedContextWindowSize",
+        ]
+        // case 名の先頭一致で判定する (debugDescription にモデルの生成文が入るため、部分一致だと
+        // 生成文中の "refusal" 等で誤判定する)。String(describing:) は「case名(Context(...))」の形。
+        return !deterministic.contains { desc.hasPrefix($0) }
     }
 }
 

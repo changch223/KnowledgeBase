@@ -33,7 +33,13 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
     private static var cachedValue: PipelineLanguage?
 
     /// 現在の pipeline 言語。保存値優先、未設定なら端末の優先言語から解決する。
+    /// テスト専用の上書き (task-local)。`withPipelineLanguage` が設定し、その task とその子 task にだけ効く。
+    /// グローバル (UserDefaults / キャッシュ) を書き換えないので、並列実行される他のテストと干渉しない。
+    /// 本番コードは設定しない (常に nil)。
+    @TaskLocal static var testOverride: PipelineLanguage?
+
     static var current: PipelineLanguage {
+        if let testOverride { return testOverride }
         if let cachedValue { return cachedValue }
         let defaults = UserDefaults(suiteName: AppGroup.identifier) ?? .standard
         let resolved = resolve(defaults: defaults, preferredLanguages: Locale.preferredLanguages)
@@ -86,6 +92,19 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         case .ko: return "한국어"
         case .es: return "Español"
         case .de: return "Deutsch"
+        }
+    }
+
+    /// 英語指示版 prompt (spec 106) で出力言語を指定するときの英語名。
+    var englishName: String {
+        switch self {
+        case .ja: return "Japanese"
+        case .zhHans: return "Simplified Chinese"
+        case .zhHant: return "Traditional Chinese"
+        case .en: return "English"
+        case .ko: return "Korean"
+        case .es: return "Spanish"
+        case .de: return "German"
         }
     }
 

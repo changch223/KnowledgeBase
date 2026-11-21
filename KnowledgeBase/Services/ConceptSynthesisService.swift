@@ -308,7 +308,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 return
             }
             do {
-                let prompt = buildConceptHierarchyPrompt(article: article)
+                let prompt = Self.buildConceptHierarchyPrompt(article: article)
                 let hierarchy = try await session.generateConceptHierarchy(prompt: prompt)
                 let broad = hierarchy.broadConcept.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard broad.count >= ConceptSynthesisCommon.minEntityNameLength else {
@@ -328,7 +328,11 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     /// spec 074: 概念階層抽出 prompt。出力が小さい (broad + ≤4 specific) ので入力に余裕がある
     /// (essence 300 字まで許容、token 安全)。広い概念候補シード + schema ルールを embed。
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildConceptHierarchyPrompt(article: Article, language: PipelineLanguage = .current) -> String {
+    static func buildConceptHierarchyPrompt(article: Article, language: PipelineLanguage = .current) -> String {
+        // spec 106: ja 以外は英語指示版 (日本語の指示文・schema ルール・シード辞書を使わない)。
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishConceptHierarchyPrompt(article: article, language: language)
+        }
         let title = Self.truncate(article.title, max: 80)
         let essence = Self.truncate(article.extractedKnowledge?.essence ?? "", max: 300)
         let keyFacts = (article.extractedKnowledge?.keyFacts ?? [])
@@ -610,6 +614,9 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         linkCandidates: [(name: String, id: UUID)] = [],
         language: PipelineLanguage = .current
     ) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishWikiBodyPrompt(conceptPage: conceptPage, articles: articles, linkCandidates: linkCandidates, language: language)
+        }
         let rule = SchemaLoader.shared.section(named: "Wiki 本文生成ルール") ?? """
         ## 概要 → ## 詳細 (箇条書き中心) の構成。300-800 字。推測禁止。
         """
@@ -719,7 +726,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         articles: [Article],
         compact: Bool = false
     ) async throws -> ConceptSynthesisOutput {
-        let prompt = buildOneShotPrompt(conceptPage: conceptPage, articles: articles)
+        let prompt = Self.buildOneShotPrompt(conceptPage: conceptPage, articles: articles)
         return try await runSynthesis(prompt: prompt, compact: compact)
     }
 
@@ -884,7 +891,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
 
         var chunkSummaries: [String] = []
         for (index, chunk) in chunks.enumerated() {
-            let chunkPrompt = buildChunkPrompt(
+            let chunkPrompt = Self.buildChunkPrompt(
                 conceptPage: conceptPage,
                 articles: chunk,
                 chunkIndex: index,
@@ -901,7 +908,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             }
         }
 
-        let metaPrompt = buildMetaPrompt(conceptPage: conceptPage, chunkSummaries: chunkSummaries, totalArticles: articles.count)
+        let metaPrompt = Self.buildMetaPrompt(conceptPage: conceptPage, chunkSummaries: chunkSummaries, totalArticles: articles.count)
         return try await runSynthesis(prompt: metaPrompt, compact: compact)
     }
 
@@ -916,17 +923,20 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         let childNames = allPages
             .filter { $0.parentConceptID == conceptPage.id && !$0.isHidden }
             .map(\.name)
-        let prompt = buildBroadConceptPrompt(conceptPage: conceptPage, childNames: childNames, articles: articles)
+        let prompt = Self.buildBroadConceptPrompt(conceptPage: conceptPage, childNames: childNames, articles: articles)
         return try await runSynthesis(prompt: prompt, compact: compact)
     }
 
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildBroadConceptPrompt(
+    static func buildBroadConceptPrompt(
         conceptPage: ConceptPage,
         childNames: [String],
         articles: [Article],
         language: PipelineLanguage = .current
     ) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishBroadConceptPrompt(conceptPage: conceptPage, childNames: childNames, articles: articles, language: language)
+        }
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
         let childText = childNames.isEmpty ? "(まだなし)" : childNames.prefix(12).joined(separator: "、")
         let essences = articles.sorted { $0.savedAt > $1.savedAt }.prefix(4).compactMap { a -> String? in
@@ -958,7 +968,10 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     // MARK: - Prompt builders
 
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildOneShotPrompt(conceptPage: ConceptPage, articles: [Article], language: PipelineLanguage = .current) -> String {
+    static func buildOneShotPrompt(conceptPage: ConceptPage, articles: [Article], language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishOneShotPrompt(conceptPage: conceptPage, articles: articles, language: language)
+        }
         let aliasesText = conceptPage.nameAliases.isEmpty ? "(なし)" : conceptPage.nameAliases.joined(separator: "、")
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
         let lines = articles.enumerated().map { idx, article -> String in
@@ -971,7 +984,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 .map { Self.truncate($0.statement, max: Self.perKeyFactMaxChars) }
                 .joined(separator: "、")
             return """
-            - [\(idx + 1)] \(title) (保存: \(formattedDate(article.savedAt)))
+            - [\(idx + 1)] \(title) (保存: \(Self.formattedDate(article.savedAt)))
               essence: \(essence)
               KeyFact: \(keyFacts.isEmpty ? "(なし)" : keyFacts)
             """
@@ -997,13 +1010,16 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     }
 
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildChunkPrompt(
+    static func buildChunkPrompt(
         conceptPage: ConceptPage,
         articles: [Article],
         chunkIndex: Int,
         totalChunks: Int,
         language: PipelineLanguage = .current
     ) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishChunkPrompt(conceptPage: conceptPage, articles: articles, chunkIndex: chunkIndex, totalChunks: totalChunks, language: language)
+        }
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
         let lines = articles.enumerated().map { idx, article -> String in
             let title = Self.truncate(article.title, max: Self.perArticleTitleMaxChars)
@@ -1015,7 +1031,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 .map { Self.truncate($0.statement, max: Self.perKeyFactMaxChars) }
                 .joined(separator: "、")
             return """
-            - [\(idx + 1)] \(title) (\(formattedDate(article.savedAt)))
+            - [\(idx + 1)] \(title) (\(Self.formattedDate(article.savedAt)))
               essence: \(essence)
               KeyFact: \(keyFacts.isEmpty ? "(なし)" : keyFacts)
             """
@@ -1038,12 +1054,15 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
     }
 
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
-    private func buildMetaPrompt(
+    static func buildMetaPrompt(
         conceptPage: ConceptPage,
         chunkSummaries: [String],
         totalArticles: Int,
         language: PipelineLanguage = .current
     ) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishMetaPrompt(conceptPage: conceptPage, chunkSummaries: chunkSummaries, totalArticles: totalArticles, language: language)
+        }
         let aliasesText = conceptPage.nameAliases.isEmpty ? "(なし)" : conceptPage.nameAliases.joined(separator: "、")
         let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
 
@@ -1072,7 +1091,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         """
     }
 
-    private func formattedDate(_ date: Date) -> String {
+    static func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
         formatter.dateFormat = "yyyy-MM-dd"
@@ -1095,6 +1114,253 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
         guard let last = text.last, !sentenceTerminators.contains(last) else { return text }
         guard let idx = text.lastIndex(where: { sentenceTerminators.contains($0) }) else { return text }
         return String(text[...idx])
+    }
+}
+
+// MARK: - 英語指示版プロンプト (spec 106)
+
+/// 生成言語が日本語以外のときの概念合成プロンプト。冒頭と末尾の両方で出力言語を指定し、
+/// ルールは日本語版の意味 (禁止事項・件数上限・字数上限) を落とさず英訳している。
+/// 記事のタイトル・essence 等のデータ部分は原文のまま埋め込む。
+extension FoundationModelsConceptSynthesisService {
+
+    /// iknow-schema.md「概念階層抽出ルール」+ defaultHierarchyRules の英語版 (schema.md は ja 専用)。
+    static let englishHierarchyRules = """
+    # Rules
+    - Use only concepts explicitly stated in the article. No guessing or reinforcement with general knowledge.
+    - Broad concept: a short field-level noun phrase (e.g. "Generative AI", "Data Engineering"), at most 16 characters. Not too broad (the category name itself) and not too narrow (an individual topic). Prefer a short field-level noun.
+    - Specific concepts: short noun phrases for individual topics the article actually discusses (e.g. "Text-to-SQL", "RAG"), at most 18 characters each.
+    - Write concept names as short nouns / technical terms only. Sentences, explanatory phrases and verb phrases are forbidden.
+      NG: "Engineers who work deeply inside client companies", "Establishing a new company through joint investment by financial institutions" -> OK: "Embedded engineer", "Joint venture".
+    - Do not use generic words, pronouns or place names as concepts (e.g. "men", "users", "companies", "she", "Tokyo Station").
+    - Do not use the same name for the broad concept and a specific concept.
+    """
+
+    /// iknow-schema.md「Wiki 本文生成ルール」の英語版。
+    static let englishWikiBodyRules = """
+    - Structure: `## Overview` (a 2-3 sentence big picture) -> `## Details` (mainly bullet points) -> optionally `## Related` (connections to other themes). Write the headings in the output language.
+    - Use bullet points (`- `) so the page can be read at a glance.
+    - Length: about 300-800 characters in total. Not too long.
+    - No speculation: write only what is explicitly stated in the given summary and article key points (source traceability).
+    - Avoid repeating the page name itself; speak through the content.
+    - When linking, copy the UUID from the candidate table exactly, character for character. Never invent a UUID.
+    """
+
+    static func buildEnglishConceptHierarchyPrompt(article: Article, language: PipelineLanguage) -> String {
+        let title = truncate(article.title, max: 80)
+        let essence = truncate(article.extractedKnowledge?.essence ?? "", max: 300)
+        let keyFacts = (article.extractedKnowledge?.keyFacts ?? [])
+            .sorted { $0.order < $1.order }
+            .prefix(3)
+            .map { truncate($0.statement, max: 60) }
+            .joined(separator: ", ")
+        let categoryRaw = ConceptSynthesisCommon.resolveCategoryRaw(for: article)
+        let categoryDisplay = CategorySeed.category(for: categoryRaw).name
+
+        return """
+        \(PromptLocalizer.outputLanguageHeader(language))
+        Organize the following article into a 2-level concept hierarchy.
+        - Broad concept (broadConcept): exactly one — the broadest concept the article belongs to; a representative field-level concept.
+        - Specific concepts (specificConcepts): 2 to 4 specific topics the article actually discusses under that broad concept.
+
+        \(englishHierarchyRules)
+
+        # Article
+        Category: \(categoryDisplay)
+        Title: \(title)
+        Key points: \(essence)
+        Facts: \(keyFacts.isEmpty ? "(none)" : keyFacts)
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
+    }
+
+    static func buildEnglishWikiBodyPrompt(
+        conceptPage: ConceptPage,
+        articles: [Article],
+        linkCandidates: [(name: String, id: UUID)],
+        language: PipelineLanguage
+    ) -> String {
+        let essences = articles.prefix(5).compactMap { article -> String? in
+            guard let e = article.extractedKnowledge?.essence, !e.isEmpty else { return nil }
+            return "- " + truncate(e, max: perArticleEssenceMaxChars)
+        }.joined(separator: "\n")
+
+        let candidatesBlock: String
+        if linkCandidates.isEmpty {
+            candidatesBlock = ""
+        } else {
+            let lines = linkCandidates.prefix(linkCandidateLimit).map {
+                "- \(truncate($0.name, max: 30)) → concept-id://\($0.id.uuidString)"
+            }.joined(separator: "\n")
+            candidatesBlock = """
+
+
+            # Cross-link reference table (★ never output this table, any heading for it, or the UUIDs themselves in the body)
+            Only when one of the names below appears naturally in the body, turn that word into an inline link `[name](concept-id://UUID)`.
+            Never write headings such as "Related page candidates" or lists of UUIDs in the body. Do not link names that are not in the table. Never invent UUIDs.
+            \(lines)
+            """
+        }
+
+        return """
+        \(PromptLocalizer.outputLanguageHeader(language))
+        Write the body of a Wiki page about "\(conceptPage.name)" in Markdown.
+
+        # Rules
+        \(englishWikiBodyRules)
+
+        # Current summary
+        \(conceptPage.summary)
+
+        # Key points of related articles
+        \(essences)\(candidatesBlock)
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
+    }
+
+    private static func englishArticleLines(_ articles: [Article], savedLabel: String?) -> String {
+        articles.enumerated().map { idx, article -> String in
+            let title = truncate(article.title, max: perArticleTitleMaxChars)
+            let rawEssence = article.extractedKnowledge?.essence ?? "(key points not generated)"
+            let essence = truncate(rawEssence, max: perArticleEssenceMaxChars)
+            let keyFacts = (article.extractedKnowledge?.keyFacts ?? [])
+                .sorted { $0.order < $1.order }
+                .prefix(perArticleKeyFactCount)
+                .map { truncate($0.statement, max: perKeyFactMaxChars) }
+                .joined(separator: ", ")
+            let date = formattedDate(article.savedAt)
+            let dateText = savedLabel.map { "(\($0): \(date))" } ?? "(\(date))"
+            return """
+            - [\(idx + 1)] \(title) \(dateText)
+              essence: \(essence)
+              KeyFact: \(keyFacts.isEmpty ? "(none)" : keyFacts)
+            """
+        }.joined(separator: "\n")
+    }
+
+    static func buildEnglishBroadConceptPrompt(
+        conceptPage: ConceptPage,
+        childNames: [String],
+        articles: [Article],
+        language: PipelineLanguage
+    ) -> String {
+        let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
+        let childText = childNames.isEmpty ? "(none yet)" : childNames.prefix(12).joined(separator: ", ")
+        let essences = articles.sorted { $0.savedAt > $1.savedAt }.prefix(4).compactMap { a -> String? in
+            guard let e = a.extractedKnowledge?.essence, !e.isEmpty else { return nil }
+            return "- " + truncate(e, max: perArticleEssenceMaxChars)
+        }
+        let essenceText = essences.isEmpty ? "(none)" : essences.joined(separator: "\n")
+
+        return """
+        \(PromptLocalizer.outputLanguageHeader(language))
+        You integrate "what is known now" about the broad field concept "\(conceptPage.name)".
+
+        ## Concept (broad concept)
+        Name: \(conceptPage.name)
+        Category: \(categoryDisplay)
+
+        ## Specific topics under this concept
+        \(childText)
+
+        ## Key points of related articles
+        \(essenceText)
+        \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw, language: language))
+        ## Output requirements
+        - summary: 120-180 characters, an overview of the whole field based on the specific topics and key points above, no speculation, declarative tone
+        - crossSourceInsights (key points): at most 5 items, each within 60 characters, the most important points / conclusions of this field in order of importance
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
+    }
+
+    static func buildEnglishOneShotPrompt(conceptPage: ConceptPage, articles: [Article], language: PipelineLanguage) -> String {
+        let aliasesText = conceptPage.nameAliases.isEmpty ? "(none)" : conceptPage.nameAliases.joined(separator: ", ")
+        let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
+        let lines = englishArticleLines(articles, savedLabel: "saved")
+
+        return """
+        \(PromptLocalizer.outputLanguageHeader(language))
+        You integrate "what is known now" about "\(conceptPage.name)" from multiple saved articles.
+
+        ## Concept
+        Name: \(conceptPage.name)
+        Aliases: \(aliasesText)
+        Category: \(categoryDisplay)
+
+        ## Source articles (essence + KeyFact)
+        \(lines)
+        \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw, language: language))
+        ## Output requirements
+        - summary: 120-180 characters, integrate only what is explicitly stated in the sources, declarative tone
+        - crossSourceInsights (key points): at most 5 items, each within 60 characters, the most important points / conclusions of this concept in order of importance
+        - No speculation or reinforcement from general knowledge
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
+    }
+
+    static func buildEnglishChunkPrompt(
+        conceptPage: ConceptPage,
+        articles: [Article],
+        chunkIndex: Int,
+        totalChunks: Int,
+        language: PipelineLanguage
+    ) -> String {
+        let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
+        let lines = englishArticleLines(articles, savedLabel: nil)
+
+        return """
+        \(PromptLocalizer.outputLanguageHeader(language))
+        You summarize a chunk of saved articles.
+
+        ## Concept
+        Name: \(conceptPage.name)
+        Category: \(categoryDisplay)
+
+        ## Article chunk (\(chunkIndex + 1)/\(totalChunks))
+        \(lines)
+
+        ## Output requirements
+        - chunkSummary: 80-140 characters, only what is explicitly stated in the sources, declarative tone
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
+    }
+
+    static func buildEnglishMetaPrompt(
+        conceptPage: ConceptPage,
+        chunkSummaries: [String],
+        totalArticles: Int,
+        language: PipelineLanguage
+    ) -> String {
+        let aliasesText = conceptPage.nameAliases.isEmpty ? "(none)" : conceptPage.nameAliases.joined(separator: ", ")
+        let categoryDisplay = CategorySeed.category(for: conceptPage.categoryRaw).name
+        let cappedChunks = chunkSummaries.prefix(6).map { String($0.prefix(150)) }
+        let chunkText = cappedChunks.isEmpty
+            ? "(no intermediate summaries could be generated)"
+            : cappedChunks.enumerated().map { idx, summary in "## Chunk \(idx + 1)\n\(summary)" }.joined(separator: "\n\n")
+
+        return """
+        \(PromptLocalizer.outputLanguageHeader(language))
+        You integrate summaries of several article chunks and write "what is known now" about "\(conceptPage.name)".
+
+        ## Concept
+        Name: \(conceptPage.name)
+        Aliases: \(aliasesText)
+        Category: \(categoryDisplay)
+
+        ## Article chunk summaries (from \(totalArticles) articles, top \(cappedChunks.count) chunks)
+        \(chunkText)
+        \(CategoryPrompts.block(forCategoryRaw: conceptPage.categoryRaw, language: language))
+        ## Output requirements
+        - summary: 120-180 characters, integrate only the chunk summaries, no speculation, declarative tone
+        - crossSourceInsights (key points): at most 5 items, each within 60 characters, the most important points / conclusions of this concept in order of importance
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
     }
 }
 
