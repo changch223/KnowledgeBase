@@ -1143,6 +1143,7 @@ extension FoundationModelsConceptSynthesisService {
     - Length: about 300-800 characters in total. Not too long.
     - No speculation: write only what is explicitly stated in the given summary and article key points (source traceability).
     - Avoid repeating the page name itself; speak through the content.
+    - When linking, copy the UUID from the candidate table exactly, character for character. Never invent a UUID.
     """
 
     static func buildEnglishConceptHierarchyPrompt(article: Article, language: PipelineLanguage) -> String {

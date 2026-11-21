@@ -101,3 +101,9 @@
 
 ## オーケストレーター修正（QA 前）
 - builder 報告「ja パイプラインでも英語記事が直読みになる」はユーザーへの説明（日本語利用者は影響なし）と食い違うため、`DirectReadPolicy.shouldTranslateFirst` で **pipeline == .ja は常に翻訳先行**（従来どおり）に変更。テスト `japanesePipelineKeepsTranslateFirst` 追加。直読みは ja 以外の生成言語のみ。
+
+### QA 修正
+- `KnowledgeExtractor.prepareDetailed`（`Prepared{text, didDirectRead, didTranslate}`）を追加。`prepareForExtraction` は text だけ返す薄いラッパ。逆向き fallback と出力言語ガードは `didDirectRead` のときだけ、「翻訳文失敗 → 原文再試行」は `didTranslate` のときだけ動く。翻訳を試みて失敗・短すぎ・unavailable で原文に戻った場合はどちらも false（再翻訳しない）。ja パイプラインとスイッチ ON は PR #84 の原文再試行以外 main と同じ動き。
+- 出力言語ガード: zhHans / zhHant は漢字を含みかな・ハングルを含まなければ一致扱い。
+- `englishWikiBodyRules` に UUID を一字一句コピーする指示を追加。
+- `extractFallsBackToRawTextWhenTranslationFails` を ja パイプライン固定の元の意図に戻した。

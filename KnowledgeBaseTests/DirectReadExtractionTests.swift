@@ -156,4 +156,70 @@ struct DirectReadExtractionTests {
         // 英単語だらけでも、かなを含む essence は日本語として扱う
         #expect(KnowledgeExtractor.outputLanguageMismatch(essence: "Apple は WWDC で iOS 26 と Foundation Models を発表した。", pipeline: .ja) == nil)
     }
+
+    // MARK: - QA 修正: 翻訳を試みて失敗した場合は再翻訳しない
+
+    private let englishText = """
+    Apple announced a new framework called Foundation Models at WWDC. The on-device
+    language model exposes structured output via the @Generable macro, enabling
+    developers to add RAG features without external servers.
+    """
+
+    @Test func jaPipelineTranslationFailureDoesNotTranslateAgainEvenIfEssenceIsEnglish() async throws {
+        try await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+            session.nextResult = .success(.fixture(essence: englishEssence))
+            let extractor = KnowledgeExtractor(session: session)
+            _ = try await extractor.extract(extractedText: englishText)
+            #expect(session.translationCallCount == 1)
+            #expect(session.callCount == 1)
+        }
+    }
+
+    @Test func jaPipelineTranslationFailureThenUnsupportedLanguageThrowsWithoutRetranslation() async throws {
+        await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+            session.nextResult = .failure(FakeGenerationError(description: "unsupportedLanguageOrLocale(x)"))
+            let extractor = KnowledgeExtractor(session: session)
+            await #expect(throws: (any Error).self) {
+                _ = try await extractor.extract(extractedText: englishText)
+            }
+            #expect(session.translationCallCount == 1)
+            #expect(session.callCount == 1)
+        }
+    }
+
+    @Test func switchOnTranslationFailureDoesNotTranslateAgain() async throws {
+        try await withPipelineLanguage(.en) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+            session.nextResult = .success(.fixture(essence: "開発者は新しい並行処理の機能を使って、段階的に移行できるようになった。"))
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
+            _ = try await extractor.extract(extractedText: japaneseText)
+            #expect(session.translationCallCount == 1)
+            #expect(session.callCount == 1)
+        }
+    }
+
+    @Test func chunkTranslationFailureDoesNotTranslateAgain() async throws {
+        await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+            session.chunkResultQueue = [.failure(FakeGenerationError(description: "unsupportedLanguageOrLocale(x)"))]
+            let extractor = KnowledgeExtractor(session: session)
+            let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: englishText))
+            #expect(result.error != nil)
+            #expect(session.translationCallCount == 1)
+            #expect(session.chunkCallCount == 1)
+        }
+    }
+
+    @Test func zhShortcutTreatsHanOnlyEssenceAsMatching() {
+        let zh = "蘋果在 WWDC 發表了 Foundation Models 框架，供開發者使用。"
+        #expect(KnowledgeExtractor.outputLanguageMismatch(essence: zh, pipeline: .zhHant) == nil)
+        #expect(KnowledgeExtractor.outputLanguageMismatch(essence: zh, pipeline: .zhHans) == nil)
+        #expect(KnowledgeExtractor.outputLanguageMismatch(essence: "開発者は新しい並行処理の機能を使って、段階的に移行できるようになった。", pipeline: .zhHant) != nil)
+    }
 }

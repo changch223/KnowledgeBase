@@ -60,20 +60,21 @@ struct KnowledgeExtractor {
     ) async throws -> ExtractedKnowledgeOutput {
         let stripped = Self.stripCodeBlocks(from: extractedText)
         let truncated = Self.truncate(text: stripped, maxChars: maxBodyChars)
-        let prepared = await prepareForExtraction(truncated)
-        let wasTranslated = prepared != truncated
+        let info = await prepareDetailed(truncated)
+        let prepared = info.text
         let output: ExtractedKnowledgeOutput
         do {
             output = try await session.generateKnowledge(prompt: Self.buildPrompt(text: prepared, guidance: guidance))
         } catch {
-            if wasTranslated {
+            if info.didTranslate {
                 // 翻訳後の本文が拒否・非対応言語と判定された場合は、原文で 1 回だけやり直す。
                 guard Self.shouldRetryWithRawText(error) else { throw error }
                 Self.logger.notice("extract retry with raw text after: \(Self.shortReason(error), privacy: .public)")
                 return try await session.generateKnowledge(prompt: Self.buildPrompt(text: truncated, guidance: guidance))
             }
             // spec 106: 原文直読みが非対応言語で落ちたら、翻訳して 1 回だけやり直す (上と対の逆向き)。
-            guard Self.isUnsupportedLanguage(error) else { throw error }
+            // 直読みを選んだときだけ (翻訳を試みて失敗した場合は再翻訳しない)。
+            guard info.didDirectRead, Self.isUnsupportedLanguage(error) else { throw error }
             let forced = await prepareForExtraction(truncated, forceTranslate: true)
             guard forced != truncated else { throw error }
             Self.logger.notice("extract retry with translation after direct-read: unsupportedLanguageOrLocale")
@@ -81,7 +82,7 @@ struct KnowledgeExtractor {
         }
         // spec 106: 出力言語ガード。essence が生成言語でなければ翻訳経路で 1 回だけやり直す
         // (やり直しに失敗しても、最初の結果は捨てない)。
-        if !wasTranslated, let got = Self.outputLanguageMismatch(essence: output.essence, pipeline: PipelineLanguage.current) {
+        if info.didDirectRead, let got = Self.outputLanguageMismatch(essence: output.essence, pipeline: PipelineLanguage.current) {
             let forced = await prepareForExtraction(truncated, forceTranslate: true)
             if forced != truncated {
                 Self.logger.notice("output language guard: expected=\(PipelineLanguage.current.rawValue, privacy: .public) got=\(String(describing: got), privacy: .public) → retry with translation")
@@ -105,6 +106,13 @@ struct KnowledgeExtractor {
         // 自言語固有の文字 (かな / ハングル) を含むなら生成言語どおりとみなす (無駄な翻訳再試行を避ける)。
         if pipeline == .ja, trimmed.unicodeScalars.contains(where: { (0x3040...0x30FF).contains($0.value) }) { return nil }
         if pipeline == .ko, trimmed.unicodeScalars.contains(where: { (0xAC00...0xD7AF).contains($0.value) }) { return nil }
+        // zh: 漢字を含みかな・ハングルを含まなければ中国語とみなす (日本語/中国語の誤判定を避ける)。
+        if pipeline == .zhHans || pipeline == .zhHant {
+            let scalars = trimmed.unicodeScalars
+            let hasHan = scalars.contains { (0x4E00...0x9FFF).contains($0.value) }
+            let hasKanaOrHangul = scalars.contains { (0x3040...0x30FF).contains($0.value) || (0xAC00...0xD7AF).contains($0.value) }
+            if hasHan && !hasKanaOrHangul { return nil }
+        }
         let detected = LanguageDetector.detect(trimmed)
         if detected == .unknown || pipeline.matches(detected: detected) { return nil }
         return detected
@@ -140,15 +148,15 @@ struct KnowledgeExtractor {
     /// spec 101: sourceLanguage を渡すと chunk ごとの言語再判定をスキップ (記事単位で 1 回判定する経路用)。
     func extractFromChunk(_ chunk: Chunk, guidance: String? = nil, sourceLanguage: DetectedLanguage? = nil) async -> ChunkResult {
         let stripped = Self.stripCodeBlocks(from: chunk.text)
-        let prepared = await prepareForExtraction(stripped, override: sourceLanguage)
-        let wasTranslated = prepared != stripped
+        let info = await prepareDetailed(stripped, override: sourceLanguage)
+        let prepared = info.text
         // 案A: chunk は小型スキーマ (ChunkKnowledgeOutput) で抽出 → 出力予約が減り chunk を大きくできる。
         do {
             var slim: ChunkKnowledgeOutput
             do {
                 slim = try await session.generateChunkKnowledge(prompt: Self.buildChunkPrompt(text: prepared, guidance: guidance))
             } catch {
-                if wasTranslated {
+                if info.didTranslate {
                     // 翻訳後の本文で拒否・非対応言語 → 原文で 1 回だけやり直す (extract と同じ方針)。
                     guard Self.shouldRetryWithRawText(error) else { throw error }
                     Self.logger.notice("chunk \(chunk.index) retry with raw text after: \(Self.shortReason(error), privacy: .public)")
@@ -156,8 +164,8 @@ struct KnowledgeExtractor {
                         prompt: Self.buildChunkPrompt(text: stripped, guidance: guidance)
                     )
                 } else {
-                    // spec 106: 原文直読みが非対応言語で落ちたら、翻訳して 1 回だけやり直す。
-                    guard Self.isUnsupportedLanguage(error) else { throw error }
+                    // spec 106: 原文直読みが非対応言語で落ちたら、翻訳して 1 回だけやり直す (直読みを選んだときだけ)。
+                    guard info.didDirectRead, Self.isUnsupportedLanguage(error) else { throw error }
                     let forced = await prepareForExtraction(stripped, override: sourceLanguage, forceTranslate: true)
                     guard forced != stripped else { throw error }
                     Self.logger.notice("chunk \(chunk.index) retry with translation after direct-read: unsupportedLanguageOrLocale")
@@ -168,7 +176,7 @@ struct KnowledgeExtractor {
                 return Self.chunkResult(chunk, slim)
             }
             // spec 106: 出力言語ガード (extract と同じ。やり直しに失敗しても最初の結果は捨てない)。
-            if !wasTranslated, let got = Self.outputLanguageMismatch(essence: slim.essence, pipeline: PipelineLanguage.current) {
+            if info.didDirectRead, let got = Self.outputLanguageMismatch(essence: slim.essence, pipeline: PipelineLanguage.current) {
                 let forced = await prepareForExtraction(stripped, override: sourceLanguage, forceTranslate: true)
                 if forced != stripped {
                     Self.logger.notice("chunk \(chunk.index) output language guard: expected=\(PipelineLanguage.current.rawValue, privacy: .public) got=\(String(describing: got), privacy: .public) → retry with translation")
@@ -204,6 +212,20 @@ struct KnowledgeExtractor {
     /// (長文記事を chunk 分割すると参照・数式・著者名などの断片が id/fr/nl 等に誤検知され、
     ///  無駄で遅い翻訳 + translationd クラッシュを招くため、記事単位 1 回判定に寄せる)。
     func prepareForExtraction(_ text: String, override: DetectedLanguage? = nil, forceTranslate: Bool = false) async -> String {
+        await prepareDetailed(text, override: override, forceTranslate: forceTranslate).text
+    }
+
+    /// 翻訳前処理の結果。fallback の起点を区別するために使う (spec 106 QA 修正):
+    /// - didDirectRead: 直読みポリシーで翻訳をスキップした (原文と生成言語が異なる)。逆向き fallback / 出力言語ガードの対象。
+    /// - didTranslate: 翻訳が成功した (キャッシュ含む)。「翻訳文が失敗 → 原文で再試行」の対象。
+    /// 翻訳を試みて失敗・短すぎ等で原文に戻った場合はどちらも false (再翻訳しない)。
+    struct Prepared {
+        let text: String
+        let didDirectRead: Bool
+        let didTranslate: Bool
+    }
+
+    func prepareDetailed(_ text: String, override: DetectedLanguage? = nil, forceTranslate: Bool = false) async -> Prepared {
         let detected = override ?? LanguageDetector.detect(text)
         Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count) override=\(override != nil)")
         // i18n Phase B: 「パイプライン言語 (PipelineLanguage.current) 以外」を全て翻訳対象に一般化。
@@ -218,10 +240,10 @@ struct KnowledgeExtractor {
         case .other(let raw):
             source = raw
         case .unknown:
-            return text
+            return Prepared(text: text, didDirectRead: false, didTranslate: false)
         }
         if PipelineLanguage.current.matches(detected: detected) {
-            return text
+            return Prepared(text: text, didDirectRead: false, didTranslate: false)
         }
         // spec 106: Foundation Models が直接読める言語は翻訳せず原文のまま渡す
         // (生成言語はプロンプトで指示)。読めない言語、または従来方式スイッチ ON のときだけ翻訳する。
@@ -230,7 +252,7 @@ struct KnowledgeExtractor {
             let prefer = preferTranslateFirst?() ?? DirectReadPolicy.prefersTranslateFirst()
             if !DirectReadPolicy.shouldTranslateFirst(detected: detected, pipeline: PipelineLanguage.current, preferTranslate: prefer) {
                 Self.logger.notice("translate skip: direct read source=\(source, privacy: .public)")
-                return text
+                return Prepared(text: text, didDirectRead: true, didTranslate: false)
             }
         }
         // 誤検知ガード: コード片・記号混在チャンク等で .other(raw) が低信頼な言語 (pl/id/nl 等) を
@@ -239,17 +261,17 @@ struct KnowledgeExtractor {
         // ことがある。翻訳対応言語集合の外なら試みず raw のまま知識抽出へ進む。
         if case .other(let raw) = detected, !LanguageDetector.isTranslationSupported(raw) {
             Self.logger.notice("translate skip: source=\(raw, privacy: .public) unsupported language (低信頼判定の可能性) → raw")
-            return text
+            return Prepared(text: text, didDirectRead: false, didTranslate: false)
         }
         // spec 101: この言語が notInstalled で失敗済みなら以後スキップ (raw を使う、再試行しない)。
         if translationCache?.isUnavailable(source: source) == true {
             Self.logger.notice("translate skip: source=\(source, privacy: .public) unavailable (notInstalled) → raw")
-            return text
+            return Prepared(text: text, didDirectRead: false, didTranslate: false)
         }
         // spec 096 (perf): 同じ本文を再翻訳しない (再抽出/カスタマイズ/backfill で頻発)。
         if let hit = translationCache?.cached(source: source, text: text) {
             Self.logger.notice("translate cache hit: source=\(source, privacy: .public) chars=\(text.count)")
-            return hit
+            return Prepared(text: hit, didDirectRead: false, didTranslate: true)
         }
         let start = Date()
         do {
@@ -260,11 +282,11 @@ struct KnowledgeExtractor {
             // 翻訳結果が極端に短い (元の 1/4 未満) → 失敗扱いで raw を返す (キャッシュしない)
             guard trimmed.count >= minRequired else {
                 Self.logger.notice("translate fallback: too short translated=\(trimmed.count) required=\(minRequired) elapsedMs=\(elapsedMs)")
-                return text
+                return Prepared(text: text, didDirectRead: false, didTranslate: false)
             }
             Self.logger.notice("translate ok: input=\(text.count) translated=\(trimmed.count) elapsedMs=\(elapsedMs)")
             translationCache?.put(source: source, text: text, translated: trimmed)
-            return trimmed
+            return Prepared(text: trimmed, didDirectRead: false, didTranslate: true)
         } catch {
             let desc = String(describing: error)
             // spec 101: 翻訳モデル未インストール (notInstalled) はこの言語を以後スキップ
@@ -277,7 +299,7 @@ struct KnowledgeExtractor {
             }
             // spec 042: 翻訳失敗 → SettingsView の誘導 flag を立てる (calm UX、UI 喚起なし)
             translationAvailability?.markNeedsSetup()
-            return text
+            return Prepared(text: text, didDirectRead: false, didTranslate: false)
         }
     }
 

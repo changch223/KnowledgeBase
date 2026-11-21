@@ -221,24 +221,25 @@ struct KnowledgeExtractorTests {
 
     /// 翻訳 throws → 英語のまま抽出 (silent fallback)
     @Test func extractFallsBackToRawTextWhenTranslationFails() async throws {
-        let session = MockLanguageModelSession()
-        session.nextResult = .success(.fixture())
-        session.nextResult = .success(.fixture(essence: "Apple は新しいフレームワークを発表し、開発者が外部サーバーなしで使えるようにした。"))
-        session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
-        let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
+        try await withPipelineLanguage(.ja) {
+            let session = MockLanguageModelSession()
+            session.nextResult = .success(.fixture())
+            session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
+            let extractor = KnowledgeExtractor(session: session)
 
-        let englishText = """
-        Apple announced a new framework called Foundation Models at WWDC. The on-device
-        language model exposes structured output via the @Generable macro, enabling
-        developers to add RAG features without external servers.
-        """
-        _ = try await extractor.extract(extractedText: englishText)
+            let englishText = """
+            Apple announced a new framework called Foundation Models at WWDC. The on-device
+            language model exposes structured output via the @Generable macro, enabling
+            developers to add RAG features without external servers.
+            """
+            _ = try await extractor.extract(extractedText: englishText)
 
-        // 翻訳は試みた
-        #expect(session.translationCallCount == 1)
-        // 失敗したので抽出は元の英文で進む (throw しない)
-        #expect(session.callCount == 1)
-        #expect(session.lastPrompt?.contains("announced a new framework") == true)
+            // 翻訳は試みた (1 回のみ)
+            #expect(session.translationCallCount == 1)
+            // 失敗したので抽出は元の英文で進む (throw しない)
+            #expect(session.callCount == 1)
+            #expect(session.lastPrompt?.contains("announced a new framework") == true)
+        }
     }
 
     /// spec 101: 翻訳が notInstalled で失敗した言語は、以後の抽出で翻訳をスキップする
