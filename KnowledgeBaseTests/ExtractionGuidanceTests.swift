@@ -43,7 +43,7 @@ struct ExtractionGuidanceTests {
     // 固定文に含まれない 'Z' で数える (ヘッダ文の文字と混ざらないように)。
     @Test func guidanceCappedTo200() {
         let long = String(repeating: "Z", count: 300)
-        let clause = KnowledgeExtractor.guidanceClause(long)
+        let clause = KnowledgeExtractor.guidanceClause(long, language: .ja)
         let countZ = clause.filter { $0 == "Z" }.count
         #expect(countZ == 200)
     }

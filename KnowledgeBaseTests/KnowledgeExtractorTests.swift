@@ -177,7 +177,7 @@ struct KnowledgeExtractorTests {
             "このフレームワークは on-device 言語モデルを公開し、開発者が SwiftUI アプリに" +
             "structured output と RAG 機能を追加できるようになります。"
         )
-        let extractor = KnowledgeExtractor(session: session)
+        let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
         let englishText = """
         Apple announced a new framework called Foundation Models at WWDC. The on-device
@@ -203,7 +203,7 @@ struct KnowledgeExtractorTests {
             "端末内の言語モデルを公開し、開発者が外部サーバーなしで structured output を" +
             "利用できるようになります。"
         )
-        let extractor = KnowledgeExtractor(session: session)
+        let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
         let chineseText = """
         苹果在全球开发者大会上发布了一个名为基础模型的全新框架。这个设备端的语言模型
@@ -223,8 +223,9 @@ struct KnowledgeExtractorTests {
     @Test func extractFallsBackToRawTextWhenTranslationFails() async throws {
         let session = MockLanguageModelSession()
         session.nextResult = .success(.fixture())
+        session.nextResult = .success(.fixture(essence: "Apple は新しいフレームワークを発表し、開発者が外部サーバーなしで使えるようにした。"))
         session.nextTranslationResult = .failure(MockLanguageModelError.safetyFiltered)
-        let extractor = KnowledgeExtractor(session: session)
+        let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
         let englishText = """
         Apple announced a new framework called Foundation Models at WWDC. The on-device
@@ -248,7 +249,7 @@ struct KnowledgeExtractorTests {
         session.nextResult = .success(.fixture())
         session.nextTranslationResult = .failure(FakeNotInstalledTranslateError())
         let cache = TranslationCache()
-        let extractor = KnowledgeExtractor(session: session, translationCache: cache)
+        let extractor = KnowledgeExtractor(session: session, translationCache: cache, preferTranslateFirst: { true })
 
         let english = """
         Apple announced a new framework called Foundation Models at WWDC. The on-device
@@ -287,7 +288,7 @@ struct KnowledgeExtractorTests {
             session.nextTranslationResult = .success(
                 "苹果在 WWDC 上宣布了新的 Foundation Models 框架，公开了设备端语言模型的结构化输出能力。"
             )
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
             let japaneseText = """
             Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
@@ -334,7 +335,7 @@ struct KnowledgeExtractorTests {
                 "Apple announced a new Foundation Models framework at WWDC, exposing structured " +
                 "output from an on-device language model."
             )
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
             let japaneseText = """
             Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
@@ -383,7 +384,7 @@ struct KnowledgeExtractorTests {
                 "Apple presentó un nuevo framework Foundation Models en la WWDC, exponiendo salida " +
                 "estructurada desde un modelo de lenguaje en el dispositivo."
             )
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
 
             let japaneseText = """
             Swift 6 のリリースについて。Apple は新しい strict concurrency 機能を発表し、
@@ -447,7 +448,7 @@ struct ExtractionResilienceTests {
                 .failure(FakeGenerationError(description: "refusal(May contain sensitive content)")),
                 .success(ChunkKnowledgeOutput(essence: "ok", keyFacts: [], entities: [])),
             ]
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
             let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
 
             #expect(result.error == nil)
@@ -482,7 +483,7 @@ struct ExtractionResilienceTests {
             session.chunkResultQueue = [
                 .failure(FakeGenerationError(description: "exceededContextWindowSize")),
             ]
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
             let result = await extractor.extractFromChunk(Chunk(index: 0, total: 1, text: japaneseText))
 
             #expect(result.error != nil)
@@ -512,7 +513,7 @@ struct ExtractionResilienceTests {
                 .failure(FakeGenerationError(description: "unsupportedLanguageOrLocale(Unsupported language.)")),
                 .success(.fixture()),
             ]
-            let extractor = KnowledgeExtractor(session: session)
+            let extractor = KnowledgeExtractor(session: session, preferTranslateFirst: { true })
             _ = try await extractor.extract(extractedText: japaneseText)
 
             #expect(session.callCount == 2)

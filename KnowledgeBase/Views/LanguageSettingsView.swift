@@ -19,6 +19,10 @@ struct LanguageSettingsView: View {
     @State private var pendingLanguage: PipelineLanguage?
     @State private var showConfirm: Bool = false
     @State private var showRestartBanner: Bool = false
+    /// spec 106: 「先に翻訳してから整理する (従来方式)」スイッチ。既定 OFF = AI が原文を直接読む新方式。
+    /// 次に保存・再抽出する記事から有効 (再起動不要、KnowledgeExtractor が毎回読む)。
+    @AppStorage(DirectReadPolicy.translateBeforeExtractionKey, store: UserDefaults(suiteName: AppGroup.identifier))
+    private var translateBeforeExtraction: Bool = false
 
     init(
         store: LanguageSettingsStore = UserDefaultsLanguageSettingsStore(),
@@ -69,6 +73,15 @@ struct LanguageSettingsView: View {
                 Text("settings.languageSettings.header")
             } footer: {
                 Text("settings.languageSettings.footer")
+            }
+            // 生成言語が日本語のときは翻訳が起きないため表示しない。
+            if currentLanguage != .ja {
+                Section {
+                    Toggle("settings.translateFirst.title", isOn: $translateBeforeExtraction)
+                        .accessibilityIdentifier("settings.translateFirst.toggle")
+                } footer: {
+                    Text("settings.translateFirst.footer")
+                }
             }
         }
         .navigationTitle("settings.languageSettings.title")

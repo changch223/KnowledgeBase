@@ -23,14 +23,20 @@ struct KnowledgeExtractor {
     /// spec 096 (perf): 翻訳結果のセッションキャッシュ (nil なら毎回翻訳)。
     let translationCache: TranslationCache?
 
+    /// spec 106: 「先に翻訳してから整理する (従来方式)」スイッチの読み出し。
+    /// nil なら `DirectReadPolicy.prefersTranslateFirst()` (設定値) を使う。テストで差し替える。
+    let preferTranslateFirst: (() -> Bool)?
+
     init(
         session: LanguageModelSessionProtocol,
         translationAvailability: TranslationAvailabilityProtocol? = nil,
-        translationCache: TranslationCache? = nil
+        translationCache: TranslationCache? = nil,
+        preferTranslateFirst: (() -> Bool)? = nil
     ) {
         self.session = session
         self.translationAvailability = translationAvailability
         self.translationCache = translationCache
+        self.preferTranslateFirst = preferTranslateFirst
     }
 
     /// spec 042: 翻訳前処理の挙動を実機 (Console.app) で diagnose するための logger。
@@ -55,15 +61,58 @@ struct KnowledgeExtractor {
         let stripped = Self.stripCodeBlocks(from: extractedText)
         let truncated = Self.truncate(text: stripped, maxChars: maxBodyChars)
         let prepared = await prepareForExtraction(truncated)
-        let prompt = Self.buildPrompt(text: prepared, guidance: guidance)
+        let wasTranslated = prepared != truncated
+        let output: ExtractedKnowledgeOutput
         do {
-            return try await session.generateKnowledge(prompt: prompt)
+            output = try await session.generateKnowledge(prompt: Self.buildPrompt(text: prepared, guidance: guidance))
         } catch {
-            // 翻訳後の本文が拒否・非対応言語と判定された場合は、原文で 1 回だけやり直す。
-            guard prepared != truncated, Self.shouldRetryWithRawText(error) else { throw error }
-            Self.logger.notice("extract retry with raw text after: \(Self.shortReason(error), privacy: .public)")
-            return try await session.generateKnowledge(prompt: Self.buildPrompt(text: truncated, guidance: guidance))
+            if wasTranslated {
+                // 翻訳後の本文が拒否・非対応言語と判定された場合は、原文で 1 回だけやり直す。
+                guard Self.shouldRetryWithRawText(error) else { throw error }
+                Self.logger.notice("extract retry with raw text after: \(Self.shortReason(error), privacy: .public)")
+                return try await session.generateKnowledge(prompt: Self.buildPrompt(text: truncated, guidance: guidance))
+            }
+            // spec 106: 原文直読みが非対応言語で落ちたら、翻訳して 1 回だけやり直す (上と対の逆向き)。
+            guard Self.isUnsupportedLanguage(error) else { throw error }
+            let forced = await prepareForExtraction(truncated, forceTranslate: true)
+            guard forced != truncated else { throw error }
+            Self.logger.notice("extract retry with translation after direct-read: unsupportedLanguageOrLocale")
+            return try await session.generateKnowledge(prompt: Self.buildPrompt(text: forced, guidance: guidance))
         }
+        // spec 106: 出力言語ガード。essence が生成言語でなければ翻訳経路で 1 回だけやり直す
+        // (やり直しに失敗しても、最初の結果は捨てない)。
+        if !wasTranslated, let got = Self.outputLanguageMismatch(essence: output.essence, pipeline: PipelineLanguage.current) {
+            let forced = await prepareForExtraction(truncated, forceTranslate: true)
+            if forced != truncated {
+                Self.logger.notice("output language guard: expected=\(PipelineLanguage.current.rawValue, privacy: .public) got=\(String(describing: got), privacy: .public) → retry with translation")
+                if let retried = try? await session.generateKnowledge(prompt: Self.buildPrompt(text: forced, guidance: guidance)) {
+                    return retried
+                }
+            }
+        }
+        return output
+    }
+
+    /// spec 106: essence (20 字以上) の言語が生成言語と一致しないとき、検知した言語を返す。
+    /// 判定不能 (.unknown) / 短すぎ / 一致 のときは nil。
+    static func outputLanguageMismatch(
+        essence: String,
+        pipeline: PipelineLanguage
+    ) -> DetectedLanguage? {
+        let trimmed = essence.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 20 else { return nil }
+        // 英単語が多い日本語・韓国語 essence は NLLanguageRecognizer が英語と誤判定しやすい。
+        // 自言語固有の文字 (かな / ハングル) を含むなら生成言語どおりとみなす (無駄な翻訳再試行を避ける)。
+        if pipeline == .ja, trimmed.unicodeScalars.contains(where: { (0x3040...0x30FF).contains($0.value) }) { return nil }
+        if pipeline == .ko, trimmed.unicodeScalars.contains(where: { (0xAC00...0xD7AF).contains($0.value) }) { return nil }
+        let detected = LanguageDetector.detect(trimmed)
+        if detected == .unknown || pipeline.matches(detected: detected) { return nil }
+        return detected
+    }
+
+    /// 原文直読みを翻訳経路へ切り替える価値がある失敗か (Foundation Models が入力言語を読めなかった)。
+    nonisolated static func isUnsupportedLanguage(_ error: Error) -> Bool {
+        String(describing: error).hasPrefix("unsupportedLanguageOrLocale")
     }
 
     /// 翻訳した本文で失敗したとき、原文に戻せば通る可能性がある失敗か。
@@ -92,31 +141,59 @@ struct KnowledgeExtractor {
     func extractFromChunk(_ chunk: Chunk, guidance: String? = nil, sourceLanguage: DetectedLanguage? = nil) async -> ChunkResult {
         let stripped = Self.stripCodeBlocks(from: chunk.text)
         let prepared = await prepareForExtraction(stripped, override: sourceLanguage)
+        let wasTranslated = prepared != stripped
         // 案A: chunk は小型スキーマ (ChunkKnowledgeOutput) で抽出 → 出力予約が減り chunk を大きくできる。
-        let prompt = Self.buildChunkPrompt(text: prepared, guidance: guidance)
         do {
-            let slim: ChunkKnowledgeOutput
+            var slim: ChunkKnowledgeOutput
             do {
-                slim = try await session.generateChunkKnowledge(prompt: prompt)
+                slim = try await session.generateChunkKnowledge(prompt: Self.buildChunkPrompt(text: prepared, guidance: guidance))
             } catch {
-                // 翻訳後の本文で拒否・非対応言語 → 原文で 1 回だけやり直す (extract と同じ方針)。
-                guard prepared != stripped, Self.shouldRetryWithRawText(error) else { throw error }
-                Self.logger.notice("chunk \(chunk.index) retry with raw text after: \(Self.shortReason(error), privacy: .public)")
-                slim = try await session.generateChunkKnowledge(
-                    prompt: Self.buildChunkPrompt(text: stripped, guidance: guidance)
-                )
+                if wasTranslated {
+                    // 翻訳後の本文で拒否・非対応言語 → 原文で 1 回だけやり直す (extract と同じ方針)。
+                    guard Self.shouldRetryWithRawText(error) else { throw error }
+                    Self.logger.notice("chunk \(chunk.index) retry with raw text after: \(Self.shortReason(error), privacy: .public)")
+                    slim = try await session.generateChunkKnowledge(
+                        prompt: Self.buildChunkPrompt(text: stripped, guidance: guidance)
+                    )
+                } else {
+                    // spec 106: 原文直読みが非対応言語で落ちたら、翻訳して 1 回だけやり直す。
+                    guard Self.isUnsupportedLanguage(error) else { throw error }
+                    let forced = await prepareForExtraction(stripped, override: sourceLanguage, forceTranslate: true)
+                    guard forced != stripped else { throw error }
+                    Self.logger.notice("chunk \(chunk.index) retry with translation after direct-read: unsupportedLanguageOrLocale")
+                    slim = try await session.generateChunkKnowledge(
+                        prompt: Self.buildChunkPrompt(text: forced, guidance: guidance)
+                    )
+                }
+                return Self.chunkResult(chunk, slim)
             }
-            // aggregator は ExtractedKnowledgeOutput を期待するので変換 (summary は per-chunk 不使用 → 空)。
-            let output = ExtractedKnowledgeOutput(
-                essence: slim.essence,
-                summary: "",
-                keyFacts: slim.keyFacts,
-                entities: slim.entities
-            )
-            return ChunkResult(chunkIndex: chunk.index, output: output, error: nil)
+            // spec 106: 出力言語ガード (extract と同じ。やり直しに失敗しても最初の結果は捨てない)。
+            if !wasTranslated, let got = Self.outputLanguageMismatch(essence: slim.essence, pipeline: PipelineLanguage.current) {
+                let forced = await prepareForExtraction(stripped, override: sourceLanguage, forceTranslate: true)
+                if forced != stripped {
+                    Self.logger.notice("chunk \(chunk.index) output language guard: expected=\(PipelineLanguage.current.rawValue, privacy: .public) got=\(String(describing: got), privacy: .public) → retry with translation")
+                    if let retried = try? await session.generateChunkKnowledge(
+                        prompt: Self.buildChunkPrompt(text: forced, guidance: guidance)
+                    ) {
+                        slim = retried
+                    }
+                }
+            }
+            return Self.chunkResult(chunk, slim)
         } catch {
             return ChunkResult(chunkIndex: chunk.index, output: nil, error: error)
         }
+    }
+
+    /// aggregator は ExtractedKnowledgeOutput を期待するので変換 (summary は per-chunk 不使用 → 空)。
+    private static func chunkResult(_ chunk: Chunk, _ slim: ChunkKnowledgeOutput) -> ChunkResult {
+        let output = ExtractedKnowledgeOutput(
+            essence: slim.essence,
+            summary: "",
+            keyFacts: slim.keyFacts,
+            entities: slim.entities
+        )
+        return ChunkResult(chunkIndex: chunk.index, output: output, error: nil)
     }
 
     /// spec 042 / i18n Phase B: 言語判定 + パイプライン言語 (PipelineLanguage.current) と異なる
@@ -126,7 +203,7 @@ struct KnowledgeExtractor {
     /// spec 101: override に記事単位で判定した言語を渡すと、chunk ごとの再判定をスキップする
     /// (長文記事を chunk 分割すると参照・数式・著者名などの断片が id/fr/nl 等に誤検知され、
     ///  無駄で遅い翻訳 + translationd クラッシュを招くため、記事単位 1 回判定に寄せる)。
-    func prepareForExtraction(_ text: String, override: DetectedLanguage? = nil) async -> String {
+    func prepareForExtraction(_ text: String, override: DetectedLanguage? = nil, forceTranslate: Bool = false) async -> String {
         let detected = override ?? LanguageDetector.detect(text)
         Self.logger.notice("translate prep: detected=\(String(describing: detected), privacy: .public) inputChars=\(text.count) override=\(override != nil)")
         // i18n Phase B: 「パイプライン言語 (PipelineLanguage.current) 以外」を全て翻訳対象に一般化。
@@ -145,6 +222,16 @@ struct KnowledgeExtractor {
         }
         if PipelineLanguage.current.matches(detected: detected) {
             return text
+        }
+        // spec 106: Foundation Models が直接読める言語は翻訳せず原文のまま渡す
+        // (生成言語はプロンプトで指示)。読めない言語、または従来方式スイッチ ON のときだけ翻訳する。
+        // forceTranslate はフォールバック (直読み失敗 / 出力言語ガード) 用でこの判定を飛ばす。
+        if !forceTranslate {
+            let prefer = preferTranslateFirst?() ?? DirectReadPolicy.prefersTranslateFirst()
+            if !DirectReadPolicy.shouldTranslateFirst(detected: detected, pipeline: PipelineLanguage.current, preferTranslate: prefer) {
+                Self.logger.notice("translate skip: direct read source=\(source, privacy: .public)")
+                return text
+            }
         }
         // 誤検知ガード: コード片・記号混在チャンク等で .other(raw) が低信頼な言語 (pl/id/nl 等) を
         // 返すことがある。翻訳エンジンが対応しない言語まで毎回 translate を試みると、
@@ -224,10 +311,32 @@ struct KnowledgeExtractor {
     /// FR-020 (元記事に明示されている内容のみ + 推測禁止 + 整合性) を必ず含める。
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     static func buildPrompt(text: String, guidance: String? = nil, language: PipelineLanguage = .current) -> String {
-        """
+        // spec 106: ja 以外は英語指示版 (冒頭 + 末尾で出力言語を指定)。ja は従来文字列のまま。
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeader(language))
+            Extract structured knowledge from the following article text.
+            \(guidanceClause(guidance, language: language))
+            # Extraction rules (strict)
+            - Extract only what is explicitly stated in the article
+            - Do not guess, fill in gaps, or reinforce with common-sense knowledge
+            - If no matching facts are found, return an empty array
+            - essence, summary and key facts must not contradict each other
+            - Return at most 10 key facts, in descending order of importance
+            - Do not include code fragments, function calls or command output in key facts (natural-language facts only)
+            - entities: only proper nouns central to the topic (people, organizations, products, specific technologies/concepts). Exclude generic words, pronouns, place names and dates (e.g. "men", "users", "companies", "Tokyo Station") and normalize spelling (e.g. "claude" -> "Claude")
+            - Original spelling of proper nouns may be kept
+
+            # Article text
+            \(text)
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
+        return """
         以下の記事本文から構造化された知識を抽出してください。
         出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
-        \(guidanceClause(guidance))
+        \(guidanceClause(guidance, language: language))
         # 抽出ルール (厳守)
         - 元記事に明示されている内容のみを抽出してください
         - 推測・補完・常識による補強は行わないでください
@@ -245,10 +354,18 @@ struct KnowledgeExtractor {
 
     /// spec 096: ユーザー指定の抽出方向を prompt に注入する句。
     /// 本文にある範囲で観点を寄せるだけ (新情報の捏造はしない)。空なら空文字。
-    static func guidanceClause(_ guidance: String?) -> String {
+    static func guidanceClause(_ guidance: String?, language: PipelineLanguage) -> String {
         let g = (guidance ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !g.isEmpty else { return "" }
         let capped = String(g.prefix(200))
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+
+            # Extraction focus (user-specified — emphasize this angle as far as the text allows)
+            \(capped)
+
+            """
+        }
         return """
 
         # 抽出の方向性 (ユーザー指定 — 本文にある範囲でこの観点を重視)
@@ -261,10 +378,27 @@ struct KnowledgeExtractor {
     /// 定型部を短くして chunk 本文に枠を回す + 出力 ≤4 件を明示。
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     static func buildChunkPrompt(text: String, guidance: String? = nil, language: PipelineLanguage = .current) -> String {
-        """
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeader(language))
+            The following is one part of an article. Extract structured knowledge from this part.
+            \(guidanceClause(guidance, language: language))
+            # Rules (strict)
+            - Only what is explicitly stated in the article. No guessing or filling in gaps
+            - keyFacts: at most 4 important facts (natural-language facts only, no code fragments)
+            - entities: at most 4 proper nouns central to the topic (people, organizations, products, specific technologies/concepts). Exclude generic words, pronouns, place names and dates
+            - Original spelling of proper nouns may be kept
+
+            # Part of the article
+            \(text)
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
+        return """
         以下は記事の一部です。この部分から構造化された知識を抽出してください。
         出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
-        \(guidanceClause(guidance))
+        \(guidanceClause(guidance, language: language))
         # ルール (厳守)
         - 元記事に明示されている内容のみ。推測・補完は禁止
         - keyFacts は重要な事実を最大 4 件 (自然言語の事実のみ、コード片は除く)
@@ -332,10 +466,27 @@ struct KnowledgeExtractor {
         let numbered = chunkEssences.enumerated()
             .map { "\($0.offset + 1). \($0.element)" }
             .joined(separator: "\n")
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeader(language))
+            The following are key points extracted from each part of an article. Combine them into an essence and a summary for the whole article.
+            \(guidanceClause(guidance, language: language))
+            # Integration rules (strict)
+            - Use only what is explicitly stated in the key points of each part
+            - Do not guess, fill in gaps, or add information from common sense
+            - essence and summary must not contradict each other
+            - Return keyFacts and entities as empty arrays (they are not generated in this prompt)
+
+            # Key points of each part
+            \(numbered)
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
         return """
         以下は記事の各部分から抽出した要点です。これらを統合して、記事全体の essence と summary を作ってください。
         出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
-        \(guidanceClause(guidance))
+        \(guidanceClause(guidance, language: language))
         # 統合ルール (厳守)
         - 各部分の要点に明示されている内容のみを使ってください
         - 推測・補完・常識による情報の追加は行わないでください

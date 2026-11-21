@@ -610,25 +610,12 @@ final class DefaultLintEngine: LintEngineProtocol {
         let language = PipelineLanguage.current
         let existingCategoryNames = (categoryRegistry.activeCategories()?.map(\.name) ?? CategorySeed.allSeeds.map(\.name))
             .joined(separator: " / ")
-        let domainExampleHint: String
-        switch language {
-        case .ja: domainExampleHint = "不動産, 法律, 料理"
-        case .zhHans: domainExampleHint = "房地产, 法律, 烹饪"
-        case .zhHant: domainExampleHint = "不動產, 法律, 烹飪"
-        case .en: domainExampleHint = "Real Estate, Law, Cooking"
-        case .ko: domainExampleHint = "부동산, 법률, 요리"
-        case .es: domainExampleHint = "Bienes Raíces, Derecho, Cocina"
-        case .de: domainExampleHint = "Immobilien, Recht, Kochen"
-        }
         let memberNames = best.map { $0.page.name }
-        let prompt = """
-            次の概念グループに共通する「分野・カテゴリー名」を 1 つ、2〜6 字の短い\(language.endonym)で命名してください。
-            具体的すぎず、分野レベルの名詞にすること (例: \(domainExampleHint))。
-            既存カテゴリー (\(existingCategoryNames)) と同じものは避けてください。
-
-            # 概念グループ
-            \(memberNames.prefix(12).joined(separator: "、"))
-            """
+        let prompt = Self.buildCategoryNamingPrompt(
+            memberNames: memberNames,
+            existingCategoryNames: existingCategoryNames,
+            language: language
+        )
         let candidateName: String
         do {
             let out = try await session.generateTopicName(prompt: prompt)
@@ -663,6 +650,46 @@ final class DefaultLintEngine: LintEngineProtocol {
         )
         refreshTrigger?.bump()
         logger.notice("LintEngine: promoted category '\(candidateName, privacy: .public)' from \(best.count) その他 concepts")
+    }
+
+    /// 新カテゴリ命名 prompt (promote step 用)。ja は従来文字列のまま。
+    /// 非 ja は英語指示版 (spec 106、日本語の指示文に出力言語が引っ張られないように)。
+    static func buildCategoryNamingPrompt(
+        memberNames: [String],
+        existingCategoryNames: String,
+        language: PipelineLanguage
+    ) -> String {
+        let domainExampleHint: String
+        switch language {
+        case .ja: domainExampleHint = "不動産, 法律, 料理"
+        case .zhHans: domainExampleHint = "房地产, 法律, 烹饪"
+        case .zhHant: domainExampleHint = "不動產, 法律, 烹飪"
+        case .en: domainExampleHint = "Real Estate, Law, Cooking"
+        case .ko: domainExampleHint = "부동산, 법률, 요리"
+        case .es: domainExampleHint = "Bienes Raíces, Derecho, Cocina"
+        case .de: domainExampleHint = "Immobilien, Recht, Kochen"
+        }
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeader(language))
+            Name one field / category shared by the following group of concepts, as a short \(language.englishName) noun of 2-6 characters (or 1-3 words).
+            Keep it at the field level, not too specific (examples: \(domainExampleHint)).
+            Avoid names that duplicate an existing category (\(existingCategoryNames)).
+
+            # Concept group
+            \(memberNames.prefix(12).joined(separator: ", "))
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
+        return """
+            次の概念グループに共通する「分野・カテゴリー名」を 1 つ、2〜6 字の短い\(language.endonym)で命名してください。
+            具体的すぎず、分野レベルの名詞にすること (例: \(domainExampleHint))。
+            既存カテゴリー (\(existingCategoryNames)) と同じものは避けてください。
+
+            # 概念グループ
+            \(memberNames.prefix(12).joined(separator: "、"))
+            """
     }
 
     // MARK: - LintLog 永続化 + cap 維持

@@ -28106,6 +28106,98 @@
         }
       }
     },
+    "settings.translateFirst.footer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus: Die KI liest das Original und schreibt in deiner Generierungssprache (schneller). An: übersetzt zuerst in deine Generierungssprache (bisherige Methode)."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off: the AI reads the original and writes in your generation language (faster). On: translates into your generation language first (previous method)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado: la IA lee el original y escribe en tu idioma de generación (más rápido). Activado: primero traduce a tu idioma de generación (método anterior)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ: AI が原文を直接読み、生成言語で整理します（速い）。オン: 先に生成言語へ翻訳してから整理します（従来の方式）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끔: AI가 원문을 직접 읽고 생성 언어로 정리합니다(더 빠름). 켬: 먼저 생성 언어로 번역한 뒤 정리합니다(기존 방식)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭：AI 直接读原文，用生成语言整理（更快）。开启：先翻译成生成语言再整理（旧方式）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉：AI 直接讀原文，用生成語言整理（更快）。開啟：先翻譯成生成語言再整理（舊方式）。"
+          }
+        }
+      }
+    },
+    "settings.translateFirst.title" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vor dem Ordnen übersetzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Translate before organizing"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Traducir antes de organizar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先に翻訳してから整理する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼저 번역한 뒤 정리"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先翻译再整理"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先翻譯再整理"
+          }
+        }
+      }
+    },
     "settings.translationSetup.completeButton" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -50,9 +50,50 @@ enum CategoryPrompts {
             glossary: "作品名・人物名・サービス名の表記を統一。"),
     ]
 
+    /// spec 106: 英語指示版 (生成言語が日本語以外) のプロファイル。キーは byCategory と同じ分野名。
+    static let englishByCategory: [String: Profile] = [
+        "テクノロジー": Profile(
+            emphasis: "Emphasize how the technology works, what it is used for, its relation to other technologies, and what it can / cannot do.",
+            glossary: "Keep spellings consistent for terms such as Claude, GPT/ChatGPT, LLM / large language model, generative AI."),
+        "経済": Profile(
+            emphasis: "Emphasize figures (stock prices, amounts, growth rates), moves of companies and markets, and causes and effects.",
+            glossary: "Keep spellings of company names, currencies and indicators (GDP, CPI, etc.) consistent."),
+        "健康": Profile(
+            emphasis: "Emphasize symptoms, causes, treatment / prevention, and whether evidence exists. Do not over-assert.",
+            glossary: "Keep spellings of disease names, ingredients, nutrients and body parts consistent."),
+        "デザイン": Profile(
+            emphasis: "Emphasize purpose, principles, methods and the tools used.",
+            glossary: "Keep spellings of tool names (e.g. Figma) and terms (e.g. UI/UX) consistent."),
+        "学術": Profile(
+            emphasis: "Emphasize claims, evidence, methods and conclusions. Preserve the logical flow.",
+            glossary: "Keep spellings of technical terms, personal names and theory names consistent."),
+        "アート": Profile(
+            emphasis: "Emphasize works, creators, styles, historical background and reception.",
+            glossary: "Keep spellings of work titles, creator names and school names consistent."),
+        "ニュース": Profile(
+            emphasis: "Emphasize when, where, who, what, and the result / impact. Keep the facts accurate.",
+            glossary: "Keep spellings of personal names, place names and organization names consistent."),
+        "スポーツ": Profile(
+            emphasis: "Emphasize players, teams, match results, records and tournaments.",
+            glossary: "Keep spellings of player names, team names and tournament names consistent."),
+        "エンタメ": Profile(
+            emphasis: "Emphasize works, cast / creators, release or streaming, and buzz.",
+            glossary: "Keep spellings of work titles, personal names and service names consistent."),
+    ]
+
     /// 概念の categoryRaw に対応する分野最適化ブロック。
     /// プロファイルが無い (その他 / 動的カテゴリ / nil) なら空文字 = 汎用生成。
-    static func block(forCategoryRaw raw: String?) -> String {
+    static func block(forCategoryRaw raw: String?, language: PipelineLanguage = .ja) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            guard let raw, let profile = englishByCategory[raw] else { return "" }
+            return """
+
+            ## Focus for this field
+            \(profile.emphasis)
+            ## Consistent spelling of proper nouns
+            \(profile.glossary)
+            """
+        }
         guard let raw, let profile = byCategory[raw] else { return "" }
         return """
 

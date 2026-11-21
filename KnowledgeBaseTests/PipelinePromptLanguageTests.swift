@@ -25,7 +25,7 @@ struct PipelinePromptLanguageTests {
         #expect(jaPrompt.contains("すべて日本語で出力してください"))
 
         let zhPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .zhHant)
-        #expect(zhPrompt.contains("出力言語: 繁體中文"))
+        #expect(zhPrompt.contains("Output language: Traditional Chinese"))
         #expect(zhPrompt.contains("請全部使用繁體中文輸出"))
         #expect(!zhPrompt.contains("すべて日本語で出力してください"))
     }
@@ -42,7 +42,7 @@ struct PipelinePromptLanguageTests {
     //  含まれる。zh 系の既存テストと同じ検証対象=「日本語での出力指示」の有無で判定する)。
     @Test func testKnowledgeExtractorBuildPromptSwitchesToEnglish() {
         let enPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .en)
-        #expect(enPrompt.contains("出力言語: English"))
+        #expect(enPrompt.contains("Output language: English"))
         #expect(enPrompt.contains("Write all output in English."))
         #expect(!enPrompt.contains("すべて日本語で出力してください"))
     }
@@ -51,21 +51,21 @@ struct PipelinePromptLanguageTests {
     // 出力言語ヘッダ切替を検証する (他 builder への波及は既存の zh/en テストと同じ経路のため省略)。
     @Test func testKnowledgeExtractorBuildPromptSwitchesToKorean() {
         let koPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .ko)
-        #expect(koPrompt.contains("出力言語: 한국어"))
+        #expect(koPrompt.contains("Output language: Korean"))
         #expect(koPrompt.contains("모든 출력은 한국어로 작성하세요."))
         #expect(!koPrompt.contains("すべて日本語で出力してください"))
     }
 
     @Test func testKnowledgeExtractorBuildPromptSwitchesToSpanish() {
         let esPrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .es)
-        #expect(esPrompt.contains("出力言語: Español"))
+        #expect(esPrompt.contains("Output language: Spanish"))
         #expect(esPrompt.contains("Escribe toda la salida en español."))
         #expect(!esPrompt.contains("すべて日本語で出力してください"))
     }
 
     @Test func testKnowledgeExtractorBuildPromptSwitchesToGerman() {
         let dePrompt = KnowledgeExtractor.buildPrompt(text: "本文です。", language: .de)
-        #expect(dePrompt.contains("出力言語: Deutsch"))
+        #expect(dePrompt.contains("Output language: German"))
         #expect(dePrompt.contains("Schreibe die gesamte Ausgabe auf Deutsch."))
         #expect(!dePrompt.contains("すべて日本語で出力してください"))
     }
@@ -96,7 +96,7 @@ struct PipelinePromptLanguageTests {
         let zhPrompt = FoundationModelsConceptSynthesisService.buildWikiBodyPrompt(
             conceptPage: page, articles: [], language: .zhHant
         )
-        #expect(zhPrompt.contains("出力言語: 繁體中文"))
+        #expect(zhPrompt.contains("Output language: Traditional Chinese"))
         #expect(!zhPrompt.contains("出力言語: 日本語"))
     }
 

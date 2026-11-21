@@ -89,6 +89,19 @@ enum PipelineLanguage: String, Sendable, CaseIterable {
         }
     }
 
+    /// 英語指示版 prompt (spec 106) で出力言語を指定するときの英語名。
+    var englishName: String {
+        switch self {
+        case .ja: return "Japanese"
+        case .zhHans: return "Simplified Chinese"
+        case .zhHant: return "Traditional Chinese"
+        case .en: return "English"
+        case .ko: return "Korean"
+        case .es: return "Spanish"
+        case .de: return "German"
+        }
+    }
+
     /// prompt 末尾に付ける「すべて◯◯で出力してください」相当の指示文。各言語で書く。
     var outputInstruction: String {
         switch self {
