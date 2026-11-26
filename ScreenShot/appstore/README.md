@@ -1,4 +1,13 @@
-# App Store スクリーンショット (自動生成) — v3 (多言語対応)
+# App Store スクリーンショット (自動生成)
+
+## v2.0 (2026-11) — まずここを読む
+- 元画像はシミュレータのデモデータで撮る: `ScreenShot/capture.sh` (DEBUG ビルドの `-screenshotDemo` モード。
+  iPhone 17 Pro で 7 ロケール × 5 画面を `ScreenShot/<locale>/` に保存。in-memory のデモデータなので実データや iCloud に触れない)。
+- 合成と PNG 化: `cd ScreenShot/appstore && python3 build.py && ./render.sh`
+- 出力サイズは 4 種: 無印 1320×2868 (6.9″) / `-65` 1242×2688 (6.5″) / `-63` 1206×2622 (6.3″) / `-61` 1179×2556 (6.1″)。
+- 以下は v3 (v1.1) 当時の説明。PNG 化は下のループの代わりに `render.sh` を使えばよい。
+
+---
 
 実機スクショに上帯キャプション(明朝)+ 端末フレーム(和紙背景)を合成した **1320×2868 / 6.9″** の App Store 用スライド。
 v3 では **ja / zh-Hans / zh-Hant / en / ko / es / de** の 7 ロケール分を一度に生成する(App Store v1.1 多言語リリース対応、

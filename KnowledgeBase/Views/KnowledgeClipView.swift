@@ -212,6 +212,9 @@ struct KnowledgeClipView: View {
         .task {
             captureRecentSinceAndTouch()
             refreshFeedOrder()  // spec 080拡張: 初回表示時に並び順 snapshot を確定
+            #if DEBUG
+            openScreenshotDemoDestination()
+            #endif
         }
         // spec 080拡張: アプリ復帰 (.active) で並び順を取り直す → 既読が下がる「次回」並び替え
         .onChange(of: scenePhase) { _, newPhase in
@@ -228,6 +231,23 @@ struct KnowledgeClipView: View {
             }
         }
     }
+
+    #if DEBUG
+    /// スクリーンショットデモ: 撮影対象に応じてトピック詳細 / 記事詳細へ起動直後に push。
+    private func openScreenshotDemoDestination() {
+        guard ScreenshotDemo.isEnabled, path.isEmpty else { return }
+        switch ScreenshotDemo.screen {
+        case .topic:
+            path.append(ConceptPageDetailDestination(id: ScreenshotDemo.topicID))
+        case .article:
+            if let article = feedArticles.first(where: { $0.id == ScreenshotDemo.articleID(0) }) {
+                path.append(article)
+            }
+        default:
+            break
+        }
+    }
+    #endif
 
     /// spec 104: 「最近保存したもの」棚 — 横スクロール。既存 ArticleShelfCard 流用 (未開封は点付き)。
     private var recentSavesShelf: some View {

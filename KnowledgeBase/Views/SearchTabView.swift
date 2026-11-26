@@ -139,6 +139,12 @@ struct SearchTabView: View {
         // タブ切替で初めて表示されたとき、既に trigger がセット済みの場合も拾う
         .task {
             consumeRegenerateRequest()
+            #if DEBUG
+            // スクリーンショットデモ: seed 済みの会話を起動直後に開く
+            if ScreenshotDemo.isEnabled, ScreenshotDemo.screen == .chat, path.isEmpty {
+                path.append(ChatConversationDestination(sessionID: ScreenshotDemo.sessionID, initialQuestion: nil))
+            }
+            #endif
         }
     }
 
