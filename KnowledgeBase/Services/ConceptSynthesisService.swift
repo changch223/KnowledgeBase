@@ -427,7 +427,7 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
             if !preserveExisting {
                 conceptPage.summary = trimmedSummary
                 if !isShelf {
-                    conceptPage.crossSourceInsights = Array(output.crossSourceInsights.prefix(5))
+                    conceptPage.crossSourceInsights = Array(Self.dedupedInsights(output.crossSourceInsights).prefix(5))
                     // spec 089: 各要点を最も関連する元記事に照合し出典 ID を保存。
                     conceptPage.insightSourceArticleIDs = ConceptSynthesisCommon.matchInsightSources(
                         insights: conceptPage.crossSourceInsights,
@@ -769,8 +769,41 @@ final class FoundationModelsConceptSynthesisService: ConceptSynthesisServiceProt
                 logger.notice("concept synthesis decodingFailure for \(conceptPage.name, privacy: .public) → repaired partial JSON")
                 return partial
             }
+            // 修復もできない decodingFailure (実機: 要点リストを延々と繰り返して JSON が壊れる) は、
+            // 出力の短い compact スキーマで 1 回だけ作り直す。短い出力ほど繰り返しに入りにくい。
+            // compact も壊れたら同じ修復を試し、だめなら rethrow → essence-list fallback。
+            if Self.isDecodingFailure(error) {
+                logger.notice("concept synthesis decodingFailure for \(conceptPage.name, privacy: .public) unrepairable → compact retry (要点≤2)")
+                do {
+                    return try await run(compact: true)
+                } catch let retryError {
+                    if let partial = Self.extractPartialOutput(from: retryError) {
+                        logger.notice("concept synthesis compact retry decodingFailure for \(conceptPage.name, privacy: .public) → repaired partial JSON")
+                        return partial
+                    }
+                    throw retryError
+                }
+            }
             throw error
         }
+    }
+
+    /// 生成結果の JSON が壊れていたエラーか (GenerationError.decodingFailure)。
+    /// 他の判定と同じく case 名の先頭一致で見る (debugDescription に生成文が入るため部分一致は使わない)。
+    static func isDecodingFailure(_ error: Error) -> Bool {
+        String(describing: error).hasPrefix("decodingFailure")
+    }
+
+    /// 要点の重複を除く (順序維持、前後空白・空文字は捨てる)。モデルが同じ要点を繰り返したときの保険。
+    static func dedupedInsights(_ insights: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for raw in insights {
+            let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !s.isEmpty, seen.insert(s).inserted else { continue }
+            result.append(s)
+        }
+        return result
     }
 
     /// 窓超過エラーか (実 overflow `exceededContextWindowSize` + P2-1 preflight
