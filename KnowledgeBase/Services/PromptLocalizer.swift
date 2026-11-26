@@ -26,4 +26,15 @@ enum PromptLocalizer {
     static func outputLanguageFooter(_ language: PipelineLanguage) -> String {
         language.outputInstruction
     }
+
+    /// spec 107: チャット・分類など「概念名」を持たないプロンプト向けの汎用出力言語指定 (英語)。
+    /// 既存の `outputLanguageHeader` (spec 106 のテストが依存) は変更しない。
+    static func outputLanguageHeaderGeneral(_ language: PipelineLanguage) -> String {
+        "Output language: \(language.englishName). Write every user-visible field in \(language.englishName), even though the schema descriptions are in Japanese. Keep product, company and person names in their original spelling."
+    }
+
+    /// 引用符で囲んだ例示句を ", " で連結 (英語指示版の banned / hedge 句の埋め込み用)。
+    static func quotedList(_ phrases: [String]) -> String {
+        phrases.map { "\"\($0)\"" }.joined(separator: ", ")
+    }
 }

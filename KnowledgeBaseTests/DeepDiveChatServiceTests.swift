@@ -257,7 +257,8 @@ struct DeepDiveChatServiceTests {
             _ = try await service.startTutorSession(for: card)
 
             let prompt = mockLM.lastTutorReplyPrompt ?? ""
-            #expect(prompt.contains("出力言語: 繁體中文"))
+            // spec 107: ja 以外は英語指示版 (ヘッダも英語)
+            #expect(prompt.contains("Output language: Traditional Chinese"))
             #expect(!prompt.contains("出力言語: 日本語"))
         }
     }

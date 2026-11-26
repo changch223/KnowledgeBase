@@ -193,14 +193,14 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
                 if hasGraphProposalForEdge(edgeID: newest.id) { continue }
 
                 // spec 058: AI 自動採用 (autoResolved status)、両方残す、ユーザー confirm なし
-                let description = "「\(node.name)」の「\(label)」が更新されています"
+                let description = String(format: String(localized: "conflict.graph.description"), node.name, label)
                 let proposal = ConflictProposal(
                     newArticle: article,
                     oldArticle: nil,
                     entityName: node.name,
                     conflictDescription: description,
-                    newFact: "\(node.name) は \(label): \(newestTarget.name)",
-                    oldFact: "\(node.name) は \(label): \(olderTarget.name)",
+                    newFact: String(format: String(localized: "conflict.graph.fact"), node.name, label, newestTarget.name),
+                    oldFact: String(format: String(localized: "conflict.graph.fact"), node.name, label, olderTarget.name),
                     status: ConflictStatus.autoResolved.rawValue,
                     graphEdgeID: newest.id
                 )
@@ -235,6 +235,31 @@ final class ConflictDetectionService: ConflictDetectionServiceProtocol {
         let newKeyFacts = newArticle.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
         let oldKeyFacts = oldArticle.extractedKnowledge?.keyFacts?.prefix(3).map { $0.statement }.joined(separator: " / ") ?? ""
 
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+            The following 2 articles are about the same entity "\(entityName)".
+            Decide whether the facts in the new article and the old article contradict each other (open/closed, appointed/resigned, released/discontinued, etc.).
+
+            ## Rules
+            1. A contradiction means one side is clearly outdated information (e.g. opened -> closed).
+            2. If the new article merely adds information, there is no contradiction (false).
+            3. If the topics differ slightly (e.g. management policy vs product introduction), there is no contradiction.
+            4. Set hasConflict=true and output an explanation only when there is a contradiction.
+
+            ## New article (saved: \(newArticle.savedAt.iso8601))
+            Title: \(newArticle.title)
+            Key point: \(newEssence)
+            Main facts: \(newKeyFacts)
+
+            ## Old article (saved: \(oldArticle.savedAt.iso8601))
+            Title: \(oldArticle.title)
+            Key point: \(oldEssence)
+            Main facts: \(oldKeyFacts)
+
+            \(PromptLocalizer.outputLanguageFooter(language))
+            """
+        }
         return """
         以下の 2 記事は同じ entity「\(entityName)」について書かれています。
         新記事と旧記事の事実 (open/閉店、就任/退任、リリース/廃止 等) に矛盾があるか判定してください。

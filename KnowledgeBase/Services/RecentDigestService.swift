@@ -202,6 +202,9 @@ final class RecentDigestService: RecentDigestServiceProtocol {
 
     /// i18n Phase B: 出力言語は `language` (既定 `PipelineLanguage.current`) に追従する。
     static func buildPrompt(articles: [Article], language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return buildEnglishPrompt(articles: articles, language: language)
+        }
         var prompt = """
         あなたは Knowledge Base の AI アシスタントです。ユーザーが最近保存した記事から、何を学んだかを「1 文の見出し + 主要テーマ 3 個」で伝えてください。
         出力言語: \(language.endonym)。スキーマの説明文が日本語でも、出力は必ず \(language.endonym) で書くこと。
@@ -245,6 +248,50 @@ final class RecentDigestService: RecentDigestServiceProtocol {
         return prompt
     }
 
+    /// spec 107: 英語指示版 (生成言語が日本語以外)。件数ガード (promptArticleLimit / promptCharBudget) は ja と同一。
+    static func buildEnglishPrompt(articles: [Article], language: PipelineLanguage) -> String {
+        var prompt = """
+        \(PromptLocalizer.outputLanguageHeaderGeneral(language))
+        You are the AI assistant of Knowledge Base. From the articles the user saved recently, tell them what they learned as "one headline sentence + 3 main themes".
+
+        ## Rules
+        1. The headline is 60-100 characters of natural \(language.englishName), an assertive sentence that unifies the themes.
+           Example: "Lately you read 4 articles about AI agent design and Claude Skills."
+        2. Each theme is a short noun phrase of 10-20 characters. Up to 3 common themes across the articles.
+           Example: "AI agents", "Claude Skills", "PM efficiency".
+        3. Do not write IDs or URLs in the text, and do not use a first-person view such as "what I read".
+
+        ## Recently saved articles (count \(articles.count))
+        """
+
+        let promptArticles = Array(articles.prefix(promptArticleLimit))
+        for (i, article) in promptArticles.enumerated() {
+            let essence = (article.extractedKnowledge?.essence ?? "").prefix(50)
+            let firstFact = article.extractedKnowledge?.keyFacts?.first?.statement.prefix(20) ?? ""
+            let entry = """
+
+            [\(i + 1)] \(article.title.prefix(50))
+            Key point: \(essence)
+            Fact: \(firstFact)
+            """
+            if prompt.count + entry.count > promptCharBudget { break }
+            prompt += entry
+        }
+
+        prompt += """
+
+        ## Output format
+        Put 4 strings in the paragraphs field, in this order:
+          [0] = headline (60-100 characters)
+          [1] = theme 1 (10-20 characters)
+          [2] = theme 2 (10-20 characters)
+          [3] = theme 3 (10-20 characters)
+
+        \(PromptLocalizer.outputLanguageFooter(language))
+        """
+        return prompt
+    }
+
     // MARK: - Fallback (Apple Intelligence 不可時の擬似生成)
 
     /// V3.0 polish: 4 件 (ヘッドライン + テーマ 3) の擬似出力を生成。
@@ -257,7 +304,7 @@ final class RecentDigestService: RecentDigestServiceProtocol {
             ?? ""
         let headlineBase = headlineSource.trimmingCharacters(in: .whitespacesAndNewlines)
         let headline = articles.count > 1
-            ? "最近 \(articles.count) 件保存しました。" + (headlineBase.count > 50 ? String(headlineBase.prefix(50)) + "…" : headlineBase)
+            ? String(format: String(localized: "recent.fallback.headline"), articles.count) + (headlineBase.count > 50 ? String(headlineBase.prefix(50)) + "…" : headlineBase)
             : headlineBase
 
         let themes = articles.prefix(3).map { article -> String in

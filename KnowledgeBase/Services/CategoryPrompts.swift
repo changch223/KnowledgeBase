@@ -81,11 +81,25 @@ enum CategoryPrompts {
             glossary: "Keep spellings of work titles, personal names and service names consistent."),
     ]
 
+    /// spec 107: categoryRaw (どの言語のシード名でも可) を日本語シード名 (= プロファイルのキー) に解決する。
+    /// 全言語のシードを order で突き合わせる。「その他」や動的カテゴリは nil。
+    static func profileKey(forCategoryRaw raw: String?) -> String? {
+        guard let raw else { return nil }
+        for lang in PipelineLanguage.allCases {
+            if let seed = CategorySeed.allSeeds(for: lang).first(where: { $0.name == raw }) {
+                return CategorySeed.allSeeds(for: .ja).first(where: { $0.order == seed.order })?.name
+            }
+        }
+        return nil
+    }
+
     /// 概念の categoryRaw に対応する分野最適化ブロック。
     /// プロファイルが無い (その他 / 動的カテゴリ / nil) なら空文字 = 汎用生成。
+    /// spec 107: categoryRaw は生成言語のシード名 (en=Technology 等) でも解決する。
     static func block(forCategoryRaw raw: String?, language: PipelineLanguage = .ja) -> String {
+        let key = profileKey(forCategoryRaw: raw)
         if !PromptLocalizer.usesJapaneseInstructions(language) {
-            guard let raw, let profile = englishByCategory[raw] else { return "" }
+            guard let key, let profile = englishByCategory[key] else { return "" }
             return """
 
             ## Focus for this field
@@ -94,7 +108,7 @@ enum CategoryPrompts {
             \(profile.glossary)
             """
         }
-        guard let raw, let profile = byCategory[raw] else { return "" }
+        guard let key, let profile = byCategory[key] else { return "" }
         return """
 
         ## この分野での重視点

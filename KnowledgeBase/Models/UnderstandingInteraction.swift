@@ -213,7 +213,7 @@ extension UnderstandingCard {
 
     /// ChatSession title 用 (xcstrings 経由しない、AI prompt context 注入時にも使う)。
     var deepDiveTitle: String {
-        "「\(deepDiveTitleFormatArg)」を深掘り"
+        String(format: String(localized: "understanding.deepDive.title", defaultValue: "「%@」を深掘り"), deepDiveTitleFormatArg)
     }
 
     /// `kindEnum` rawValue 文字列 (a11y identifier / xcstrings 補助)。

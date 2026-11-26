@@ -176,8 +176,24 @@ struct LLMTranscriptCorrectionService: TranscriptCorrecting {
 
     // MARK: - 純関数 (テスト可)
 
-    static func buildPrompt(text: String, terms: [String]) -> String {
-        """
+    static func buildPrompt(text: String, terms: [String], language: PipelineLanguage = .current) -> String {
+        // spec 107: 目的は「原語のまま」の誤認識補正で翻訳ではない。出力言語ヘッダは付けず、
+        // ja 以外のパイプラインでは英語指示で「入力と同じ言語を保つ・翻訳しない・要約しない」を明示する。
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            You are a proofreader of speech transcripts. The transcript below may contain proper nouns or technical terms \
+            that were misrecognized by sound. Replace only the misrecognitions that clearly correspond to an entry in the glossary \
+            with the glossary's correct spelling.
+            - Keep the same language as the input text. Do not translate. Do not summarize.
+            - Do not change words that do not correspond to the glossary. Do not add, delete or paraphrase anything. Keep the word order.
+            - If you are not sure, leave it unchanged.
+            - Output only the corrected transcript (no explanations or headings).
+            Glossary: \(terms.joined(separator: ", "))
+            Transcript:
+            \(text)
+            """
+        }
+        return """
         あなたは音声文字起こしの校正者です。次の文字起こしには、固有名詞や専門用語が音で\
         誤って認識された箇所があります。下の「用語集」に明らかに対応すると判断できる誤認識\
         だけを、用語集の正しい表記に置き換えてください。
@@ -190,8 +206,27 @@ struct LLMTranscriptCorrectionService: TranscriptCorrecting {
         """
     }
 
-    static func buildInstructionPrompt(text: String, instruction: String) -> String {
-        """
+    static func buildInstructionPrompt(text: String, instruction: String, language: PipelineLanguage = .current) -> String {
+        if !PromptLocalizer.usesJapaneseInstructions(language) {
+            return """
+            Apply the user's correction instruction to the following text. In transcripts and OCR, the same proper noun or technical term \
+            is often misspelled in several different ways within one text \
+            (e.g. "Claude Code" as gloadcode / clodecode / cloudcode, "CLAUDE.md" as clodeMD).
+
+            - Use the correct spelling given in the instruction as the standard. Fix not only the misspellings shown as examples but also \
+            **every spelling variant, mis-conversion or misrecognition that sounds or looks similar and clearly refers to the same thing**.
+            - Also fix related or derived words and compounds that come from the same mistake \
+            (e.g. if the instruction says "Claude Code", a similar spelling such as "clodeMD" -> "CLAUDE.md" should be fixed when it clearly refers to the same target).
+            - Read the text from start to end and fix every matching spelling, leaving none.
+            - Do not change words unrelated to the instruction. Do not summarize, add, delete or paraphrase. Keep the word order.
+            - Keep the same language as the input text. Do not translate.
+            - Output only the corrected text (no explanations or headings).
+            Instruction: \(instruction)
+            Text:
+            \(text)
+            """
+        }
+        return """
         次の文章に、ユーザーの訂正指示を適用してください。文字起こしや OCR では、同じ固有名詞・専門用語が\
         一つの文章の中で何通りにも誤って表記されることがあります\
         (例: 「Claude Code」が gloadcode / clodecode / cloudcode、「CLAUDE.md」が clodeMD など)。
