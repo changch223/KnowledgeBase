@@ -545,6 +545,69 @@ struct ConceptSynthesisServiceTests {
         #expect(session.conceptSynthesisCompactCallCount == 1)  // compact が 1 回呼ばれた
     }
 
+    // MARK: - 13b. 修復できない decodingFailure → compact で作り直す
+
+    @Test func testResynthesizeCompactRetryOnUnrepairableDecodingFailure() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let a = makeArticle(url: "a", title: "A", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let b = makeArticle(url: "b", title: "B", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let page = ConceptPage(name: "X", categoryRaw: "テクノロジー", relatedArticles: [a, b], isStale: true)
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        // JSON の形を成していない繰り返し出力 (実機ログ相当) → 修復不能
+        session.nextConceptSynthesisResult = .failure(FakeDecodingFailureError(
+            description: "decodingFailure(GenerationError.Context(debugDescription: \"要点1」]要点1」]要点1」]\", underlyingErrors: [], errorDescriptionOverride: nil))"
+        ))
+        session.nextConceptSynthesisCompactResult = .success(
+            ConceptSynthesisCompactOutput(summary: "compact 要約。", crossSourceInsights: ["要点1", "要点2"])
+        )
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(session.conceptSynthesisCompactCallCount == 1)
+        #expect(page.summary == "compact 要約。")
+        #expect(page.crossSourceInsights == ["要点1", "要点2"])
+        #expect(page.isStale == false)
+    }
+
+    @Test func testRepairableDecodingFailureDoesNotRetry() async throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        let a = makeArticle(url: "a", title: "A", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let b = makeArticle(url: "b", title: "B", categoryRaw: "テクノロジー", entityNames: ["X"], in: context)
+        let page = ConceptPage(name: "X", categoryRaw: "テクノロジー", relatedArticles: [a, b], isStale: true)
+        context.insert(page)
+        try context.save()
+
+        let session = MockLanguageModelSession()
+        let json = #"{"summary":"修復できる要約。","crossSourceInsights":["要点A。"]}"#
+        session.nextConceptSynthesisResult = .failure(FakeDecodingFailureError(
+            description: "decodingFailure(GenerationError.Context(debugDescription: \"\(json)\", underlyingErrors: [], errorDescriptionOverride: nil))"
+        ))
+        let service = makeFoundationService(context: context, session: session)
+
+        await service.resynthesize(page)
+
+        #expect(session.conceptSynthesisCompactCallCount == 0)  // 修復で足りるので作り直さない
+        #expect(page.summary == "修復できる要約。")
+    }
+
+    @Test func testIsDecodingFailureUsesCasePrefix() {
+        #expect(FoundationModelsConceptSynthesisService.isDecodingFailure(FakeDecodingFailureError(description: "decodingFailure(x)")))
+        #expect(!FoundationModelsConceptSynthesisService.isDecodingFailure(FakeDecodingFailureError(description: "refusal(decodingFailure)")))
+    }
+
+    @Test func testDedupedInsightsRemovesRepeats() {
+        let out = FoundationModelsConceptSynthesisService.dedupedInsights(["要点1", " 要点1 ", "", "要点2", "要点1"])
+        #expect(out == ["要点1", "要点2"])
+    }
+
     // MARK: - spec 105: 書架トピックは要点を作らない
 
     @Test func testShelfConceptSavesSummaryButNoInsights() async throws {
