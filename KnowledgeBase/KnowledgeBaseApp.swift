@@ -40,11 +40,11 @@ struct KnowledgeBaseApp: App {
     @Environment(\.scenePhase) private var scenePhase
     /// spec 056: 起動 default は知識 Clip (Today タブ)、毎回起動で強制 `.knowledgeClip`
     /// (LastOpenedStore.lastTab は無視、新習慣定着のため)。
-    @State private var selectedTab: AppTab = .knowledgeClip
+    @State private var selectedTab: AppTab = KnowledgeBaseApp.launchTab()
     /// spec 096: 見直し完了バナーから開く確認シートの対象記事。
     @State private var reviewConfirmArticle: Article?
     /// spec 049: 初回起動時の onboarding 表示。
-    @State private var showOnboarding: Bool = !OnboardingFlagStore.shared.hasCompleted
+    @State private var showOnboarding: Bool = KnowledgeBaseApp.shouldShowOnboarding()
     /// spec 061 (P1-6): 永続 store 構築失敗 → in-memory fallback で起動した印。
     /// true なら「データ読み込みに問題」banner を表示する。
     @State private var storeLoadFailed: Bool = UserDefaults.standard.bool(forKey: "spec061_storeLoadFailed")
@@ -71,7 +71,26 @@ struct KnowledgeBaseApp: App {
         // spec 051 Phase A 完成: iCloud toggle が有効 (forced reset 削除)。
     }
 
+    /// 起動時の初期タブ。DEBUG のスクリーンショットデモ時のみ撮影対象タブ、それ以外は知識 Clip。
+    private static func launchTab() -> AppTab {
+        #if DEBUG
+        if ScreenshotDemo.isEnabled { return ScreenshotDemo.initialTab }
+        #endif
+        return .knowledgeClip
+    }
+
+    private static func shouldShowOnboarding() -> Bool {
+        #if DEBUG
+        if ScreenshotDemo.isEnabled { return false }
+        #endif
+        return !OnboardingFlagStore.shared.hasCompleted
+    }
+
     var sharedModelContainer: ModelContainer = {
+        #if DEBUG
+        // App Store スクリーンショット用デモモード: in-memory + 決定的デモデータ (CloudKit・既存ストアに触れない)
+        if ScreenshotDemo.isEnabled { return ScreenshotDemo.makeSeededContainer() }
+        #endif
         AppGroup.ensureContainerDirectoryExists()
 
         // spec 051 Phase A 完成: UserDefaults `icloud_sync_enabled` flag を読んで
@@ -151,7 +170,13 @@ struct KnowledgeBaseApp: App {
                         reviewConfirmArticle = article
                     }
                     // 同様に独立 View にして aiAvailabilityMonitor の変化を確実に observe する。
+                    #if DEBUG
+                    if !ScreenshotDemo.isEnabled {
+                        AIAvailabilityBannerHost(monitor: aiAvailabilityMonitor)
+                    }
+                    #else
                     AIAvailabilityBannerHost(monitor: aiAvailabilityMonitor)
+                    #endif
                     // 多言語対応: 端末言語と生成言語のズレ通知 (AI 可用性バナーと同時成立時は下に並ぶ)。
                     LanguageMismatchBannerHost(pipelineToNotify: $languageMismatchPipeline)
                 }
@@ -252,6 +277,11 @@ struct KnowledgeBaseApp: App {
     private func bootstrap() async {
         // 二重 bootstrap 抑止: scene 復帰時の .task 再実行で backfill が重複しないように。
         guard serviceContainer.knowledgeService == nil else { return }
+
+        // スクリーンショットデモ (DEBUG): backfill / 整理ループ / AI / ネットワークを一切走らせない。
+        #if DEBUG
+        if ScreenshotDemo.isEnabled { return }
+        #endif
 
         // 多言語対応 Phase A: pipeline 言語 (PipelineLanguage) を初回起動時に端末言語からロック。
         // 既に保存済みなら no-op (既存ユーザーは今まで通り ja のまま)。

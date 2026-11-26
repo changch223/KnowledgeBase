@@ -4315,7 +4315,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share Sheet で「Knowledge Base」を選択"
+            "value" : "Share Sheet で「まとメモ」を選択"
           }
         },
         "ko" : {
@@ -4783,7 +4783,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "URL を Knowledge Base に保存します"
+            "value" : "URL をまとメモに保存します"
           }
         },
         "ko" : {
@@ -4967,7 +4967,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knowledge Base に保存"
+            "value" : "まとメモに保存"
           }
         },
         "ko" : {
@@ -8539,7 +8539,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knowledge Base について教えて"
+            "value" : "まとメモについて教えて"
           }
         },
         "ko" : {
@@ -9479,7 +9479,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share Sheet で「Knowledge Base」を選択して記事を保存しましょう"
+            "value" : "Share Sheet で「まとメモ」を選択して記事を保存しましょう"
           }
         },
         "ko" : {
@@ -9996,7 +9996,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knowledge Base"
+            "value" : "まとメモ"
           }
         },
         "ko" : {
@@ -17222,7 +17222,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "他のアプリの共有ボタンから「Knowledge Base」を選ぶ"
+            "value" : "他のアプリの共有ボタンから「まとメモ」を選ぶ"
           }
         },
         "ko" : {
@@ -19766,7 +19766,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しい Knowledge Base へようこそ"
+            "value" : "新しいまとメモへようこそ"
           }
         },
         "ko" : {
@@ -21312,7 +21312,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari で記事を開いて「共有」→ Knowledge Base で保存できます"
+            "value" : "Safari で記事を開いて「共有」→ まとメモで保存できます"
           }
         },
         "ko" : {
@@ -21808,7 +21808,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knowledge Base はあなたが読んだ記事を AI が自動で整理し、必要なときに思い出せる「あなた専用の第二の脳」です。"
+            "value" : "まとメモは、あなたが読んだ記事を AI が自動で整理し、必要なときに思い出せる「あなた専用の第二の脳」です。"
           }
         },
         "ko" : {
@@ -21855,7 +21855,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ようこそ Knowledge Base へ"
+            "value" : "まとメモへようこそ"
           }
         },
         "ko" : {
@@ -25373,7 +25373,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「アクション追加」→ 検索で「Knowledge Base」→「Knowledge Baseに保存」を選択。URL を「Chrome の現在の URL」に設定します。"
+            "value" : "「アクション追加」→ 検索で「まとメモ」→「まとメモに保存」を選択。URL を「Chrome の現在の URL」に設定します。"
           }
         },
         "ko" : {
@@ -26768,7 +26768,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari で開いた全ページを自動でKnowledge Baseに保存します。下の遅延設定で「ページを開いてから何秒後に保存するか」を選択。すでに保存済みのページは重複保存されません。"
+            "value" : "Safari で開いた全ページを自動でまとメモに保存します。下の遅延設定で「ページを開いてから何秒後に保存するか」を選択。すでに保存済みのページは重複保存されません。"
           }
         },
         "ko" : {
@@ -26956,7 +26956,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari で開いたすべてのページがKnowledge Baseに自動保存されます。プライバシー保護のため、Cookie 同意画面 / 検索結果 / ログイン画面などは除外されます。後でいつでも OFF にできます。"
+            "value" : "Safari で開いたすべてのページがまとメモに自動保存されます。プライバシー保護のため、Cookie 同意画面 / 検索結果 / ログイン画面などは除外されます。後でいつでも OFF にできます。"
           }
         },
         "ko" : {
@@ -27285,7 +27285,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Safari でページを開いた時に自動でKnowledge Baseに保存できます"
+            "value" : "Safari でページを開いた時に自動でまとメモに保存できます"
           }
         },
         "ko" : {
@@ -27520,7 +27520,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「Knowledge Base」拡張機能を ON にし、すべての Web サイトに対して許可してください"
+            "value" : "「まとメモ」拡張機能を ON にし、すべての Web サイトに対して許可してください"
           }
         },
         "ko" : {
@@ -27567,7 +27567,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knowledge Base拡張機能を ON にする"
+            "value" : "まとメモ拡張機能を ON にする"
           }
         },
         "ko" : {
@@ -27614,7 +27614,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下のトグルで自動保存を ON にすると、Safari で開いたページが自動で保存されます。OFF の場合はツールバーのKnowledge Baseアイコンタップで保存します。"
+            "value" : "下のトグルで自動保存を ON にすると、Safari で開いたページが自動で保存されます。OFF の場合はツールバーのまとメモアイコンタップで保存します。"
           }
         },
         "ko" : {
@@ -28269,7 +28269,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "英語記事を保存した時に、Knowledge Baseは iOS の翻訳機能を使って日本語に翻訳してから知識を抽出します。初回利用時は英語と日本語の翻訳モデルを iOS Settings からダウンロードする必要があります。"
+            "value" : "英語記事を保存した時に、まとメモは iOS の翻訳機能を使って日本語に翻訳してから知識を抽出します。初回利用時は英語と日本語の翻訳モデルを iOS Settings からダウンロードする必要があります。"
           }
         },
         "ko" : {
@@ -35616,37 +35616,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Verwandte Konzepte (%lld)"
+            "value" : "Verwandte Themen (%lld)"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Related Concepts (%lld)"
+            "value" : "Related Topics (%lld)"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Conceptos relacionados (%lld)"
+            "value" : "Temas relacionados (%lld)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "関連するトピック (%lld)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "관련 개념 (%lld)"
+            "value" : "관련 주제 (%lld)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "相关概念 (%lld)"
+            "value" : "相关主题 (%lld)"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "相關概念 (%lld)"
+            "value" : "相關主題 (%lld)"
           }
         }
       }

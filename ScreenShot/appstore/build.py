@@ -36,11 +36,11 @@ LOCALES = ["ja", "zh-Hans", "zh-Hant", "en", "ko", "es", "de"]
 # 元画像はロケールごとに ScreenShot/<locale>/<ファイル名> を優先探索し、無ければこのファイル名で
 # ScreenShot/ 直下 (ja 実機) にフォールバックする。
 SLIDE_LAYOUT = [
-    ("01-knowledge", "knowledge base.PNG", "right", 1835),
-    ("02-wiki", "wiki page.PNG", "left", 1156),
-    ("03-chat", "AI Chat.PNG", "right", 2069),
-    ("04-save", "content page.PNG", "right", 1560),
-    ("05-library", "library.PNG", "right", 1227),
+    ("01-knowledge", "knowledge base.PNG", "right", 1565),
+    ("02-wiki", "wiki page.PNG", "right", 2160),
+    ("03-chat", "AI Chat.PNG", "right", 2150),
+    ("04-save", "content page.PNG", "right", 1310),
+    ("05-library", "library.PNG", "right", 1370),
 ]
 
 # ロケール別キャプション。SLIDE_LAYOUT と同じ順序 5 件、各 (見出し, サブ, チップ文言)。
@@ -72,7 +72,7 @@ CAPTIONS = {
         ("What you read|《organizes itself》.", "AI surfaces key points by topic first", "Key points at a glance"),
         ("AI compiles your own|《personal encyclopedia》.", "Multiple articles, one page", "Grows as you read"),
         ("Answers to your knowledge,|《backed by citations》.", "Tap a citation to jump to the source", "Answers with sources"),
-        ("Save the moment you read it,|in 《2 taps》.", "URL, photo, PDF, or audio", "Straight from Share Sheet"),
+        ("Save as you read,|in just 《2 taps》.", "URL, photo, PDF, or audio", "Straight from Share Sheet"),
         ("Categories and tags,|organized 《automatically》.", "The more you save, the easier to find", "Auto-classified"),
     ],
     # v1.1 追加ロケール (docs/app-store/RELEASE-MATERIALS.md §1-K 対応)。用語は各言語の
@@ -106,6 +106,8 @@ CAPTIONS = {
 SIZES = [
     ("", 1320, 2868),          # 6.9" (iPhone 17 Pro Max 等)
     ("-65", 1242, 2688),       # 6.5" (1242x2688 スロット)
+    ("-63", 1206, 2622),       # 6.3" (iPhone 17 Pro / 16 Pro、v2.0 で追加)
+    ("-61", 1179, 2556),       # 6.1" (iPhone 15 / 16 等、v2.0 で追加)
 ]
 
 TEMPLATE = """<!DOCTYPE html>

@@ -22,6 +22,7 @@ DerivedData/
 
 # App Store 素材 — 重いファイルは git 管理外 (生成ツールのみコミット)
 ScreenShot/*.PNG
+ScreenShot/*/*.PNG
 ScreenShot/*.MP4
 ScreenShot/appstore/output/
 ScreenShot/appstore/output-1242x2688/
